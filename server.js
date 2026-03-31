@@ -15,7 +15,7 @@ mercadopago.configure({
 // Rota PIX
 app.post("/pix", async (req, res) => {
   try {
-    const { valor } = req.body;
+    const { valor, email } = req.body;
 
     if (!valor) {
       return res.status(400).json({ error: "Valor não informado" });
@@ -26,7 +26,7 @@ app.post("/pix", async (req, res) => {
       description: "Pedido Romer Art",
       payment_method_id: "pix",
       payer: {
-        email: "cliente@email.com"
+        email: email || "seuemail@gmail.com"
       }
     });
 
@@ -36,14 +36,14 @@ app.post("/pix", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("ERRO PIX:", error);
+    console.error("ERRO PIX:", error.response?.data || error.message);
+
     res.status(500).json({
       error: "Erro ao gerar PIX",
-      detalhe: error.message
+      detalhe: error.response?.data || error.message
     });
   }
 });
-
 // Porta padrão Render
 const PORT = process.env.PORT || 3000;
 
