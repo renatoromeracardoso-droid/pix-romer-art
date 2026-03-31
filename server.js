@@ -50,23 +50,40 @@ app.post("/pix", async (req, res) => {
 app.post("/webhook", async (req, res) => {
   try {
 
-    console.log("📩 Webhook recebido:", req.body);
+    console.log("📩 Webhook bruto:", JSON.stringify(req.body));
 
-    const paymentId = req.body?.data?.id;
+    const body = req.body;
+
+    // 🔥 pega ID de qualquer formato
+    const paymentId =
+      body?.data?.id ||
+      body?.id ||
+      body?.resource?.split("/").pop();
 
     if (!paymentId) {
-      console.log("⚠️ Webhook sem ID");
+      console.log("⚠️ ID não encontrado");
       return res.sendStatus(200);
     }
+
+    console.log("🔎 Buscando pagamento:", paymentId);
 
     const payment = await mercadopago.payment.findById(paymentId);
 
     const status = payment.body.status;
 
-    console.log("💰 Status do pagamento:", status);
+    console.log("💰 STATUS REAL:", status);
 
     if (status === "approved") {
       console.log("✅ PAGAMENTO APROVADO!");
+    }
+
+    res.sendStatus(200);
+
+  } catch (error) {
+    console.log("❌ ERRO WEBHOOK:", error.message);
+    res.sendStatus(500);
+  }
+});
 
       // 🔥 FUTURO:
       // aqui você pode salvar pedido, enviar WhatsApp, etc
