@@ -32,17 +32,14 @@ app.post("/pix", async (req, res) => {
       }
     });
 
-    // ✅ PADRÃO QUE FUNCIONAVA
-    const dados = payment.body;
+    // 🔥 COMPATÍVEL COM TODAS VERSÕES
+    const dados = payment.body || payment;
 
-    // 🔍 DEBUG (pode ver no Render Logs)
     console.log("PIX GERADO:", JSON.stringify(dados, null, 2));
 
-    // 🔥 pega QR corretamente
     const qr = dados.point_of_interaction?.transaction_data?.qr_code;
     const qrBase64 = dados.point_of_interaction?.transaction_data?.qr_code_base64;
 
-    // 🚨 validação
     if (!qr || !qrBase64) {
       console.log("❌ QR NÃO VEIO");
       return res.status(500).json({
@@ -50,11 +47,9 @@ app.post("/pix", async (req, res) => {
       });
     }
 
-    // 💾 salva status
     pagamentos[dados.id] = "pending";
 
-    // ✅ resposta correta
-    res.json({
+    return res.json({
       id: dados.id,
       qr_code: qr,
       qr_code_base64: qrBase64
@@ -62,20 +57,24 @@ app.post("/pix", async (req, res) => {
 
   } catch (error) {
     console.log("❌ ERRO PIX:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Erro ao gerar PIX"
     });
   }
 });
 
-// 🔄 WEBHOOK (opcional, mas já pronto)
+// 🔄 WEBHOOK (Mercado Pago)
 app.post("/webhook", async (req, res) => {
   try {
     const data = req.body;
 
+    console.log("📩 WEBHOOK:", data);
+
     if (data.type === "payment") {
       const pagamento = await mercadopago.payment.findById(data.data.id);
-      const status = pagamento.body.status;
+      const dados = pagamento.body || pagamento;
+
+      const status = dados.status;
 
       pagamentos[data.data.id] = status;
 
@@ -90,7 +89,7 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// 🔎 STATUS
+// 🔎 CONSULTAR STATUS
 app.get("/status/:id", (req, res) => {
   res.json({
     status: pagamentos[req.params.id] || "pending"
