@@ -8,7 +8,7 @@ app.use(cors());
 
 // 🔐 SUA ACCESS TOKEN (cole a sua aqui)
 mercadopago.configure({
-  access_token: "APP_USR-3621281958570060-033019-27346be25e4fc9ebc600fbcae12453e3-189230820"
+  access_token: "APP_USR-3621281958570060-033019-6ce53019338b3e0d8a61d5a2b0c73640-189230820"
 });
 
 app.post("/pix", async (req, res) => {
