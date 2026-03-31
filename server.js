@@ -6,12 +6,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔐 TOKEN do Render
+// 🔐 TOKEN do Render (MP_TOKEN)
 mercadopago.configure({
   access_token: process.env.MP_TOKEN
 });
 
-// 🔥 banco temporário (memória)
+// 🧠 banco temporário (memória)
 let pagamentos = {};
 
 // 🚀 GERAR PIX
@@ -34,14 +34,28 @@ app.post("/pix", async (req, res) => {
 
     const dados = payment.body;
 
-    // 🔥 salva status
+    // 🔥 pega QR com segurança
+    const qr = dados?.point_of_interaction?.transaction_data?.qr_code;
+    const qrBase64 = dados?.point_of_interaction?.transaction_data?.qr_code_base64;
+
+    // 🚨 validação
+    if (!qr || !qrBase64) {
+      console.log("❌ ERRO: QR não veio do Mercado Pago");
+      console.log(JSON.stringify(dados, null, 2));
+
+      return res.status(500).json({
+        error: "Erro ao gerar QR Code PIX"
+      });
+    }
+
+    // 🔥 salva status inicial
     pagamentos[dados.id] = "pending";
 
+    // ✅ resposta única correta
     res.json({
       id: dados.id,
-      qr_code: dados.point_of_interaction.transaction_data.qr_code,
-      qr_code_base64:
-        dados.point_of_interaction.transaction_data.qr_code_base64
+      qr_code: qr,
+      qr_code_base64: qrBase64
     });
 
   } catch (error) {
@@ -62,7 +76,7 @@ app.post("/webhook", async (req, res) => {
 
       pagamentos[data.data.id] = status;
 
-      console.log("💰 Status atualizado:", status);
+      console.log("💰 Status do pagamento:", status);
     }
 
     res.sendStatus(200);
@@ -83,4 +97,7 @@ app.get("/status/:id", (req, res) => {
 });
 
 // 🚀 START
-app.listen(3000, () => console.log("🔥 Servidor rodando"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(🔥 Servidor rodando na porta ${PORT});
+});
