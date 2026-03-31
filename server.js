@@ -15,25 +15,61 @@ mercadopago.configure({
 let pagamentos = {};
 
 // 🚀 GERAR PIX
-app.post("/pix", async (req, res) => {
-  try {
-    const { valor, email } = req.body;
+async function gerarPix(){
 
-    if (!valor) {
-      return res.status(400).json({ error: "Valor obrigatório" });
-    }
+ if(itens.length===0){
+   alert("Adicione item");
+   return;
+ }
 
-    const payment = await mercadopago.payment.create({
-      transaction_amount: Number(valor),
-      description: "Pedido Romer Art",
-      payment_method_id: "pix",
-      payer: {
-        email: email || "cliente@email.com"
-      }
-    });
+ lista.innerHTML = resumo + "<br><br>⏳ Gerando PIX...";
 
-    const dados = payment.body;
+ try{
 
+   const r = await fetch("https://pix-romer-art.onrender.com/pix",{
+     method:"POST",
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({
+       valor:Number(totalFinal.toFixed(2)),
+       email:email.value
+     })
+   });
+
+   const d = await r.json();
+
+   // 🚨 MOSTRA ERRO REAL
+   if(d.error){
+     lista.innerHTML = resumo + "<br><br>❌ ERRO PIX: "+d.error;
+     console.log("ERRO BACKEND:", d);
+     return;
+   }
+
+   // 🚨 VALIDAÇÃO
+   if(!d.qr_code || !d.qr_code_base64){
+     lista.innerHTML = resumo + "<br><br>❌ QR inválido";
+     console.log("RESPOSTA:", d);
+     return;
+   }
+
+   lista.innerHTML = resumo + `
+   <br><hr><br>
+
+   <b>Pagamento via PIX</b><br><br>
+
+   <img src="data:image/png;base64,${d.qr_code_base64}" width="220"><br><br>
+
+   <textarea id="pixCode" style="width:100%;height:80px;">${d.qr_code}</textarea>
+
+   <button onclick="copiarPix()" class="btn">Copiar PIX</button>
+
+   <br><br>⏳ Aguardando pagamento...
+   `;
+
+ }catch(e){
+   lista.innerHTML = resumo + "<br><br>❌ Servidor offline";
+   console.log("ERRO FETCH:", e);
+ }
+}
     // 🔥 pega QR com segurança
     const qr = dados?.point_of_interaction?.transaction_data?.qr_code;
     const qrBase64 = dados?.point_of_interaction?.transaction_data?.qr_code_base64;
