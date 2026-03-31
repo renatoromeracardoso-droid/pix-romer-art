@@ -6,15 +6,15 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔐 TOKEN
+// 🔐 TOKEN do Render
 mercadopago.configure({
   access_token: process.env.MP_TOKEN
 });
 
-// banco simples
+// 🧠 banco temporário
 let pagamentos = {};
 
-// 🚀 GERAR PIX (VERSÃO ESTÁVEL)
+// 🚀 GERAR PIX
 app.post("/pix", async (req, res) => {
   try {
     const { valor, email } = req.body;
@@ -23,7 +23,7 @@ app.post("/pix", async (req, res) => {
       return res.status(400).json({ error: "Valor obrigatório" });
     }
 
-    const pagamento = await mercadopago.payment.create({
+    const payment = await mercadopago.payment.create({
       transaction_amount: Number(valor),
       description: "Pedido Romer Art",
       payment_method_id: "pix",
@@ -32,34 +32,65 @@ app.post("/pix", async (req, res) => {
       }
     });
 
-    const body = pagamento.response || pagamento.body;
+    // ✅ PADRÃO QUE FUNCIONAVA
+    const dados = payment.body;
 
-    // 🔥 LOG PRA DEBUG
-    console.log("RETORNO MP:", JSON.stringify(body, null, 2));
+    // 🔍 DEBUG (pode ver no Render Logs)
+    console.log("PIX GERADO:", JSON.stringify(dados, null, 2));
 
-    const tx = body.point_of_interaction?.transaction_data;
+    // 🔥 pega QR corretamente
+    const qr = dados.point_of_interaction?.transaction_data?.qr_code;
+    const qrBase64 = dados.point_of_interaction?.transaction_data?.qr_code_base64;
 
-    if (!tx || !tx.qr_code_base64) {
+    // 🚨 validação
+    if (!qr || !qrBase64) {
+      console.log("❌ QR NÃO VEIO");
       return res.status(500).json({
-        error: "Mercado Pago não retornou QR"
+        error: "QR não retornado pelo Mercado Pago"
       });
     }
 
-    pagamentos[body.id] = "pending";
+    // 💾 salva status
+    pagamentos[dados.id] = "pending";
 
+    // ✅ resposta correta
     res.json({
-      id: body.id,
-      qr_code: tx.qr_code,
-      qr_code_base64: tx.qr_code_base64
+      id: dados.id,
+      qr_code: qr,
+      qr_code_base64: qrBase64
     });
 
-  } catch (err) {
-    console.log("❌ ERRO PIX:", err);
-    res.status(500).json({ error: "Erro ao gerar PIX" });
+  } catch (error) {
+    console.log("❌ ERRO PIX:", error);
+    res.status(500).json({
+      error: "Erro ao gerar PIX"
+    });
   }
 });
 
-// 🔄 STATUS
+// 🔄 WEBHOOK (opcional, mas já pronto)
+app.post("/webhook", async (req, res) => {
+  try {
+    const data = req.body;
+
+    if (data.type === "payment") {
+      const pagamento = await mercadopago.payment.findById(data.data.id);
+      const status = pagamento.body.status;
+
+      pagamentos[data.data.id] = status;
+
+      console.log("💰 STATUS:", status);
+    }
+
+    res.sendStatus(200);
+
+  } catch (error) {
+    console.log("❌ ERRO WEBHOOK:", error);
+    res.sendStatus(500);
+  }
+});
+
+// 🔎 STATUS
 app.get("/status/:id", (req, res) => {
   res.json({
     status: pagamentos[req.params.id] || "pending"
@@ -67,4 +98,7 @@ app.get("/status/:id", (req, res) => {
 });
 
 // 🚀 START
-app.listen(3000, () => console.log("🔥 Servidor rodando"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("🔥 Servidor rodando na porta", PORT);
+});
