@@ -6,13 +6,16 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔐 Token vindo do Render (Environment Variable)
+// 🔐 Token do Mercado Pago (Render Environment)
 mercadopago.configure({
   access_token: process.env.ACCESS_TOKEN
 });
 
+// 🧠 memória simples dos pagamentos
+const pagamentos = {};
+
 // ==============================
-// 🔥 ROTA GERAR PIX
+// 🔥 GERAR PIX
 // ==============================
 app.post("/pix", async (req, res) => {
   try {
@@ -32,8 +35,13 @@ app.post("/pix", async (req, res) => {
       }
     });
 
+    const id = payment.body.id;
+
+    // salva como pendente
+    pagamentos[id] = "pending";
+
     res.json({
-      id: payment.body.id,
+      id: id,
       qr_code: payment.body.point_of_interaction.transaction_data.qr_code,
       qr_code_base64: payment.body.point_of_interaction.transaction_data.qr_code_base64
     });
@@ -45,20 +53,17 @@ app.post("/pix", async (req, res) => {
 });
 
 // ==============================
-// 🔥 WEBHOOK (CONFIRMA PAGAMENTO)
+// 🔥 WEBHOOK (MERCADO PAGO)
 // ==============================
 app.post("/webhook", async (req, res) => {
   try {
 
-    console.log("📩 Webhook bruto:", JSON.stringify(req.body));
+    console.log("📩 Webhook recebido:", JSON.stringify(req.body));
 
-    const body = req.body;
-
-    // 🔥 pega ID de qualquer formato
     const paymentId =
-      body?.data?.id ||
-      body?.id ||
-      body?.resource?.split("/").pop();
+      req.body?.data?.id ||
+      req.body?.id ||
+      req.body?.resource?.split("/").pop();
 
     if (!paymentId) {
       console.log("⚠️ ID não encontrado");
@@ -71,9 +76,10 @@ app.post("/webhook", async (req, res) => {
 
     const status = payment.body.status;
 
-    console.log("💰 STATUS REAL:", status);
+    console.log("💰 STATUS:", status);
 
     if (status === "approved") {
+      pagamentos[paymentId] = "approved";
       console.log("✅ PAGAMENTO APROVADO!");
     }
 
@@ -85,27 +91,28 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-      // 🔥 FUTURO:
-      // aqui você pode salvar pedido, enviar WhatsApp, etc
-    }
+// ==============================
+// 🔥 CONSULTAR STATUS
+// ==============================
+app.get("/status/:id", (req, res) => {
 
-    res.sendStatus(200);
+  const id = req.params.id;
 
-  } catch (error) {
-    console.log("❌ ERRO WEBHOOK:", error.message);
-    res.sendStatus(500);
-  }
+  res.json({
+    status: pagamentos[id] || "pending"
+  });
+
 });
 
 // ==============================
-// 🔥 TESTE RÁPIDO (OPCIONAL)
+// 🔥 TESTE SERVIDOR
 // ==============================
 app.get("/", (req, res) => {
   res.send("Servidor PIX rodando 🚀");
 });
 
 // ==============================
-// 🚀 START SERVER
+// 🚀 START
 // ==============================
 const PORT = process.env.PORT || 3000;
 
