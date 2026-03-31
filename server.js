@@ -11,7 +11,7 @@ mercadopago.configure({
   access_token: process.env.MP_TOKEN
 });
 
-// 🧠 memória temporária
+// 🧠 memória simples
 let pagamentos = {};
 
 // 🚀 GERAR PIX
@@ -27,6 +27,10 @@ app.post("/pix", async (req, res) => {
       transaction_amount: Number(valor),
       description: "Pedido Romer Art",
       payment_method_id: "pix",
+
+      // 🔥 IMPORTANTE (garante fluxo correto)
+      notification_url: "https://pix-romer-art.onrender.com/webhook",
+
       payer: {
         email: email || "cliente@email.com"
       }
@@ -36,32 +40,17 @@ app.post("/pix", async (req, res) => {
 
     console.log("PIX GERADO:", JSON.stringify(dados, null, 2));
 
-    // 🔥 pega QR de qualquer formato
-    let qr = null;
-    let qrBase64 = null;
+    // 🔥 caminho correto do PIX
+    const tx = dados.point_of_interaction?.transaction_data;
 
-    // padrão principal
-    if (dados.point_of_interaction?.transaction_data) {
-      qr = dados.point_of_interaction.transaction_data.qr_code;
-      qrBase64 = dados.point_of_interaction.transaction_data.qr_code_base64;
-    }
+    const qr = tx?.qr_code;
+    const qrBase64 = tx?.qr_code_base64;
 
-    // fallback 1
-    if (!qr && dados.qr_code) {
-      qr = dados.qr_code;
-      qrBase64 = dados.qr_code_base64;
-    }
-
-    // fallback 2 (casos raros)
-    if (!qr && dados.transaction_details?.external_resource_url) {
-      qr = dados.transaction_details.external_resource_url;
-    }
-
-    // 🚨 validação final
-    if (!qr) {
-      console.log("❌ QR NÃO ENCONTRADO");
+    // 🚨 validação forte
+    if (!qr || !qrBase64) {
+      console.log("❌ QR NÃO VEIO:", dados);
       return res.status(500).json({
-        error: "QR não retornado pelo Mercado Pago",
+        error: "Mercado Pago não retornou QR",
         debug: dados
       });
     }
