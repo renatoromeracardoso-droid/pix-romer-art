@@ -6,24 +6,21 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔐 Token do Mercado Pago (Render Environment)
+// 🔐 TOKEN do Render
 mercadopago.configure({
-  access_token: process.env.ACCESS_TOKEN
+  access_token: process.env.MP_TOKEN
 });
 
-// 🧠 memória simples dos pagamentos
-const pagamentos = {};
+// 🔥 banco temporário (memória)
+let pagamentos = {};
 
-// ==============================
-// 🔥 GERAR PIX
-// ==============================
+// 🚀 GERAR PIX
 app.post("/pix", async (req, res) => {
   try {
-
     const { valor, email } = req.body;
 
     if (!valor) {
-      return res.status(400).json({ error: "Valor não informado" });
+      return res.status(400).json({ error: "Valor obrigatório" });
     }
 
     const payment = await mercadopago.payment.create({
@@ -35,87 +32,55 @@ app.post("/pix", async (req, res) => {
       }
     });
 
-    const id = payment.body.id;
+    const dados = payment.body;
 
-    // salva como pendente
-    pagamentos[id] = "pending";
+    // 🔥 salva status
+    pagamentos[dados.id] = "pending";
 
     res.json({
-      id: id,
-      qr_code: payment.body.point_of_interaction.transaction_data.qr_code,
-      qr_code_base64: payment.body.point_of_interaction.transaction_data.qr_code_base64
+      id: dados.id,
+      qr_code: dados.point_of_interaction.transaction_data.qr_code,
+      qr_code_base64:
+        dados.point_of_interaction.transaction_data.qr_code_base64
     });
 
   } catch (error) {
-    console.log("❌ ERRO PIX:", error.message);
+    console.log("❌ ERRO PIX:", error);
     res.status(500).json({ error: "Erro ao gerar PIX" });
   }
 });
 
-// ==============================
-// 🔥 WEBHOOK (MERCADO PAGO)
-// ==============================
+// 🔥 WEBHOOK (Mercado Pago)
 app.post("/webhook", async (req, res) => {
   try {
+    const data = req.body;
 
-    console.log("📩 Webhook recebido:", JSON.stringify(req.body));
+    if (data.type === "payment") {
+      const pagamento = await mercadopago.payment.findById(data.data.id);
 
-    const paymentId =
-      req.body?.data?.id ||
-      req.body?.id ||
-      req.body?.resource?.split("/").pop();
+      const status = pagamento.body.status;
 
-    if (!paymentId) {
-      console.log("⚠️ ID não encontrado");
-      return res.sendStatus(200);
-    }
+      pagamentos[data.data.id] = status;
 
-    console.log("🔎 Buscando pagamento:", paymentId);
-
-    const payment = await mercadopago.payment.findById(paymentId);
-
-    const status = payment.body.status;
-
-    console.log("💰 STATUS:", status);
-
-    if (status === "approved") {
-      pagamentos[paymentId] = "approved";
-      console.log("✅ PAGAMENTO APROVADO!");
+      console.log("💰 Status atualizado:", status);
     }
 
     res.sendStatus(200);
 
   } catch (error) {
-    console.log("❌ ERRO WEBHOOK:", error.message);
+    console.log("❌ ERRO WEBHOOK:", error);
     res.sendStatus(500);
   }
 });
 
-// ==============================
-// 🔥 CONSULTAR STATUS
-// ==============================
+// 🔎 CONSULTAR STATUS
 app.get("/status/:id", (req, res) => {
-
   const id = req.params.id;
 
   res.json({
     status: pagamentos[id] || "pending"
   });
-
 });
 
-// ==============================
-// 🔥 TESTE SERVIDOR
-// ==============================
-app.get("/", (req, res) => {
-  res.send("Servidor PIX rodando 🚀");
-});
-
-// ==============================
 // 🚀 START
-// ==============================
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("🚀 Servidor rodando na porta", PORT);
-});
+app.listen(3000, () => console.log("🔥 Servidor rodando"));
