@@ -3,17 +3,23 @@ const cors = require("cors");
 const mercadopago = require("mercadopago");
 
 const app = express();
+
 app.use(express.json());
 app.use(cors());
 
-// 🔐 SUA ACCESS TOKEN (cole a sua aqui)
+// 🔐 Usa o token do Render (Environment Variable)
 mercadopago.configure({
-  access_token: "APP_USR-3621281958570060-033019-6ce53019338b3e0d8a61d5a2b0c73640-189230820"
+  access_token: process.env.ACCESS_TOKEN
 });
 
+// Rota PIX
 app.post("/pix", async (req, res) => {
   try {
     const { valor } = req.body;
+
+    if (!valor) {
+      return res.status(400).json({ error: "Valor não informado" });
+    }
 
     const payment = await mercadopago.payment.create({
       transaction_amount: Number(valor),
@@ -26,20 +32,21 @@ app.post("/pix", async (req, res) => {
 
     res.json({
       qr_code: payment.body.point_of_interaction.transaction_data.qr_code,
-      qr_code_base64:
-        payment.body.point_of_interaction.transaction_data.qr_code_base64
+      qr_code_base64: payment.body.point_of_interaction.transaction_data.qr_code_base64
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro ao gerar PIX" });
+    console.error("ERRO PIX:", error);
+    res.status(500).json({
+      error: "Erro ao gerar PIX",
+      detalhe: error.message
+    });
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("API PIX funcionando 🚀");
-});
+// Porta padrão Render
+const PORT = process.env.PORT || 3000;
 
-app.listen(3000, () => {
-  console.log("Servidor rodando");
+app.listen(PORT, () => {
+  console.log("Servidor rodando na porta", PORT);
 });
