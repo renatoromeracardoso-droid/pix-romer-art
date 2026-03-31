@@ -3,21 +3,33 @@ const cors = require("cors");
 const mercadopago = require("mercadopago");
 
 const app = express();
-app.use(express.json());
-app.use(cors());
 
-// 🔐 TOKEN
+// 🔥 CORS LIBERADO (IMPORTANTE)
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+
+// 🔐 TOKEN (Render ENV: MP_TOKEN)
 mercadopago.configure({
   access_token: process.env.MP_TOKEN
 });
 
-// 🧠 memória
+// 🧠 memória simples
 let pagamentos = {};
+
+// 🔎 TESTE
+app.get("/", (req, res) => {
+  res.send("🔥 Servidor OK");
+});
 
 // 🚀 GERAR PIX
 app.post("/pix", async (req, res) => {
+
+  console.log("🔥 REQUISIÇÃO PIX RECEBIDA");
+
   try {
     const { valor, email } = req.body;
+
+    console.log("📦 Dados:", req.body);
 
     if (!valor) {
       return res.status(400).json({ error: "Valor obrigatório" });
@@ -27,45 +39,21 @@ app.post("/pix", async (req, res) => {
       transaction_amount: Number(valor),
       description: "Pedido Romer Art",
       payment_method_id: "pix",
-      binary_mode: true, // 🔥 ESSENCIAL
-
-      notification_url: "https://pix-romer-art.onrender.com/webhook",
-
       payer: {
         email: email || "cliente@email.com"
       }
     });
 
-    const dados = payment.body || payment;
+    const dados = payment.body;
 
-    console.log("PIX GERADO:", JSON.stringify(dados, null, 2));
+    console.log("✅ PIX GERADO:", JSON.stringify(dados, null, 2));
 
-    // 🔥 tenta pegar QR em todos formatos possíveis
-    let qr = null;
-    let qrBase64 = null;
+    const tx = dados.point_of_interaction?.transaction_data;
 
-    // padrão principal
-    if (dados.point_of_interaction?.transaction_data) {
-      qr = dados.point_of_interaction.transaction_data.qr_code;
-      qrBase64 = dados.point_of_interaction.transaction_data.qr_code_base64;
-    }
-
-    // fallback (algumas versões)
-    if (!qr && dados.qr_code) {
-      qr = dados.qr_code;
-      qrBase64 = dados.qr_code_base64;
-    }
-
-    // fallback extra
-    if (!qr && dados.transaction_details?.external_resource_url) {
-      qr = dados.transaction_details.external_resource_url;
-    }
-
-    // 🚨 validação
-    if (!qr) {
+    if (!tx || !tx.qr_code) {
       console.log("❌ QR NÃO VEIO:", dados);
       return res.status(500).json({
-        error: "Mercado Pago não retornou QR",
+        error: "QR não retornado pelo Mercado Pago",
         debug: dados
       });
     }
@@ -74,8 +62,8 @@ app.post("/pix", async (req, res) => {
 
     return res.json({
       id: dados.id,
-      qr_code: qr,
-      qr_code_base64: qrBase64
+      qr_code: tx.qr_code,
+      qr_code_base64: tx.qr_code_base64
     });
 
   } catch (error) {
@@ -86,7 +74,7 @@ app.post("/pix", async (req, res) => {
   }
 });
 
-// 🔄 WEBHOOK
+// 🔄 WEBHOOK (opcional)
 app.post("/webhook", async (req, res) => {
   try {
     const data = req.body;
@@ -95,9 +83,7 @@ app.post("/webhook", async (req, res) => {
 
     if (data.type === "payment") {
       const pagamento = await mercadopago.payment.findById(data.data.id);
-      const dados = pagamento.body || pagamento;
-
-      const status = dados.status;
+      const status = pagamento.body.status;
 
       pagamentos[data.data.id] = status;
 
@@ -112,7 +98,7 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// 🔎 STATUS
+// 🔎 CONSULTAR STATUS
 app.get("/status/:id", (req, res) => {
   res.json({
     status: pagamentos[req.params.id] || "pending"
@@ -120,7 +106,7 @@ app.get("/status/:id", (req, res) => {
 });
 
 // 🚀 START
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🔥 Servidor rodando na porta", PORT);
 });
