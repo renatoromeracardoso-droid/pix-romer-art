@@ -6,12 +6,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔐 TOKEN do Render
+// 🔐 TOKEN
 mercadopago.configure({
   access_token: process.env.MP_TOKEN
 });
 
-// 🧠 banco temporário
+// 🧠 memória temporária
 let pagamentos = {};
 
 // 🚀 GERAR PIX
@@ -32,18 +32,37 @@ app.post("/pix", async (req, res) => {
       }
     });
 
-    // 🔥 COMPATÍVEL COM TODAS VERSÕES
     const dados = payment.body || payment;
 
     console.log("PIX GERADO:", JSON.stringify(dados, null, 2));
 
-    const qr = dados.point_of_interaction?.transaction_data?.qr_code;
-    const qrBase64 = dados.point_of_interaction?.transaction_data?.qr_code_base64;
+    // 🔥 pega QR de qualquer formato
+    let qr = null;
+    let qrBase64 = null;
 
-    if (!qr || !qrBase64) {
-      console.log("❌ QR NÃO VEIO");
+    // padrão principal
+    if (dados.point_of_interaction?.transaction_data) {
+      qr = dados.point_of_interaction.transaction_data.qr_code;
+      qrBase64 = dados.point_of_interaction.transaction_data.qr_code_base64;
+    }
+
+    // fallback 1
+    if (!qr && dados.qr_code) {
+      qr = dados.qr_code;
+      qrBase64 = dados.qr_code_base64;
+    }
+
+    // fallback 2 (casos raros)
+    if (!qr && dados.transaction_details?.external_resource_url) {
+      qr = dados.transaction_details.external_resource_url;
+    }
+
+    // 🚨 validação final
+    if (!qr) {
+      console.log("❌ QR NÃO ENCONTRADO");
       return res.status(500).json({
-        error: "QR não retornado pelo Mercado Pago"
+        error: "QR não retornado pelo Mercado Pago",
+        debug: dados
       });
     }
 
@@ -63,7 +82,7 @@ app.post("/pix", async (req, res) => {
   }
 });
 
-// 🔄 WEBHOOK (Mercado Pago)
+// 🔄 WEBHOOK
 app.post("/webhook", async (req, res) => {
   try {
     const data = req.body;
@@ -89,7 +108,7 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// 🔎 CONSULTAR STATUS
+// 🔎 STATUS
 app.get("/status/:id", (req, res) => {
   res.json({
     status: pagamentos[req.params.id] || "pending"
