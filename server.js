@@ -52,3 +52,35 @@ app.post("/pix", async (req,res)=>{
 app.listen(process.env.PORT || 10000, ()=>{
   console.log("Servidor rodando");
 });
+// ===== WEBHOOK =====
+app.post("/webhook", async (req,res)=>{
+
+  try{
+
+    console.log("WEBHOOK RECEBIDO:", req.body);
+
+    if(req.body.type === "payment"){
+
+      const paymentId = req.body.data.id;
+
+      const pagamento = await mercadopago.payment.findById(paymentId);
+
+      const status = pagamento.body.status;
+
+      console.log("STATUS:", status);
+
+      if(status === "approved"){
+        console.log("✅ PAGAMENTO APROVADO");
+        // aqui você pode salvar no banco depois
+      }
+
+    }
+
+    res.sendStatus(200);
+
+  }catch(e){
+    console.log("ERRO WEBHOOK:", e);
+    res.sendStatus(500);
+  }
+
+});
