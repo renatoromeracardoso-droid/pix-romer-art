@@ -2,17 +2,242 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Teste</title>
-</head>
+<title>RomerArt Pedidos</title>
 
+<style>
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;cursor:pointer;}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+.whats{background:#25d366;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+</style>
+
+</head>
 <body>
 
-<button onclick="addItem()">Adicionar</button>
+<div class="app">
+
+<div class="card">
+<h3>Cliente</h3>
+<input id="cliente" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
+<input id="endereco" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
+</div>
+
+<div class="card">
+<h3>Serviço</h3>
+
+<select id="tipo">
+<option value="">Selecione</option>
+<option>Corte</option>
+<option>Gravação</option>
+<option>Corte + Gravação</option>
+</select>
+
+<select id="item">
+<option value="">Selecione</option>
+<option value="MDF">MDF</option>
+<option value="ACRILICO">Acrílico</option>
+<option value="COMPENSADO">Compensado</option>
+<option value="CAMISETA">Camiseta</option>
+<option value="COPO">Copo</option>
+</select>
+
+<select id="esp"></select>
+
+<input id="larg" placeholder="Largura mm">
+<input id="alt" placeholder="Altura mm">
+<input id="qtd" value="1">
+
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button class="whats" onclick="enviarWhats()" id="btnWhats" disabled>Enviar Pedido</button>
+
+</div>
+
+<div id="resumo" class="box"></div>
+
+</div>
 
 <script>
+
+const WHATS="5511946447040";
+
+let itens=[];
+let pagamentoId=null;
+let pago=false;
+
+// CEP
+cep.onblur=async()=>{
+ let c=cep.value.replace(/\D/g,'');
+ if(c.length!==8)return;
+ let r=await fetch(https://viacep.com.br/ws/${c}/json/);
+ let d=await r.json();
+ endereco.value=d.logradouro||"";
+ bairro.value=d.bairro||"";
+ cidade.value=d.localidade||"";
+};
+
+// LIMITES
+larg.oninput=()=>{if(larg.value>400)larg.value=400;}
+alt.oninput=()=>{if(alt.value>400)alt.value=400;}
+
+// PREÇOS
+const precos={
+ MDF:0.08,
+ ACRILICO:0.15,
+ COMPENSADO:0.07,
+ CAMISETA:25,
+ COPO:8
+};
+
+// ADD
 function addItem(){
-  alert("Funcionando!");
+
+ if(!tipo.value||!item.value){
+  alert("Preencha serviço e item");
+  return;
+ }
+
+ let q=Number(qtd.value)||1;
+
+ let valor=0;
+
+ if(precos[item.value] && (item.value==="CAMISETA"||item.value==="COPO")){
+  valor=precos[item.value]*q;
+ }else{
+
+  let l=Number(larg.value);
+  let a=Number(alt.value);
+
+  if(!l||!a){
+   alert("Informe medidas");
+   return;
+  }
+
+  if(l>400||a>400){
+   alert("Máximo 400mm");
+   return;
+  }
+
+  let area=(l*a)/100;
+
+  let material=area*precos[item.value];
+  let tempo=area*0.04;
+  let custo=(tempo/60)*60;
+
+  valor=(material+custo+1)*1.4;
+
+  if(tipo.value==="Gravação") valor*=1.2;
+  if(tipo.value==="Corte + Gravação") valor*=1.5;
+
+  valor*=q;
+ }
+
+ itens.push({
+  tipo:tipo.value,
+  item:item.value,
+  valor
+ });
+
+ render();
 }
+
+// RESUMO
+function render(){
+
+ let html="";
+ let total=0;
+
+ itens.forEach((i,x)=>{
+  total+=i.valor;
+  html+=${x+1}) ${i.tipo} - ${i.item} - R$ ${i.valor.toFixed(2)}<br>;
+ });
+
+ let frete=15;
+ let desconto=total*0.05;
+ let final=total+frete-desconto;
+
+ html+=<br>Frete: R$ ${frete};
+ html+=<br>Subtotal: R$ ${total.toFixed(2)};
+ html+=<br>Desconto PIX: -R$ ${desconto.toFixed(2)};
+ html+=<br><b>Total: R$ ${final.toFixed(2)}</b>;
+
+ resumo.innerHTML=html;
+}
+
+// PIX
+async function gerarPix(){
+
+ if(itens.length===0){
+  alert("Adicione itens");
+  return;
+ }
+
+ let total=0;
+ itens.forEach(i=>total+=i.valor);
+
+ let final=total-(total*0.05);
+
+ const r=await fetch("/pix",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({valor:final,email:email.value})
+ });
+
+ const d=await r.json();
+
+ pagamentoId=d.id;
+
+ resumo.innerHTML+=`
+ <br><br>
+ <img width="200" src="data:image/png;base64,${d.img}">
+ <textarea style="width:100%">${d.qr}</textarea>
+ <br><b id="statusPix">Aguardando pagamento...</b>
+ `;
+
+ verificar();
+}
+
+// STATUS
+function verificar(){
+
+ const intervalo=setInterval(async()=>{
+
+  const r=await fetch("/status/"+pagamentoId);
+  const d=await r.json();
+
+  if(d.status==="pago"){
+   document.getElementById("statusPix").innerHTML="✅ PAGAMENTO APROVADO";
+   pago=true;
+   document.getElementById("btnWhats").disabled=false;
+   clearInterval(intervalo);
+  }
+
+ },3000);
+}
+
+// WHATS
+function enviarWhats(){
+
+ if(!pago){
+  alert("Pagamento não confirmado");
+  return;
+ }
+
+ let texto=resumo.innerText;
+
+ window.open(https://wa.me/${WHATS}?text=${encodeURIComponent(texto)});
+}
+
 </script>
 
 </body>
