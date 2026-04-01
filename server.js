@@ -4,12 +4,10 @@ const mercadopago = require("mercadopago");
 const app = express();
 app.use(express.json());
 
-// CONFIG TOKEN
-mercadopago.configure({
-  access_token: process.env.MP_TOKEN
-});
+// CONFIGURA TOKEN
+mercadopago.configurations.setAccessToken(process.env.MP_TOKEN);
 
-// GERAR PIX
+// PIX
 app.post("/pix", async (req, res) => {
   try {
 
@@ -55,10 +53,12 @@ app.get("/status/:id", async (req, res) => {
     });
 
   } catch (e) {
+    console.log("ERRO STATUS:", e);
     res.status(500).json({ erro: "Erro status" });
   }
 });
 
+// PORTA
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
