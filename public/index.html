@@ -6,27 +6,39 @@
 <title>RomerArt Pedidos</title>
 
 <style>
+
+*{
+  box-sizing:border-box;
+}
+
 body{
-  font-family: Arial;
+  margin:0;
+  font-family:Arial, sans-serif;
   background: linear-gradient(135deg,#ff416c,#ff4b2b);
+}
+
+/* CENTRALIZAÇÃO CORRETA */
+.wrapper{
   display:flex;
   justify-content:center;
   align-items:center;
-  height:100vh;
-  margin:0;
+  min-height:100vh;
+  padding:20px;
 }
 
 .card{
   background:#1e293b;
   padding:25px;
   border-radius:12px;
-  width:360px;
+  width:100%;
+  max-width:360px;
   color:#fff;
   box-shadow:0 10px 25px rgba(0,0,0,0.3);
 }
 
 h2{
   text-align:center;
+  margin-bottom:15px;
 }
 
 input, select{
@@ -54,41 +66,38 @@ button{
   margin-top:15px;
   font-size:14px;
 }
+
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="wrapper">
+  <div class="card">
 
-<h2>Pedidos Online</h2>
+    <h2>Pedidos Online</h2>
 
-<select id="material">
-  <option value="0.08">MDF</option>
-  <option value="0.15">Acrílico</option>
-</select>
+    <select id="material">
+      <option value="0.08">MDF</option>
+      <option value="0.15">Acrílico</option>
+    </select>
 
-<input id="largura" type="number" placeholder="Largura (mm)">
-<input id="altura" type="number" placeholder="Altura (mm)">
-<input id="quantidade" type="number" value="1">
+    <input id="largura" type="number" placeholder="Largura (mm)">
+    <input id="altura" type="number" placeholder="Altura (mm)">
+    <input id="quantidade" type="number" value="1">
 
-<button class="add" onclick="adicionarItem()">Adicionar</button>
-<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+    <button class="add" onclick="adicionarItem()">Adicionar</button>
+    <button class="pix" onclick="gerarPix()">Gerar PIX</button>
 
-<div id="resumo"></div>
+    <div id="resumo"></div>
 
+  </div>
 </div>
 
 <script>
 
-// ===============================
-// ESTADO
-// ===============================
 let carrinho = [];
 
-// ===============================
-// ADICIONAR ITEM
-// ===============================
 function adicionarItem(){
 
   const largura = Number(document.getElementById("largura").value);
@@ -101,33 +110,20 @@ function adicionarItem(){
     return;
   }
 
-  if(largura > 400 || altura > 400){
-    alert("Máximo 400mm");
-    return;
-  }
-
   const area = (largura * altura) / 100;
   const valor = ((area * preco) + 2) * qtd;
 
-  carrinho.push({
-    largura,
-    altura,
-    qtd,
-    valor
-  });
+  carrinho.push({largura, altura, qtd, valor});
 
   atualizarResumo();
 }
 
-// ===============================
-// ATUALIZAR RESUMO
-// ===============================
 function atualizarResumo(){
 
   let total = 0;
   let html = "<b>Pedido:</b><br>";
 
-  carrinho.forEach((item, i)=>{
+  carrinho.forEach((item,i)=>{
     total += item.valor;
     html += ${i+1}) ${item.largura}x${item.altura} | Qtd:${item.qtd} | R$ ${item.valor.toFixed(2)}<br>;
   });
@@ -142,9 +138,6 @@ function atualizarResumo(){
   document.getElementById("resumo").innerHTML = html;
 }
 
-// ===============================
-// GERAR PIX
-// ===============================
 async function gerarPix(){
 
   if(carrinho.length === 0){
@@ -159,16 +152,16 @@ async function gerarPix(){
 
   try{
 
-    const response = await fetch("/pix",{
+    const res = await fetch("/pix",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({
+      body:JSON.stringify({
         valor: final,
-        email: "romerartbrasil@gmail.com"
+        email:"romerartbrasil@gmail.com"
       })
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
     if(data.erro){
       alert(data.erro);
@@ -181,9 +174,8 @@ async function gerarPix(){
       <textarea style="width:100%;margin-top:10px">${data.qr}</textarea>
     `;
 
-  }catch(err){
+  }catch(e){
     alert("Erro ao conectar com servidor");
-    console.log(err);
   }
 }
 
