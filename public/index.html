@@ -1,9 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Pedidos RomerArt</title>
+
+<style>
+body{
+  margin:0;
+  font-family: Arial;
+  background: linear-gradient(135deg,#ff416c,#ff4b2b);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.card{
+  background:#1e293b;
+  padding:25px;
+  border-radius:12px;
+  width:300px;
+  color:white;
+  box-shadow:0 0 20px rgba(0,0,0,0.3);
+}
+
+h2{
+  text-align:center;
+}
+
+select,input,button{
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+  border-radius:6px;
+  border:none;
+}
+
+button{
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.btn-add{
+  background:#f59e0b;
+}
+
+.btn-pix{
+  background:#22c55e;
+}
+
+#resumo{
+  margin-top:15px;
+  font-size:14px;
+}
+</style>
+
+</head>
+<body>
+
+<div class="card">
+
+<h2>Pedidos Online</h2>
+
+<select id="material">
+  <option value="150">MDF 3mm</option>
+  <option value="180">MDF 6mm</option>
+  <option value="220">Acrílico</option>
+  <option value="50">Camiseta</option>
+  <option value="30">Copo</option>
+</select>
+
+<input id="l" placeholder="Largura mm">
+<input id="a" placeholder="Altura mm">
+<input id="q" value="1" placeholder="Quantidade">
+
+<button class="btn-add" onclick="adicionar()">Adicionar</button>
+<button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
+
+<div id="resumo"></div>
+
+</div>
+
 <script>
 
 let itens = [];
 let pagamentoId = null;
 let intervalo = null;
 
+// ➕ ADICIONAR ITEM
 function adicionar(){
 
   const mat = document.getElementById("material");
@@ -34,9 +118,11 @@ function adicionar(){
   }
 
   itens.push({nome,l,a,q,valor});
+
   atualizar();
 }
 
+// 🔄 ATUALIZA RESUMO
 function atualizar(){
 
   let html = "";
@@ -57,6 +143,7 @@ function atualizar(){
   document.getElementById("resumo").innerHTML = html;
 }
 
+// 💰 GERAR PIX
 async function gerarPix(){
 
   let subtotal = 0;
@@ -90,6 +177,7 @@ async function gerarPix(){
 
 }
 
+// 🔁 VERIFICA AUTOMATICAMENTE
 function iniciarVerificacao(){
 
   intervalo = setInterval(async () => {
@@ -108,8 +196,11 @@ function iniciarVerificacao(){
 
     }
 
-  }, 3000); // verifica a cada 3 segundos
+  }, 3000);
 
 }
 
 </script>
+
+</body>
+</html>
