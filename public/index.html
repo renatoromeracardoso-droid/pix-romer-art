@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Romerart Pedidos</title>
+<title>Pedidos</title>
 
 <style>
 body{
@@ -72,12 +72,12 @@ let itens = [];
 
 function addItem(){
 
- let l = parseFloat(document.getElementById("larg").value);
- let a = parseFloat(document.getElementById("alt").value);
- let q = parseInt(document.getElementById("qtd").value);
- let preco = parseFloat(document.getElementById("material").value);
+ let l = parseFloat(document.getElementById("larg").value) || 0;
+ let a = parseFloat(document.getElementById("alt").value) || 0;
+ let q = parseInt(document.getElementById("qtd").value) || 1;
+ let preco = parseFloat(document.getElementById("material").value) || 0;
 
- if(!l || !a){
+ if(l <= 0 || a <= 0){
    alert("Preencha largura e altura");
    return;
  }
@@ -89,9 +89,19 @@ function addItem(){
 
  let area = (l * a)/100;
  let valor = (area * preco)+2;
- valor *= q;
+ valor = valor * q;
 
- itens.push({l,a,q,valor});
+ if(isNaN(valor)){
+   alert("Erro no cálculo");
+   return;
+ }
+
+ itens.push({
+   l:Number(l),
+   a:Number(a),
+   q:Number(q),
+   valor:Number(valor)
+ });
 
  render();
 }
@@ -102,8 +112,9 @@ function render(){
  let html="<br><b>Pedido:</b><br>";
 
  itens.forEach((i,x)=>{
-   total += i.valor;
-   html += ${x+1}) ${i.l}x${i.a} | Qtd:${i.q} | R$ ${i.valor.toFixed(2)}<br>;
+   let v = Number(i.valor || 0);
+   total += v;
+   html += ${x+1}) ${i.l}x${i.a} | Qtd:${i.q} | R$ ${v.toFixed(2)}<br>;
  });
 
  let desc = total*0.05;
@@ -118,30 +129,41 @@ function render(){
 
 async function gerarPix(){
 
+ if(itens.length === 0){
+   alert("Adicione item primeiro");
+   return;
+ }
+
  let total=0;
- itens.forEach(i=> total+=i.valor);
+ itens.forEach(i=> total+=Number(i.valor||0));
 
  let final = Number((total*0.95).toFixed(2));
 
- let r = await fetch("https://pix-romer-art.onrender.com/pix",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({
-     valor: final,
-     email:"romerartbrasil@gmail.com"
-   })
- });
+ try{
 
- let d = await r.json();
+   let r = await fetch("https://pix-romer-art.onrender.com/pix",{
+     method:"POST",
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({
+       valor: final,
+       email:"romerartbrasil@gmail.com"
+     })
+   });
 
- let qr = d.qr || d.qr_code;
- let img = d.img || d.qr_code_base64;
+   let d = await r.json();
 
- document.getElementById("resumo").innerHTML += `
- <br><br><b>Pague com PIX:</b><br>
- <img width="200" src="data:image/png;base64,${img}">
- <textarea style="width:100%">${qr}</textarea>
- `;
+   let qr = d.qr || d.qr_code || "";
+   let img = d.img || d.qr_code_base64 || "";
+
+   document.getElementById("resumo").innerHTML += `
+   <br><br><b>Pague com PIX:</b><br>
+   ${img ? <img width="200" src="data:image/png;base64,${img}"> : ""}
+   <textarea style="width:100%">${qr}</textarea>
+   `;
+
+ }catch(e){
+   alert("Erro ao gerar PIX");
+ }
 }
 
 </script>
