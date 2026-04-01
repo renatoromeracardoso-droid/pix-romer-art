@@ -1,84 +1,8 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<title>Pedidos</title>
-
-<style>
-body{
-  margin:0;
-  font-family:Arial;
-  background: linear-gradient(135deg,#ff416c,#ff4b2b);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-}
-
-.box{
-  background:#1e293b;
-  padding:20px;
-  border-radius:10px;
-  width:320px;
-  color:#fff;
-}
-
-input,select{
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-  border:none;
-  border-radius:5px;
-}
-
-button{
-  width:100%;
-  padding:10px;
-  margin-top:5px;
-  border:none;
-  border-radius:5px;
-  color:#fff;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-.add{background:orange;}
-.pix{background:green;}
-
-#resumo{
-  margin-top:10px;
-}
-</style>
-</head>
-
-<body>
-
-<div class="box">
-
-<h3>Pedidos Online</h3>
-
-<select id="material">
-<option value="0.08">MDF 3mm</option>
-<option value="0.10">MDF 6mm</option>
-<option value="0.15">Acrílico</option>
-<option value="25">Camiseta</option>
-<option value="12">Copo</option>
-</select>
-
-<input id="l" placeholder="Largura">
-<input id="a" placeholder="Altura">
-<input id="q" type="number" value="1">
-
-<button class="add" onclick="adicionar()">Adicionar</button>
-<button class="pix" onclick="gerarPix()">Gerar PIX</button>
-
-<div id="resumo"></div>
-
-</div>
-
 <script>
 
 let itens = [];
+let pagamentoId = null;
+let intervalo = null;
 
 function adicionar(){
 
@@ -110,7 +34,6 @@ function adicionar(){
   }
 
   itens.push({nome,l,a,q,valor});
-
   atualizar();
 }
 
@@ -151,9 +74,15 @@ async function gerarPix(){
 
     const d = await r.json();
 
+    pagamentoId = d.id;
+
     document.getElementById("resumo").innerHTML +=
       "<br><br><b>PIX:</b><br>" +
-      "<textarea style='width:100%'>" + d.qr + "</textarea>";
+      "<img width='200' src='data:image/png;base64," + d.img + "'/>" +
+      "<textarea style='width:100%'>" + d.qr + "</textarea>" +
+      "<br><b id='statusPagamento'>Aguardando pagamento...</b>";
+
+    iniciarVerificacao();
 
   }catch(e){
     alert("Erro ao gerar PIX");
@@ -161,7 +90,26 @@ async function gerarPix(){
 
 }
 
-</script>
+function iniciarVerificacao(){
 
-</body>
-</html>
+  intervalo = setInterval(async () => {
+
+    if(!pagamentoId) return;
+
+    const r = await fetch("/status/" + pagamentoId);
+    const d = await r.json();
+
+    if(d.status === "pago"){
+
+      document.getElementById("statusPagamento").innerHTML =
+        "✅ PAGAMENTO APROVADO";
+
+      clearInterval(intervalo);
+
+    }
+
+  }, 3000); // verifica a cada 3 segundos
+
+}
+
+</script>
