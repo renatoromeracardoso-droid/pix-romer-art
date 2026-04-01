@@ -38,6 +38,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <select id="servico"></select>
 <select id="material"></select>
 <select id="produto"></select>
+<select id="espessura"></select>
 
 <input id="largura" placeholder="Largura mm">
 <input id="altura" placeholder="Altura mm">
@@ -50,20 +51,19 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 </div>
 
 <div id="resumo" class="box"></div>
-<div id="total" class="box"></div>
 <div id="pix" class="box"></div>
 
 </div>
 
 <script>
 
-// ===== CONFIG =====
 const API = "https://pix-romer-art.onrender.com/pix";
 const WHATS = "5511946447040";
 
 let itens=[];
 
 let tabela={
+ config:[],
  materiais:[],
  produtos:[],
  servicos:[]
@@ -86,10 +86,17 @@ function csvToJson(csv){
  }).filter(l=>Object.values(l).some(v=>v));
 }
 
-// ===== CARREGAR GOOGLE =====
+// ===== CONFIG =====
+function getConfig(chave){
+ let item=tabela.config.find(c=>c.chave===chave);
+ return item?Number(item.valor):0;
+}
+
+// ===== LOAD =====
 async function carregarDados(){
 
  const urls={
+  config:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv",
   servicos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv",
   produtos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv",
   materiais:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv"
@@ -114,9 +121,10 @@ function montarSelects(){
  tabela.materiais.map(m=>`<option>${m.nome}</option>`).join("");
 
  atualizarProdutos();
+ atualizarEspessura();
 }
 
-// ===== REGRAS =====
+// ===== PRODUTOS =====
 function atualizarProdutos(){
 
  let serv=servico.value;
@@ -130,7 +138,23 @@ function atualizarProdutos(){
  lista.map(p=>`<option>${p.nome}</option>`).join("");
 }
 
+// ===== ESPESSURA =====
+function atualizarEspessura(){
+
+ let mat=tabela.materiais.find(m=>m.nome===material.value);
+
+ if(!mat||!mat.espessura){
+  espessura.innerHTML="<option>-</option>";
+  return;
+ }
+
+ let lista=mat.espessura.split("|");
+
+ espessura.innerHTML=lista.map(e=>`<option>${e}mm</option>`).join("");
+}
+
 servico.onchange=atualizarProdutos;
+material.onchange=atualizarEspessura;
 
 // ===== CEP =====
 cep.onblur=async()=>{
@@ -149,40 +173,59 @@ cep.onblur=async()=>{
 largura.oninput=()=>{if(largura.value>400)largura.value=400;}
 altura.oninput=()=>{if(altura.value>400)altura.value=400;}
 
+// ===== CALCULO =====
+function calcularValor(l,a,q){
+
+ let mat=tabela.materiais.find(m=>m.nome===material.value);
+ let base=Number(mat?.valor_base||0);
+
+ let area=(l*a)/100;
+
+ let custoMaterial=area*base;
+ let custoTempo=area*getConfig("custo_tempo");
+
+ let custo=custoMaterial+custoTempo+1;
+
+ let lucro=custo*getConfig("lucro");
+
+ let total=custo+lucro;
+
+ if(servico.value==="Gravação") total*=1.2;
+ if(servico.value==="Corte + Gravação") total*=1.5;
+
+ total*=q;
+
+ if(total<getConfig("valor_minimo")*q){
+  total=getConfig("valor_minimo")*q;
+ }
+
+ return total;
+}
+
 // ===== ADD =====
 function addItem(){
+
+ if(!nome.value||!email.value||!cep.value||!numero.value){
+  alert("Preencha cliente");
+  return;
+ }
 
  let l=Number(largura.value);
  let a=Number(altura.value);
  let q=Number(qtd.value);
 
- if(!servico.value||!material.value||!produto.value){
-  alert("Selecione tudo");
-  return;
- }
+ if(!l||!a){alert("Informe medidas");return;}
+ if(l>400||a>400){alert("Máx 400mm");return;}
 
- if(!l||!a||!q){
-  alert("Preencha medidas");
-  return;
- }
+ let valor=calcularValor(l,a,q);
 
- if(l>400||a>400){
-  alert("Máx 400mm");
-  return;
- }
-
- let mat=tabela.materiais.find(m=>m.nome===material.value);
-
- let base=Number(mat.valor_base||0);
-
- if(base<=0){
-  alert("Erro valor material");
-  return;
- }
-
- let valor=((l*a)/100)*base*q;
-
- itens.push({servico:servico.value,produto:produto.value,l,a,q,valor});
+ itens.push({
+  servico:servico.value,
+  material:material.value,
+  produto:produto.value,
+  espessura:espessura.value,
+  l,a,q,valor
+ });
 
  render();
 }
@@ -191,22 +234,33 @@ function addItem(){
 function render(){
 
  let total=0;
- let html="<b>Resumo:</b><br><br>";
+
+ let html=`<b>Pedido #${Date.now().toString().slice(-6)}</b><br><br>
+ <b>Cliente:</b><br>
+ ${nome.value}<br>
+ ${email.value}<br>
+ ${endereco.value}, ${numero.value}<br>
+ ${bairro.value} - ${cidade.value}<br><br>`;
 
  itens.forEach((i,x)=>{
   total+=i.valor;
 
   html+=`${x+1}) ${i.servico}<br>
+  ${i.material} (${i.espessura})<br>
   ${i.produto}<br>
   ${i.l}x${i.a}mm | Qtd:${i.q}<br>
   R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
- let desc=total*0.05;
- let final=total-desc;
+ let desconto=total*getConfig("desconto_pix");
+ let final=total-desconto;
 
- html+=`<b>Total: R$ ${final.toFixed(2)}</b><br>
- (5% desconto PIX)`;
+ html+=`
+ Subtotal: R$ ${total.toFixed(2)}<br>
+ Desconto PIX: -R$ ${desconto.toFixed(2)}<br>
+ <b>Total: R$ ${final.toFixed(2)}</b><br><br>
+ Prazo: 2 a 5 dias úteis
+ `;
 
  resumo.innerHTML=html;
 }
@@ -214,20 +268,10 @@ function render(){
 // ===== PIX =====
 async function gerarPix(){
 
- if(!nome.value||!email.value||!cep.value||!numero.value){
-  alert("Preencha cliente");
-  return;
- }
-
- if(itens.length===0){
-  alert("Adicione item");
-  return;
- }
-
  let total=itens.reduce((s,i)=>s+i.valor,0);
- let final=total-(total*0.05);
+ let final=total-(total*getConfig("desconto_pix"));
 
- pix.innerHTML="⏳ Gerando PIX...";
+ pix.innerHTML="Gerando PIX...";
 
  let r=await fetch(API,{
   method:"POST",
@@ -237,15 +281,10 @@ async function gerarPix(){
 
  let d=await r.json();
 
- if(!d.qr){
-  pix.innerHTML="❌ Erro PIX";
-  return;
- }
-
  pix.innerHTML=`
  <img src="data:image/png;base64,${d.qr}" width="200"><br>
  <textarea style="width:100%">${d.copia}</textarea>
- <p>⏳ Aguardando pagamento...</p>
+ <p>Aguardando pagamento...</p>
  `;
 
  statusPix(d.id);
