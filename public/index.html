@@ -1,1 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RomerArt Pedidos</title>
 
+<style>
+body{
+  font-family: Arial;
+  background: linear-gradient(135deg,#ff416c,#ff4b2b);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  margin:0;
+}
+
+.card{
+  background:#1e293b;
+  padding:25px;
+  border-radius:12px;
+  width:360px;
+  color:#fff;
+  box-shadow:0 10px 25px rgba(0,0,0,0.3);
+}
+
+h2{
+  text-align:center;
+}
+
+input, select{
+  width:100%;
+  padding:10px;
+  margin:8px 0;
+  border:none;
+  border-radius:6px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:6px;
+  margin-top:8px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.add{background:#f97316;color:#fff;}
+.pix{background:#16a34a;color:#fff;}
+
+#resumo{
+  margin-top:15px;
+  font-size:14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>Pedidos Online</h2>
+
+<select id="material">
+  <option value="0.08">MDF</option>
+  <option value="0.15">Acrílico</option>
+</select>
+
+<input id="largura" type="number" placeholder="Largura (mm)">
+<input id="altura" type="number" placeholder="Altura (mm)">
+<input id="quantidade" type="number" value="1">
+
+<button class="add" onclick="adicionarItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+
+<div id="resumo"></div>
+
+</div>
+
+<script>
+
+// ===============================
+// ESTADO
+// ===============================
+let carrinho = [];
+
+// ===============================
+// ADICIONAR ITEM
+// ===============================
+function adicionarItem(){
+
+  const largura = Number(document.getElementById("largura").value);
+  const altura = Number(document.getElementById("altura").value);
+  const qtd = Number(document.getElementById("quantidade").value);
+  const preco = Number(document.getElementById("material").value);
+
+  if(!largura || !altura){
+    alert("Preencha largura e altura");
+    return;
+  }
+
+  if(largura > 400 || altura > 400){
+    alert("Máximo 400mm");
+    return;
+  }
+
+  const area = (largura * altura) / 100;
+  const valor = ((area * preco) + 2) * qtd;
+
+  carrinho.push({
+    largura,
+    altura,
+    qtd,
+    valor
+  });
+
+  atualizarResumo();
+}
+
+// ===============================
+// ATUALIZAR RESUMO
+// ===============================
+function atualizarResumo(){
+
+  let total = 0;
+  let html = "<b>Pedido:</b><br>";
+
+  carrinho.forEach((item, i)=>{
+    total += item.valor;
+    html += ${i+1}) ${item.largura}x${item.altura} | Qtd:${item.qtd} | R$ ${item.valor.toFixed(2)}<br>;
+  });
+
+  const desconto = total * 0.05;
+  const final = total - desconto;
+
+  html += <br>Subtotal: R$ ${total.toFixed(2)};
+  html += <br>Desconto PIX: -R$ ${desconto.toFixed(2)};
+  html += <br><b>Total: R$ ${final.toFixed(2)}</b>;
+
+  document.getElementById("resumo").innerHTML = html;
+}
+
+// ===============================
+// GERAR PIX
+// ===============================
+async function gerarPix(){
+
+  if(carrinho.length === 0){
+    alert("Adicione itens primeiro");
+    return;
+  }
+
+  let total = 0;
+  carrinho.forEach(i => total += i.valor);
+
+  const final = Number((total * 0.95).toFixed(2));
+
+  try{
+
+    const response = await fetch("/pix",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        valor: final,
+        email: "romerartbrasil@gmail.com"
+      })
+    });
+
+    const data = await response.json();
+
+    if(data.erro){
+      alert(data.erro);
+      return;
+    }
+
+    document.getElementById("resumo").innerHTML += `
+      <br><br><b>PIX:</b><br>
+      <img width="200" src="data:image/png;base64,${data.img}">
+      <textarea style="width:100%;margin-top:10px">${data.qr}</textarea>
+    `;
+
+  }catch(err){
+    alert("Erro ao conectar com servidor");
+    console.log(err);
+  }
+}
+
+</script>
+
+</body>
+</html>
