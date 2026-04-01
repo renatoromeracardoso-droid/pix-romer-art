@@ -34,45 +34,12 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 </div>
 
 <div class="card">
-<h3>Serviço</h3>
+<h3>Pedido</h3>
 
-<select id="servico">
-<option value="">Selecione</option>
-<option>Corte</option>
-<option>Gravação</option>
-<option>Corte + Gravação</option>
-</select>
-
-<select id="material">
-<option value="">Material</option>
-<option>MDF</option>
-<option>Acrílico</option>
-<option>Madeira</option>
-<option>Compensado</option>
-</select>
-
+<select id="servico"></select>
+<select id="material"></select>
 <select id="espessura"></select>
-
-<select id="produto">
-<option value="">Produto</option>
-<option>CAMISETA</option>
-<option>COPO</option>
-<option>TAÇA</option>
-<option>GARRAFA</option>
-<option>CHAVEIRO</option>
-<option>CANETA</option>
-<option>LÁPIS</option>
-</select>
-
-<select id="tamanho" class="hidden">
-<option value="">Tamanho</option>
-<option>P</option><option>M</option><option>G</option><option>GG</option>
-</select>
-
-<select id="cor" class="hidden">
-<option value="">Cor</option>
-<option>Branco</option><option>Preto</option><option>Colorido</option>
-</select>
+<select id="produto"></select>
 
 <input id="largura" placeholder="Largura mm">
 <input id="altura" placeholder="Altura mm">
@@ -91,97 +58,56 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
+// ===== LINKS PLANILHA =====
+const URL_CONFIG="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv";
+const URL_SERVICOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv";
+const URL_PRODUTOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv";
+const URL_MATERIAIS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv";
+
 const API="https://pix-romer-art.onrender.com/pix";
-const WHATS="5511946447040";
-const CEP_ORIGEM="03822000";
 
+let servicos=[],produtos=[],materiais=[];
 let itens=[];
-let freteValor=0;
 
-// ===== ESPESSURA =====
-const espMap={
- MDF:[3,6],
- Acrílico:[2,3,5],
- Madeira:[3,5],
- Compensado:[3,4]
-};
+// ===== CSV PARSER MELHOR =====
+function csvToJson(csv){
+ let linhas=csv.split("\n").map(l=>l.trim()).filter(l=>l);
+ let headers=linhas[0].split(",");
+
+ return linhas.slice(1).map(l=>{
+  let dados=l.split(",");
+  let obj={};
+  headers.forEach((h,i)=>obj[h.trim()]=dados[i]?.trim());
+  return obj;
+ });
+}
+
+// ===== CARREGAR PLANILHA =====
+async function carregar(){
+
+ let s=await fetch(URL_SERVICOS).then(r=>r.text());
+ let p=await fetch(URL_PRODUTOS).then(r=>r.text());
+ let m=await fetch(URL_MATERIAIS).then(r=>r.text());
+
+ servicos=csvToJson(s);
+ produtos=csvToJson(p);
+ materiais=csvToJson(m);
+
+ servico.innerHTML=servicos.map(x=>`<option>${x.nome}</option>`).join("");
+ produto.innerHTML='<option value="">Produto</option>'+produtos.map(x=>`<option>${x.nome}</option>`).join("");
+ material.innerHTML='<option value="">Material</option>'+materiais.map(x=>`<option>${x.nome}</option>`).join("");
+}
+
+carregar();
 
 // ===== CEP =====
 cep.onblur=async()=>{
- let c=cep.value.replace(/\D/g,'');
- if(c.length!==8)return;
-
- let r=await fetch(`https://viacep.com.br/ws/${c}/json/`);
+ let r=await fetch(`https://viacep.com.br/ws/${cep.value}/json/`);
  let d=await r.json();
-
- endereco.value=d.logradouro||"";
- bairro.value=d.bairro||"";
- cidade.value=d.localidade||"";
-
- await render();
+ endereco.value=d.logradouro;
+ bairro.value=d.bairro;
+ cidade.value=d.localidade;
 };
-
-// ===== CONTROLE =====
-servico.onchange=controlarCampos;
-produto.onchange=controlarCampos;
-
-material.onchange=()=>{
- let lista=espMap[material.value]||[];
- espessura.innerHTML=lista.map(e=>`<option>${e}mm</option>`).join("");
-};
-
-function controlarCampos(){
-
- if(servico.value==="Gravação"){
-  material.classList.add("hidden");
-  espessura.classList.add("hidden");
- }else{
-  material.classList.remove("hidden");
-  espessura.classList.remove("hidden");
- }
-
- if(["COPO","TAÇA","GARRAFA","CANETA","LÁPIS"].includes(produto.value)){
-  largura.classList.add("hidden");
-  altura.classList.add("hidden");
- }else{
-  largura.classList.remove("hidden");
-  altura.classList.remove("hidden");
- }
-
- if(produto.value==="CAMISETA"){
-  tamanho.classList.remove("hidden");
-  cor.classList.remove("hidden");
- }else{
-  tamanho.classList.add("hidden");
-  cor.classList.add("hidden");
- }
-}
-
-// ===== LIMITES =====
-largura.oninput=()=>{if(largura.value>400)largura.value=400;}
-altura.oninput=()=>{if(altura.value>400)altura.value=400;}
-
-// ===== FRETE =====
-async function calcularFrete(){
-
- let cepDestino=cep.value.replace(/\D/g,'');
-
- if(cepDestino.length!==8) return 0;
-
- try{
-  let origem=await fetch(`https://viacep.com.br/ws/${CEP_ORIGEM}/json/`).then(r=>r.json());
-  let destino=await fetch(`https://viacep.com.br/ws/${cepDestino}/json/`).then(r=>r.json());
-
-  if(origem.localidade===destino.localidade){
-    return 0;
-  }
-
-  return 15;
-
- }catch{
-  return 20;
- }
-}
 
 // ===== CALCULO =====
 function calcular(){
@@ -189,100 +115,61 @@ function calcular(){
  let q=Number(qtd.value)||1;
 
  if(produto.value){
-
-  if(produto.value==="CAMISETA"){
-   let base={P:18,M:20,G:22,GG:25}[tamanho.value]||20;
-   if(cor.value==="Colorido") base+=3;
-   return base*q;
-  }
-
-  let precos={
-   COPO:8,TAÇA:10,GARRAFA:15,
-   CHAVEIRO:3,CANETA:2,"LÁPIS":1
-  };
-
-  return (precos[produto.value]||5)*q;
+  let p=produtos.find(x=>x.nome===produto.value);
+  return Number(p.preco||0)*q;
  }
+
+ let m=materiais.find(x=>x.nome===material.value);
+ let s=servicos.find(x=>x.nome===servico.value);
 
  let l=Number(largura.value)||0;
  let a=Number(altura.value)||0;
 
- if(l<=0||a<=0){alert("Informe medidas");return 0;}
-
  let area=(l*a)/100;
 
- let base={
-  MDF:0.08,Acrílico:0.15,Madeira:0.12,Compensado:0.07
- }[material.value]||0.1;
+ let base=Number(m?.preco||0);
+ let serv=Number(s?.multiplicador||1);
 
- let custo=area*base;
- let tempo=area*0.04;
-
- let total=(custo+tempo+1)*1.4;
-
- if(servico.value==="Gravação") total*=1.2;
- if(servico.value==="Corte + Gravação") total*=1.5;
-
- return total*q;
+ return area*base*serv*q;
 }
 
 // ===== ADD =====
-async function addItem(){
-
- if(!nome.value||!email.value||!cep.value||!numero.value){
-  alert("Preencha dados do cliente");
-  return;
- }
-
+function addItem(){
  let valor=calcular();
- if(valor<=0)return;
 
  itens.push({
   servico:servico.value,
   material:material.value,
   produto:produto.value,
-  esp:espessura.value||"-",
-  l:largura.value||"-",
-  a:altura.value||"-",
+  l:largura.value,
+  a:altura.value,
   q:qtd.value,
   valor
  });
 
- await render();
+ render();
 }
 
 // ===== RESUMO =====
-async function render(){
+function render(){
 
  let total=0;
 
- let html=`<b>Pedido #${Date.now().toString().slice(-6)}</b><br><br>
- Nome: ${nome.value}<br>
- Email: ${email.value}<br>
- ${endereco.value}, ${numero.value}<br>
- ${bairro.value} - ${cidade.value}<br><br>`;
+ let html="";
 
  itens.forEach((i,x)=>{
   total+=i.valor;
 
   html+=`${x+1}) ${i.servico}<br>
-  ${i.material||""} ${i.esp}<br>
-  ${i.produto||""}<br>
+  ${i.material}<br>
+  ${i.produto}<br>
   ${i.l}x${i.a} Qtd:${i.q}<br>
   R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
- let frete=await calcularFrete();
- let desconto=total*0.05;
- let final=(total-desconto)+frete;
+ let final=total-(total*0.05);
 
- html+=`
- Subtotal: R$ ${total.toFixed(2)}<br>
- Desconto PIX: -R$ ${desconto.toFixed(2)}<br>
- Frete: ${frete===0?"Grátis 🎉":"R$ "+frete.toFixed(2)}<br>
- <b>Total: R$ ${final.toFixed(2)}</b><br>
- Prazo: 2 a 5 dias úteis
- `;
+ html+=`Total: R$ ${final.toFixed(2)}`;
 
  resumo.innerHTML=html;
 }
@@ -291,63 +178,30 @@ async function render(){
 async function gerarPix(){
 
  let total=itens.reduce((s,i)=>s+i.valor,0);
- let desconto=total*0.05;
- let final=total-desconto;
+ let final=total-(total*0.05);
 
- if(final<=0){
-  alert("Valor inválido");
+ if(final<5){
+  pix.innerHTML="Pedido mínimo R$5";
   return;
  }
 
- pix.innerHTML="Gerando PIX...";
+ let r=await fetch(API,{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({valor:Number(final.toFixed(2))})
+ });
 
- try{
+ let d=await r.json();
 
-  let r=await fetch(API,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({valor:Number(final.toFixed(2))})
-  });
-
-  let d=await r.json();
-
-  if(!d || !d.qr){
-    pix.innerHTML="Erro ao gerar PIX";
-    return;
-  }
-
-  pix.innerHTML=`
-    <img src="data:image/png;base64,${d.qr}" width="200"><br>
-    <textarea style="width:100%">${d.copia}</textarea>
-  `;
-
-  acompanhar(d.id);
-
- }catch{
-  pix.innerHTML="Erro de conexão";
- }
-}
-
-// ===== STATUS =====
-function acompanhar(id){
-
- let t=setInterval(async()=>{
-
-  let r=await fetch(API+"/status/"+id);
-  let d=await r.json();
-
-  if(d.status==="approved"){
-   clearInterval(t);
-   pix.innerHTML+="<br><b style='color:lightgreen;'>Pagamento aprovado!</b>";
-   btnWhats.disabled=false;
-  }
-
- },3000);
+ pix.innerHTML=`
+ <img src="data:image/png;base64,${d.qr}" width="200"><br>
+ <textarea>${d.copia}</textarea>
+ `;
 }
 
 // ===== WHATS =====
 function enviarWhats(){
- window.open(`https://wa.me/${WHATS}?text=${encodeURIComponent(resumo.innerText)}`);
+ window.open("https://wa.me/5511946447040?text="+encodeURIComponent(resumo.innerText));
 }
 
 </script>
