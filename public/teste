@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<button onclick="add()">Testar</button>
+
+<script>
+function add(){
+  alert("Funcionou!");
+}
+</script>
+
+</body>
+</html>
