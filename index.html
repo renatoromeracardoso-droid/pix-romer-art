@@ -58,37 +58,36 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 let itens = [];
 let pago = false;
-
 const WHATS = "5511946447040";
 
 // CEP
-cep.onblur = async ()=>{
- let c = cep.value.replace(/\D/g,'');
- if(c.length!==8)return;
+document.getElementById("cep").addEventListener("blur", async function() {
+  let c = this.value.replace(/\D/g,'');
+  if(c.length !== 8) return;
 
- let r = await fetch(https://viacep.com.br/ws/${c}/json/);
- let d = await r.json();
+  let r = await fetch(https://viacep.com.br/ws/${c}/json/);
+  let d = await r.json();
 
- endereco.value=d.logradouro||"";
- bairro.value=d.bairro||"";
- cidade.value=d.localidade||"";
-};
+  document.getElementById("endereco").value = d.logradouro || "";
+  document.getElementById("bairro").value = d.bairro || "";
+  document.getElementById("cidade").value = d.localidade || "";
+});
 
 // ADD
 function addItem(){
 
- let l=Number(larg.value);
- let a=Number(alt.value);
- let q=Number(qtd.value);
+ let l = Number(document.getElementById("larg").value);
+ let a = Number(document.getElementById("alt").value);
+ let q = Number(document.getElementById("qtd").value);
 
- if(!l||!a||!q){
+ if(!l || !a || !q){
    alert("Preencha corretamente");
    return;
  }
 
- let valor=((l*a)/100)*0.1*q+2;
+ let valor = ((l*a)/100)*0.1*q + 2;
 
- itens.push({material:material.value,l,a,q,valor});
+ itens.push({l,a,q,valor});
 
  render();
 }
@@ -96,60 +95,63 @@ function addItem(){
 // RENDER
 function render(){
 
- let total=0;
- let html="<b>Resumo:</b><br><br>";
+ let total = 0;
+ let html = "<b>Resumo:</b><br><br>";
 
  itens.forEach((i,x)=>{
-   total+=i.valor;
-   html+=${x+1}) ${i.material} ${i.l}x${i.a} - Qtd:${i.q}<br>R$ ${i.valor.toFixed(2)}<br><br>;
+   total += i.valor;
+   html += ${x+1}) ${i.l}x${i.a} - Qtd:${i.q}<br>R$ ${i.valor.toFixed(2)}<br><br>;
  });
 
- let desc=total*0.05;
- let final=total-desc;
+ let desc = total * 0.05;
+ let final = total - desc;
 
- html+=`Subtotal: R$ ${total.toFixed(2)}<br>
+ html += `Subtotal: R$ ${total.toFixed(2)}<br>
  Desconto PIX: -R$ ${desc.toFixed(2)}<br>
  <b>Total: R$ ${final.toFixed(2)}</b><br><br>`;
 
- resumo.innerHTML=html;
+ document.getElementById("resumo").innerHTML = html;
 }
 
 // PIX
 async function gerarPix(){
 
- if(itens.length===0){
+ if(itens.length === 0){
    alert("Adicione item");
    return;
  }
 
- let total=0;
- itens.forEach(i=>total+=i.valor);
+ let total = 0;
+ itens.forEach(i => total += i.valor);
 
- let final=parseFloat((total-total*0.05).toFixed(2));
+ let final = Number((total - total*0.05).toFixed(2));
 
- if(final<1){
-   alert("Valor mínimo R$1");
+ if(isNaN(final) || final <= 0){
+   alert("Erro no valor");
    return;
  }
 
- resumo.innerHTML+="<br>⏳ Gerando PIX...";
+ document.getElementById("resumo").innerHTML += "<br>⏳ Gerando PIX...";
 
  try{
 
- let r=await fetch("https://pix-romer-art.onrender.com/pix",{
+ let r = await fetch("https://pix-romer-art.onrender.com/pix",{
    method:"POST",
    headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({valor:final,email:email.value})
+   body:JSON.stringify({
+     valor: final,
+     email: document.getElementById("email").value
+   })
  });
 
- let data=await r.json();
+ let data = await r.json();
 
  if(!data.qr_code){
-   resumo.innerHTML+="<br>Erro PIX";
+   alert("Erro PIX");
    return;
  }
 
- resumo.innerHTML+=`
+ document.getElementById("resumo").innerHTML += `
  <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
  <textarea style="width:100%">${data.qr_code}</textarea>
  <br><b id="status">Aguardando pagamento...</b>
@@ -158,22 +160,22 @@ async function gerarPix(){
  verificar(data.id);
 
  }catch(e){
-   resumo.innerHTML+="<br>Erro servidor";
+   alert("Erro servidor");
  }
 }
 
 // STATUS
 function verificar(id){
 
- let t=setInterval(async()=>{
+ let t = setInterval(async()=>{
 
- let r=await fetch(https://pix-romer-art.onrender.com/status/${id});
- let d=await r.json();
+ let r = await fetch(https://pix-romer-art.onrender.com/status/${id});
+ let d = await r.json();
 
- if(d.status==="approved"){
-   status.innerHTML="✅ PAGAMENTO APROVADO";
-   btnWhats.style.display="block";
-   pago=true;
+ if(d.status === "approved"){
+   document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
+   document.getElementById("btnWhats").style.display = "block";
+   pago = true;
    clearInterval(t);
  }
 
@@ -188,7 +190,8 @@ function enviarWhats(){
    return;
  }
 
- let txt=resumo.innerText;
+ let txt = document.getElementById("resumo").innerText;
+
  window.open(https://wa.me/${WHATS}?text=${encodeURIComponent(txt)});
 }
 
