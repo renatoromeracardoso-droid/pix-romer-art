@@ -1,204 +1,292 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Pedidos RomerArt</title>
 
 <style>
-body{
-  margin:0;
-  font-family: Arial;
-  background: linear-gradient(135deg,#ff416c,#ff4b2b);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-}
-
-.card{
-  background:#1e293b;
-  padding:25px;
-  border-radius:12px;
-  width:300px;
-  color:white;
-  box-shadow:0 0 20px rgba(0,0,0,0.3);
-}
-
-h2{
-  text-align:center;
-}
-
-select,input,button{
-  width:100%;
-  margin-top:10px;
-  padding:10px;
-  border-radius:6px;
-  border:none;
-}
-
-button{
-  font-weight:bold;
-  cursor:pointer;
-}
-
-.btn-add{
-  background:#f59e0b;
-}
-
-.btn-pix{
-  background:#22c55e;
-}
-
-#resumo{
-  margin-top:15px;
-  font-size:14px;
-}
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;cursor:pointer;}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+.whats{background:#25d366;display:none;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
 </style>
 
 </head>
 <body>
 
+<div class="app">
+
 <div class="card">
+<h3>Cliente</h3>
+<input id="cliente" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
+<input id="endereco" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
+</div>
 
-<h2>Pedidos Online</h2>
+<div class="card">
+<h3>Serviço</h3>
 
-<select id="material">
-  <option value="150">MDF 3mm</option>
-  <option value="180">MDF 6mm</option>
-  <option value="220">Acrílico</option>
-  <option value="50">Camiseta</option>
-  <option value="30">Copo</option>
+<select id="tipo"></select>
+<select id="item"></select>
+<select id="esp"></select>
+
+<select id="tamanho" style="display:none">
+<option>P</option><option>M</option><option>G</option><option>GG</option>
 </select>
 
-<input id="l" placeholder="Largura mm">
-<input id="a" placeholder="Altura mm">
-<input id="q" value="1" placeholder="Quantidade">
+<select id="cor" style="display:none">
+<option>Branco</option><option>Preto</option><option>Colorido</option>
+</select>
 
-<button class="btn-add" onclick="adicionar()">Adicionar</button>
-<button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
+<input id="larg" placeholder="Largura mm">
+<input id="alt" placeholder="Altura mm">
+<input id="qtd" value="1">
 
-<div id="resumo"></div>
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button id="btnWhats" class="whats" onclick="enviarWhats()">Enviar Pedido no WhatsApp</button>
+
+</div>
+
+<div id="resumo" class="box"></div>
 
 </div>
 
 <script>
 
-let itens = [];
-let pagamentoId = null;
-let intervalo = null;
+const WHATS = "5511946447040";
 
-// ➕ ADICIONAR ITEM
-function adicionar(){
+const materiais={
+ MDF:{preco:0.08, esp:[3,6]},
+ ACRILICO:{preco:0.15, esp:[2,3,5]},
+ COMPENSADO:{preco:0.07, esp:[3,4]},
+ MADEIRA:{preco:0.12, esp:[3,5]}
+};
 
-  const mat = document.getElementById("material");
-  const nome = mat.options[mat.selectedIndex].text;
-  const preco = Number(mat.value);
+const produtos={
+ CAMISETA:{P:18,M:20,G:22,GG:25},
+ COPO:8,TACA:10,GARRAFA:15,CHAVEIRO:3,CANETA:2,LAPIS:1
+};
 
-  let l = Number(document.getElementById("l").value);
-  let a = Number(document.getElementById("a").value);
-  let q = Number(document.getElementById("q").value);
+let itens=[];
+let pagamentoId=null;
+let intervalo=null;
 
-  if(nome.includes("Camiseta") || nome.includes("Copo")){
-    l = 1;
-    a = 1;
-  }else{
-    if(!l || !a){
-      alert("Preencha largura e altura");
-      return;
-    }
-  }
+// INIT
+tipo.innerHTML=`
+<option value="">Selecione</option>
+<option>Corte</option>
+<option>Gravação</option>
+<option>Corte + Gravação</option>
+`;
 
-  let valor = 0;
+tipo.onchange=carregar;
+item.onchange=extras;
 
-  if(nome.includes("Camiseta") || nome.includes("Copo")){
-    valor = preco * q;
-  }else{
-    const area = (l * a) / 10000;
-    valor = ((area * preco) + 2) * q;
-  }
+function carregar(){
 
-  itens.push({nome,l,a,q,valor});
+ item.innerHTML="<option value=''>Selecione</option>";
 
-  atualizar();
+ let lista=[];
+
+ if(tipo.value==="Corte") lista=Object.keys(materiais);
+ if(tipo.value==="Gravação") lista=[...Object.keys(materiais),...Object.keys(produtos)];
+ if(tipo.value==="Corte + Gravação") lista=[...Object.keys(materiais),...Object.keys(produtos)];
+
+ lista.forEach(i=>item.innerHTML+=<option>${i}</option>);
+
+ extras();
 }
 
-// 🔄 ATUALIZA RESUMO
-function atualizar(){
+function extras(){
 
-  let html = "";
-  let subtotal = 0;
+ esp.style.display="none";
+ tamanho.style.display="none";
+ cor.style.display="none";
 
-  itens.forEach((i, index) => {
-    subtotal += i.valor;
-    html += (index+1) + ") " + i.nome + " - " + i.l + "x" + i.a + " - Qtd:" + i.q + " - R$ " + i.valor.toFixed(2) + "<br>";
-  });
+ if(materiais[item.value]){
+   esp.style.display="block";
+   esp.innerHTML="";
+   materiais[item.value].esp.forEach(e=>esp.innerHTML+=<option>${e}mm</option>);
+ }
 
-  const desconto = subtotal * 0.05;
-  const total = subtotal - desconto;
-
-  html += "<br>Subtotal: R$ " + subtotal.toFixed(2);
-  html += "<br>Desconto PIX: -R$ " + desconto.toFixed(2);
-  html += "<br><b>Total: R$ " + total.toFixed(2) + "</b>";
-
-  document.getElementById("resumo").innerHTML = html;
+ if(item.value==="CAMISETA"){
+   tamanho.style.display="block";
+   cor.style.display="block";
+   esp.style.display="none";
+ }
 }
 
-// 💰 GERAR PIX
+// CEP AUTO
+cep.onblur=async()=>{
+ let c=cep.value.replace(/\D/g,'');
+ if(c.length!==8)return;
+ let r=await fetch(https://viacep.com.br/ws/${c}/json/);
+ let d=await r.json();
+ endereco.value=d.logradouro||"";
+ bairro.value=d.bairro||"";
+ cidade.value=d.localidade||"";
+};
+
+// VALIDAR
+function validar(){
+ if(!cliente.value || !email.value || !cep.value || !tipo.value || !item.value){
+   alert("Preencha os campos obrigatórios");
+   return false;
+ }
+ return true;
+}
+
+// CALCULO
+function calcular(){
+
+ let q=+qtd.value||1;
+
+ if(produtos[item.value]){
+   if(item.value==="CAMISETA"){
+     let base=produtos.CAMISETA[tamanho.value]||20;
+     if(cor.value==="Colorido") base+=3;
+     return base*q;
+   }
+   return produtos[item.value]*q;
+ }
+
+ let l=+larg.value||0;
+ let a=+alt.value||0;
+
+ if(l<=0||a<=0){alert("Informe medidas");return 0;}
+
+ let area=(l*a)/100;
+
+ let material=area*materiais[item.value].preco;
+ let tempo=area*0.04;
+ let custo=(tempo/60)*60;
+
+ let total=(material+custo+1)*1.4;
+
+ if(tipo.value==="Gravação") total*=1.2;
+ if(tipo.value==="Corte + Gravação") total*=1.5;
+
+ return total*q;
+}
+
+function calcularFrete(){
+ let c=cep.value.replace(/\D/g,'');
+ return c.startsWith("03822")?0:15;
+}
+
+// ADD
+function addItem(){
+
+ if(!validar()) return;
+
+ let valor=calcular();
+ if(valor===0)return;
+
+ itens.push({
+   tipo:tipo.value,item:item.value,esp:esp.value||"-",
+   l:larg.value||"-",a:alt.value||"-",
+   qtd:qtd.value,valor
+ });
+
+ render();
+}
+
+// RESUMO
+function render(){
+
+ let total=0;
+ let html=<b>Pedido</b><br><br>;
+
+ html+=Nome: ${cliente.value}<br>Email: ${email.value}<br><br>;
+
+ itens.forEach((i,x)=>{
+   total+=i.valor;
+   html+=${x+1}) ${i.item} - R$ ${i.valor.toFixed(2)}<br>;
+ });
+
+ let frete=calcularFrete();
+ let desconto=total*0.05;
+ let final=total+frete-desconto;
+
+ html+=<br>Total: R$ ${final.toFixed(2)};
+
+ resumo.innerHTML=html;
+}
+
+// PIX
 async function gerarPix(){
 
-  let subtotal = 0;
-  itens.forEach(i => subtotal += i.valor);
+ if(!validar() || itens.length===0){
+   alert("Complete o pedido");
+   return;
+ }
 
-  const total = Number((subtotal * 0.95).toFixed(2));
+ let total=0;
+ itens.forEach(i=> total+=i.valor);
 
-  try{
+ let final=Number((total*0.95).toFixed(2));
 
-    const r = await fetch("/pix",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({valor: total})
-    });
+ resumo.innerHTML+="<br><br>⏳ Gerando PIX...";
 
-    const d = await r.json();
+ const r=await fetch("/pix",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({valor:final})
+ });
 
-    pagamentoId = d.id;
+ const d=await r.json();
 
-    document.getElementById("resumo").innerHTML +=
-      "<br><br><b>PIX:</b><br>" +
-      "<img width='200' src='data:image/png;base64," + d.img + "'/>" +
-      "<textarea style='width:100%'>" + d.qr + "</textarea>" +
-      "<br><b id='statusPagamento'>Aguardando pagamento...</b>";
+ pagamentoId=d.id;
 
-    iniciarVerificacao();
+ resumo.innerHTML+=`
+ <br><img width="200" src="data:image/png;base64,${d.img}">
+ <textarea style="width:100%">${d.qr}</textarea>
+ <br><b id="statusPix">Aguardando pagamento...</b>
+ `;
 
-  }catch(e){
-    alert("Erro ao gerar PIX");
-  }
-
+ verificarStatus();
 }
 
-// 🔁 VERIFICA AUTOMATICAMENTE
-function iniciarVerificacao(){
+// STATUS AUTO
+function verificarStatus(){
 
-  intervalo = setInterval(async () => {
+ intervalo=setInterval(async()=>{
 
-    if(!pagamentoId) return;
+   const r=await fetch("/status/"+pagamentoId);
+   const d=await r.json();
 
-    const r = await fetch("/status/" + pagamentoId);
-    const d = await r.json();
+   if(d.status==="pago"){
 
-    if(d.status === "pago"){
+     document.getElementById("statusPix").innerHTML="✅ PAGAMENTO APROVADO";
 
-      document.getElementById("statusPagamento").innerHTML =
-        "✅ PAGAMENTO APROVADO";
+     document.getElementById("btnWhats").style.display="block";
 
-      clearInterval(intervalo);
+     clearInterval(intervalo);
+   }
 
-    }
-
-  }, 3000);
-
+ },3000);
 }
+
+// WHATS
+function enviarWhats(){
+
+ let msg = resumo.innerText + "\n\nStatus: PAGO";
+
+ let url=https://wa.me/${WHATS}?text=${encodeURIComponent(msg)};
+ window.open(url);
+}
+
+carregar();
 
 </script>
 
