@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Romerart Pedidos</title>
+
+<style>
+body{
+  font-family: Arial;
+  background: linear-gradient(135deg,#ff416c,#ff4b2b);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  margin:0;
+}
+.box{
+  background:#1e293b;
+  padding:20px;
+  border-radius:12px;
+  width:350px;
+  color:#fff;
+}
+input,select{
+  width:100%;
+  margin-bottom:10px;
+  padding:10px;
+  border:none;
+  border-radius:6px;
+}
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:6px;
+  margin-top:5px;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+</style>
+
+</head>
+<body>
+
+<div class="box">
+
+<h3>Pedidos Online</h3>
+
+<select id="material">
+<option value="0.08">MDF</option>
+<option value="0.15">ACRILICO</option>
+</select>
+
+<input id="larg" type="number" placeholder="Largura mm">
+<input id="alt" type="number" placeholder="Altura mm">
+<input id="qtd" type="number" value="1">
+
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+
+<div id="resumo"></div>
+
+</div>
+
+<script>
+
+let itens = [];
+
+function addItem(){
+
+ let l = parseFloat(document.getElementById("larg").value);
+ let a = parseFloat(document.getElementById("alt").value);
+ let q = parseInt(document.getElementById("qtd").value);
+ let preco = parseFloat(document.getElementById("material").value);
+
+ if(!l || !a){
+   alert("Preencha largura e altura");
+   return;
+ }
+
+ if(l > 400 || a > 400){
+   alert("Máximo 400mm");
+   return;
+ }
+
+ let area = (l * a)/100;
+ let valor = (area * preco)+2;
+ valor *= q;
+
+ itens.push({l,a,q,valor});
+
+ render();
+}
+
+function render(){
+
+ let total=0;
+ let html="<br><b>Pedido:</b><br>";
+
+ itens.forEach((i,x)=>{
+   total += i.valor;
+   html += ${x+1}) ${i.l}x${i.a} | Qtd:${i.q} | R$ ${i.valor.toFixed(2)}<br>;
+ });
+
+ let desc = total*0.05;
+ let final = total-desc;
+
+ html += <br>Subtotal: R$ ${total.toFixed(2)};
+ html += <br>Desconto PIX: -R$ ${desc.toFixed(2)};
+ html += <br><b>Total: R$ ${final.toFixed(2)}</b>;
+
+ document.getElementById("resumo").innerHTML = html;
+}
+
+async function gerarPix(){
+
+ let total=0;
+ itens.forEach(i=> total+=i.valor);
+
+ let final = Number((total*0.95).toFixed(2));
+
+ let r = await fetch("/pix",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+     valor: final,
+     email:"romerartbrasil@gmail.com"
+   })
+ });
+
+ let d = await r.json();
+
+ let qr = d.qr || d.qr_code;
+ let img = d.img || d.qr_code_base64;
+
+ document.getElementById("resumo").innerHTML += `
+ <br><br><b>Pague com PIX:</b><br>
+ <img width="200" src="data:image/png;base64,${img}">
+ <textarea style="width:100%">${qr}</textarea>
+ `;
+}
+
+</script>
+
+</body>
+</html>
