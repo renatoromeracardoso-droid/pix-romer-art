@@ -58,8 +58,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-// ===== LINKS PLANILHA =====
-const URL_CONFIG="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv";
+// ===== LINKS =====
 const URL_SERVICOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv";
 const URL_PRODUTOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv";
 const URL_MATERIAIS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv";
@@ -69,36 +68,68 @@ const API="https://pix-romer-art.onrender.com/pix";
 let servicos=[],produtos=[],materiais=[];
 let itens=[];
 
-// ===== CSV PARSER MELHOR =====
+// ===== CSV ROBUSTO =====
 function csvToJson(csv){
- let linhas=csv.split("\n").map(l=>l.trim()).filter(l=>l);
+ let linhas=csv.trim().split("\n");
  let headers=linhas[0].split(",");
 
  return linhas.slice(1).map(l=>{
-  let dados=l.split(",");
+  let values=l.split(",");
   let obj={};
-  headers.forEach((h,i)=>obj[h.trim()]=dados[i]?.trim());
+  headers.forEach((h,i)=>{
+    obj[h.trim()]=(values[i]||"").trim();
+  });
   return obj;
  });
 }
 
-// ===== CARREGAR PLANILHA =====
+// ===== CARREGAR =====
 async function carregar(){
 
- let s=await fetch(URL_SERVICOS).then(r=>r.text());
- let p=await fetch(URL_PRODUTOS).then(r=>r.text());
- let m=await fetch(URL_MATERIAIS).then(r=>r.text());
+ try{
+  let s=await fetch(URL_SERVICOS).then(r=>r.text());
+  let p=await fetch(URL_PRODUTOS).then(r=>r.text());
+  let m=await fetch(URL_MATERIAIS).then(r=>r.text());
 
- servicos=csvToJson(s);
- produtos=csvToJson(p);
- materiais=csvToJson(m);
+  servicos=csvToJson(s);
+  produtos=csvToJson(p);
+  materiais=csvToJson(m);
 
- servico.innerHTML=servicos.map(x=>`<option>${x.nome}</option>`).join("");
- produto.innerHTML='<option value="">Produto</option>'+produtos.map(x=>`<option>${x.nome}</option>`).join("");
- material.innerHTML='<option value="">Material</option>'+materiais.map(x=>`<option>${x.nome}</option>`).join("");
+  servico.innerHTML='<option value="">Serviço</option>'+servicos.map(x=>`<option>${x.nome}</option>`).join("");
+  produto.innerHTML='<option value="">Produto</option>'+produtos.map(x=>`<option>${x.nome}</option>`).join("");
+  material.innerHTML='<option value="">Material</option>'+materiais.map(x=>`<option>${x.nome}</option>`).join("");
+
+ }catch(e){
+  alert("Erro ao carregar planilha");
+  console.log(e);
+ }
+
 }
 
 carregar();
+
+// ===== CONTROLE =====
+servico.onchange=controlarCampos;
+produto.onchange=controlarCampos;
+
+function controlarCampos(){
+
+ if(servico.value==="Gravação"){
+  material.classList.add("hidden");
+  espessura.classList.add("hidden");
+  produto.classList.remove("hidden");
+ }else{
+  material.classList.remove("hidden");
+  espessura.classList.remove("hidden");
+  produto.classList.add("hidden");
+  produto.value="";
+ }
+
+}
+
+// ===== LIMITES =====
+largura.oninput=()=>{if(largura.value>400)largura.value=400;}
+altura.oninput=()=>{if(altura.value>400)altura.value=400;}
 
 // ===== CEP =====
 cep.onblur=async()=>{
@@ -116,7 +147,7 @@ function calcular(){
 
  if(produto.value){
   let p=produtos.find(x=>x.nome===produto.value);
-  return Number(p.preco||0)*q;
+  return Number(p?.preco||5)*q;
  }
 
  let m=materiais.find(x=>x.nome===material.value);
@@ -125,17 +156,21 @@ function calcular(){
  let l=Number(largura.value)||0;
  let a=Number(altura.value)||0;
 
+ if(l<=0||a<=0){
+  alert("Informe medidas válidas");
+  return 0;
+ }
+
  let area=(l*a)/100;
 
- let base=Number(m?.preco||0);
- let serv=Number(s?.multiplicador||1);
-
- return area*base*serv*q;
+ return area*(Number(m?.preco||0.1))*(Number(s?.multiplicador||1))*q;
 }
 
 // ===== ADD =====
 function addItem(){
+
  let valor=calcular();
+ if(valor<=0)return;
 
  itens.push({
   servico:servico.value,
@@ -154,22 +189,21 @@ function addItem(){
 function render(){
 
  let total=0;
-
  let html="";
 
  itens.forEach((i,x)=>{
   total+=i.valor;
 
   html+=`${x+1}) ${i.servico}<br>
-  ${i.material}<br>
-  ${i.produto}<br>
+  ${i.material||""}<br>
+  ${i.produto||""}<br>
   ${i.l}x${i.a} Qtd:${i.q}<br>
   R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
  let final=total-(total*0.05);
 
- html+=`Total: R$ ${final.toFixed(2)}`;
+ html+=`<b>Total: R$ ${final.toFixed(2)}</b>`;
 
  resumo.innerHTML=html;
 }
@@ -192,6 +226,11 @@ async function gerarPix(){
  });
 
  let d=await r.json();
+
+ if(!d || !d.qr){
+  pix.innerHTML="Erro ao gerar PIX";
+  return;
+ }
 
  pix.innerHTML=`
  <img src="data:image/png;base64,${d.qr}" width="200"><br>
