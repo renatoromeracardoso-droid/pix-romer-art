@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Romer Art</title>
+<title>RomerArt Pedidos</title>
 
 <style>
 body{background:#0f172a;font-family:Arial;color:#fff;}
@@ -12,7 +12,7 @@ input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:non
 button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;}
 .add{background:#f97316;}
 .pix{background:#16a34a;}
-.whats{background:#25d366;}
+.whats{background:#22c55e;}
 .box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
 .hidden{display:none;}
 </style>
@@ -24,13 +24,13 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <div class="card">
 <h3>Cliente</h3>
-<input id="nome" placeholder="Nome *">
-<input id="email" placeholder="Email *">
-<input id="cep" placeholder="CEP *">
+<input id="nome" placeholder="Nome *" required>
+<input id="email" placeholder="Email *" required>
+<input id="cep" placeholder="CEP *" required>
 <input id="endereco" placeholder="Rua" readonly>
 <input id="bairro" placeholder="Bairro" readonly>
 <input id="cidade" placeholder="Cidade" readonly>
-<input id="numero" placeholder="Número *">
+<input id="numero" placeholder="Número *" required>
 </div>
 
 <div class="card">
@@ -47,7 +47,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <button class="add" onclick="addItem()">Adicionar</button>
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button class="whats" id="btnWhats" disabled onclick="enviarWhats()">Enviar Pedido</button>
+<button class="whats" onclick="enviarWhats()">Enviar Pedido</button>
 
 </div>
 
@@ -58,7 +58,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-// ===== LINKS =====
+// ===== LINKS PLANILHA =====
 const URL_SERVICOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv";
 const URL_PRODUTOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv";
 const URL_MATERIAIS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv";
@@ -68,7 +68,7 @@ const API="https://pix-romer-art.onrender.com/pix";
 let servicos=[],produtos=[],materiais=[];
 let itens=[];
 
-// ===== CSV ROBUSTO =====
+// ===== CSV =====
 function csvToJson(csv){
  let linhas=csv.trim().split("\n");
  let headers=linhas[0].split(",");
@@ -76,9 +76,7 @@ function csvToJson(csv){
  return linhas.slice(1).map(l=>{
   let values=l.split(",");
   let obj={};
-  headers.forEach((h,i)=>{
-    obj[h.trim()]=(values[i]||"").trim();
-  });
+  headers.forEach((h,i)=>obj[h.trim()]=(values[i]||"").trim());
   return obj;
  });
 }
@@ -86,34 +84,31 @@ function csvToJson(csv){
 // ===== CARREGAR =====
 async function carregar(){
 
- try{
-  let s=await fetch(URL_SERVICOS).then(r=>r.text());
-  let p=await fetch(URL_PRODUTOS).then(r=>r.text());
-  let m=await fetch(URL_MATERIAIS).then(r=>r.text());
+ let s=await fetch(URL_SERVICOS).then(r=>r.text());
+ let p=await fetch(URL_PRODUTOS).then(r=>r.text());
+ let m=await fetch(URL_MATERIAIS).then(r=>r.text());
 
-  servicos=csvToJson(s);
-  produtos=csvToJson(p);
-  materiais=csvToJson(m);
+ servicos=csvToJson(s);
+ produtos=csvToJson(p);
+ materiais=csvToJson(m);
 
-  servico.innerHTML='<option value="">Serviço</option>'+servicos.map(x=>`<option>${x.nome}</option>`).join("");
-  produto.innerHTML='<option value="">Produto</option>'+produtos.map(x=>`<option>${x.nome}</option>`).join("");
-  material.innerHTML='<option value="">Material</option>'+materiais.map(x=>`<option>${x.nome}</option>`).join("");
+ servico.innerHTML='<option value="">Serviço</option>'+servicos.map(x=>`<option>${x.nome}</option>`).join("");
+ produto.innerHTML='<option value="">Produto</option>'+produtos.map(x=>`<option>${x.nome}</option>`).join("");
+ material.innerHTML='<option value="">Material</option>'+materiais.map(x=>`<option>${x.nome}</option>`).join("");
 
- }catch(e){
-  alert("Erro ao carregar planilha");
-  console.log(e);
- }
+ material.onchange=()=>{
+  let lista=materiais.filter(x=>x.nome===material.value);
+  let esp=[...new Set(lista.map(x=>x.espessura))];
+
+  espessura.innerHTML='<option value="">Espessura</option>'+esp.map(e=>`<option>${e}</option>`).join("");
+ };
 
 }
 
 carregar();
 
 // ===== CONTROLE =====
-servico.onchange=controlarCampos;
-produto.onchange=controlarCampos;
-
-function controlarCampos(){
-
+servico.onchange=()=>{
  if(servico.value==="Gravação"){
   material.classList.add("hidden");
   espessura.classList.add("hidden");
@@ -122,12 +117,10 @@ function controlarCampos(){
   material.classList.remove("hidden");
   espessura.classList.remove("hidden");
   produto.classList.add("hidden");
-  produto.value="";
  }
+};
 
-}
-
-// ===== LIMITES =====
+// ===== LIMITE =====
 largura.oninput=()=>{if(largura.value>400)largura.value=400;}
 altura.oninput=()=>{if(altura.value>400)altura.value=400;}
 
@@ -147,34 +140,37 @@ function calcular(){
 
  if(produto.value){
   let p=produtos.find(x=>x.nome===produto.value);
-  return Number(p?.preco||5)*q;
+  return Number(p?.preco||0)*q;
  }
 
- let m=materiais.find(x=>x.nome===material.value);
- let s=servicos.find(x=>x.nome===servico.value);
+ let mat = materiais.find(x =>
+   x.nome===material.value && x.espessura===espessura.value
+ );
+
+ let serv = servicos.find(x=>x.nome===servico.value);
+
+ if(!mat || !serv) return 0;
 
  let l=Number(largura.value)||0;
  let a=Number(altura.value)||0;
 
- if(l<=0||a<=0){
-  alert("Informe medidas válidas");
-  return 0;
- }
+ if(l<=0 || a<=0) return 0;
 
  let area=(l*a)/100;
 
- return area*(Number(m?.preco||0.1))*(Number(s?.multiplicador||1))*q;
+ return area * Number(mat.preco) * Number(serv.multiplicador) * q;
 }
 
 // ===== ADD =====
 function addItem(){
 
  let valor=calcular();
- if(valor<=0)return;
+ if(valor<=0){alert("Preencha corretamente");return;}
 
  itens.push({
   servico:servico.value,
   material:material.value,
+  espessura:espessura.value,
   produto:produto.value,
   l:largura.value,
   a:altura.value,
@@ -194,16 +190,22 @@ function render(){
  itens.forEach((i,x)=>{
   total+=i.valor;
 
-  html+=`${x+1}) ${i.servico}<br>
-  ${i.material||""}<br>
+  html+=`
+  <b>${x+1}) ${i.servico}</b><br>
+  ${i.material||""} ${i.espessura||""}<br>
   ${i.produto||""}<br>
   ${i.l}x${i.a} Qtd:${i.q}<br>
   R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
- let final=total-(total*0.05);
+ let desconto=total*0.05;
+ let final=total-desconto;
 
- html+=`<b>Total: R$ ${final.toFixed(2)}</b>`;
+ html+=`
+ <hr>
+ Subtotal: R$ ${total.toFixed(2)}<br>
+ Desconto PIX: -R$ ${desconto.toFixed(2)}<br>
+ <b>Total: R$ ${final.toFixed(2)}</b>`;
 
  resumo.innerHTML=html;
 }
@@ -214,33 +216,41 @@ async function gerarPix(){
  let total=itens.reduce((s,i)=>s+i.valor,0);
  let final=total-(total*0.05);
 
- if(final<5){
-  pix.innerHTML="Pedido mínimo R$5";
+ if(final<1){
+  pix.innerHTML="Valor inválido";
   return;
  }
 
- let r=await fetch(API,{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({valor:Number(final.toFixed(2))})
- });
+ try{
+  let r=await fetch(API,{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({valor:Number(final.toFixed(2))})
+  });
 
- let d=await r.json();
+  let d=await r.json();
 
- if(!d || !d.qr){
-  pix.innerHTML="Erro ao gerar PIX";
-  return;
+  if(!d || !d.qr){
+   pix.innerHTML="Erro ao gerar PIX";
+   return;
+  }
+
+  pix.innerHTML=`
+  <img src="data:image/png;base64,${d.qr}" width="200"><br>
+  <textarea>${d.copia}</textarea>`;
+
+ }catch(e){
+  pix.innerHTML="Erro servidor PIX";
  }
 
- pix.innerHTML=`
- <img src="data:image/png;base64,${d.qr}" width="200"><br>
- <textarea>${d.copia}</textarea>
- `;
 }
 
 // ===== WHATS =====
 function enviarWhats(){
- window.open("https://wa.me/5511946447040?text="+encodeURIComponent(resumo.innerText));
+
+ let texto=`Pedido:\n${resumo.innerText}`;
+
+ window.open("https://wa.me/5511946447040?text="+encodeURIComponent(texto));
 }
 
 </script>
