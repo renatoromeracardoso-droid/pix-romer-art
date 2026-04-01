@@ -54,3 +54,7 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, ()=>{
   console.log("Servidor rodando 🚀");
 });
+app.post("/webhook", (req, res) => {
+  console.log("Pagamento recebido:", req.body);
+  res.sendStatus(200);
+});
