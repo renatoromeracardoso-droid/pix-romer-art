@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const mercadopago = require("mercadopago");
-const path = require("path");
 
 const app = express();
 
@@ -9,25 +8,29 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-// 🔑 TOKEN MERCADO PAGO
+// 🔑 TOKEN
 mercadopago.configure({
   access_token: process.env.MP_TOKEN
 });
 
-// 🧠 "Banco" simples (memória)
+// 🧠 memória (simples)
 let pagamentos = {};
 
 // TESTE
-app.get("/", (req,res)=>{
+app.get("/", (req, res) => {
   res.send("Servidor OK 🚀");
 });
 
 // 🔥 GERAR PIX
-app.post("/pix", async (req,res)=>{
+app.post("/pix", async (req, res) => {
 
-  try{
+  try {
 
     const { valor } = req.body;
+
+    if (!valor) {
+      return res.status(400).json({ erro: "Valor obrigatório" });
+    }
 
     const pagamento = await mercadopago.payment.create({
       transaction_amount: Number(valor),
@@ -39,10 +42,9 @@ app.post("/pix", async (req,res)=>{
     });
 
     const dados = pagamento.body;
-
     const id = dados.id;
 
-    // salva status
+    // salva como pendente
     pagamentos[id] = {
       status: "pendente",
       valor: valor
@@ -56,58 +58,86 @@ app.post("/pix", async (req,res)=>{
       img: pix.qr_code_base64
     });
 
-  }catch(e){
+  } catch (e) {
     console.log(e);
-    res.status(500).json({erro:"Erro ao gerar PIX"});
+    res.status(500).json({ erro: "Erro ao gerar PIX" });
   }
 
 });
 
-// 🔥 WEBHOOK (recebe confirmação do Mercado Pago)
-app.post("/webhook", (req, res) => {
+// 🔥 WEBHOOK (VALIDAÇÃO REAL)
+app.post("/webhook", async (req, res) => {
 
-  try{
+  try {
 
     const data = req.body;
 
-    if(data.type === "payment"){
+    if (data.type === "payment") {
 
       const pagamentoId = data.data.id;
 
-      // marca como pago
-      if(pagamentos[pagamentoId]){
-        pagamentos[pagamentoId].status = "pago";
-        console.log("Pagamento aprovado:", pagamentoId);
+      // 🔍 consulta REAL no Mercado Pago
+      const pagamento = await mercadopago.payment.findById(pagamentoId);
+
+      const status = pagamento.body.status;
+
+      console.log("Status MP:", status);
+
+      // ✅ só aprova se for approved
+      if (status === "approved") {
+
+        if (pagamentos[pagamentoId]) {
+          pagamentos[pagamentoId].status = "pago";
+          console.log("Pagamento confirmado:", pagamentoId);
+        }
+
       }
 
     }
 
     res.sendStatus(200);
 
-  }catch(e){
+  } catch (e) {
     console.log(e);
     res.sendStatus(500);
   }
 
 });
 
-// 🔍 CONSULTAR STATUS
-app.get("/status/:id", (req,res)=>{
+// 🔍 CONSULTAR STATUS (COM VALIDAÇÃO EXTRA)
+app.get("/status/:id", async (req, res) => {
 
-  const id = req.params.id;
+  try {
 
-  if(!pagamentos[id]){
-    return res.json({status:"não encontrado"});
+    const id = req.params.id;
+
+    // se não existir localmente
+    if (!pagamentos[id]) {
+      return res.json({ status: "não encontrado" });
+    }
+
+    // 🔍 valida novamente direto no MP (extra segurança)
+    const pagamento = await mercadopago.payment.findById(id);
+
+    const statusMP = pagamento.body.status;
+
+    if (statusMP === "approved") {
+      pagamentos[id].status = "pago";
+    }
+
+    res.json({
+      status: pagamentos[id].status
+    });
+
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ erro: "Erro ao consultar status" });
   }
-
-  res.json({
-    status: pagamentos[id].status
-  });
 
 });
 
 const PORT = process.env.PORT || 10000;
 
-app.listen(PORT, ()=>{
+app.listen(PORT, () => {
   console.log("Servidor rodando 🚀");
 });
