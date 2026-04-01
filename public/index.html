@@ -2,111 +2,51 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>RomerArt Pedidos</title>
+<title>Teste RomerArt</title>
 
 <style>
-body{background:#0f172a;font-family:Arial;color:#fff;}
-.app{max-width:400px;margin:auto;padding:20px;}
-.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
-input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
-button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;cursor:pointer;}
-.add{background:#f97316;}
-.pix{background:#16a34a;}
-.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+body{background:#111;color:#fff;font-family:Arial;}
+.box{max-width:300px;margin:auto;margin-top:50px;}
+input,button{width:100%;padding:10px;margin-top:10px;}
+button{background:orange;border:none;}
 </style>
 
 </head>
 <body>
 
-<div class="app">
+<div class="box">
 
-<div class="card">
-<h3>Cliente</h3>
-<input id="cliente" placeholder="Nome">
-<input id="email" placeholder="Email">
-</div>
+<input id="valor" placeholder="Valor">
+<button onclick="addItem()">Adicionar</button>
+<button onclick="gerarPix()">Gerar PIX</button>
 
-<div class="card">
-<h3>Pedido</h3>
-
-<select id="item">
-<option value="">Selecione</option>
-<option>MDF</option>
-<option>ACRILICO</option>
-</select>
-
-<input id="larg" placeholder="Largura">
-<input id="alt" placeholder="Altura">
-<input id="qtd" value="1">
-
-<button class="add" onclick="addItem()">Adicionar</button>
-<button class="pix" onclick="gerarPix()">Gerar PIX</button>
-
-</div>
-
-<div id="resumo" class="box"></div>
+<div id="resumo"></div>
 
 </div>
 
 <script>
 
-let itens=[];
-let pagamentoId=null;
+// 🔥 TESTE SIMPLES
 
 function addItem(){
-
-  let item=document.getElementById("item").value;
-  let l=Number(document.getElementById("larg").value);
-  let a=Number(document.getElementById("alt").value);
-  let q=Number(document.getElementById("qtd").value);
-
-  if(!item){
-    alert("Selecione item");
-    return;
-  }
-
-  let valor=(l*a/100)*0.1*q;
-
-  itens.push({item,valor});
-
-  render();
-}
-
-function render(){
-
-  let html="";
-  let total=0;
-
-  itens.forEach((i,x)=>{
-    total+=i.valor;
-    html+=${x+1}) ${i.item} - R$ ${i.valor.toFixed(2)}<br>;
-  });
-
-  html+=<br>Total: R$ ${total.toFixed(2)};
-
-  document.getElementById("resumo").innerHTML=html;
+  document.getElementById("resumo").innerHTML = "Item adicionado";
 }
 
 async function gerarPix(){
 
-  let total=0;
-  itens.forEach(i=>total+=i.valor);
+  const valor = document.getElementById("valor").value;
 
-  const r=await fetch("/pix",{
+  const r = await fetch("/pix",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({valor:total})
+    body:JSON.stringify({valor: Number(valor)})
   });
 
-  const d=await r.json();
+  const d = await r.json();
 
-  pagamentoId=d.id;
-
-  document.getElementById("resumo").innerHTML+=`
-  <br><img width="200" src="data:image/png;base64,${d.img}">
-  <textarea style="width:100%">${d.qr}</textarea>
+  document.getElementById("resumo").innerHTML += `
+    <br><img width="200" src="data:image/png;base64,${d.img}">
   `;
-
 }
 
 </script>
