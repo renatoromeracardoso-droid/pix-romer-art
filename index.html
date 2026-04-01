@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>RomerArt Pedido</title>
+<title>Romer Art</title>
 
 <style>
 body{background:#0f172a;font-family:Arial;color:#fff;}
@@ -14,6 +14,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 .pix{background:#16a34a;}
 .whats{background:#25d366;}
 .box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+.hidden{display:none;}
 </style>
 
 </head>
@@ -35,10 +36,43 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <div class="card">
 <h3>Serviço</h3>
 
-<select id="servico"></select>
-<select id="material"></select>
-<select id="produto"></select>
+<select id="servico">
+<option value="">Selecione</option>
+<option>Corte</option>
+<option>Gravação</option>
+<option>Corte + Gravação</option>
+</select>
+
+<select id="material">
+<option value="">Material</option>
+<option>MDF</option>
+<option>Acrílico</option>
+<option>Madeira</option>
+<option>Compensado</option>
+</select>
+
 <select id="espessura"></select>
+
+<select id="produto">
+<option value="">Produto</option>
+<option>CAMISETA</option>
+<option>COPO</option>
+<option>TAÇA</option>
+<option>GARRAFA</option>
+<option>CHAVEIRO</option>
+<option>CANETA</option>
+<option>LÁPIS</option>
+</select>
+
+<select id="tamanho" class="hidden">
+<option value="">Tamanho</option>
+<option>P</option><option>M</option><option>G</option><option>GG</option>
+</select>
+
+<select id="cor" class="hidden">
+<option value="">Cor</option>
+<option>Branco</option><option>Preto</option><option>Colorido</option>
+</select>
 
 <input id="largura" placeholder="Largura mm">
 <input id="altura" placeholder="Altura mm">
@@ -46,7 +80,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <button class="add" onclick="addItem()">Adicionar</button>
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button class="whats" id="btnEnviar" disabled onclick="enviarWhats()">Enviar Pedido</button>
+<button class="whats" id="btnWhats" disabled onclick="enviarWhats()">Enviar Pedido</button>
 
 </div>
 
@@ -57,104 +91,18 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-const API = "https://pix-romer-art.onrender.com/pix";
-const WHATS = "5511946447040";
+const API="https://pix-romer-art.onrender.com/pix";
+const WHATS="5511946447040";
 
 let itens=[];
 
-let tabela={
- config:[],
- materiais:[],
- produtos:[],
- servicos:[]
-};
-
-// ===== CSV =====
-function csvToJson(csv){
- let linhas=csv.trim().split("\n");
- let headers=linhas[0].split(",").map(h=>h.trim());
-
- return linhas.slice(1).map(l=>{
-  let valores=l.split(",");
-  let obj={};
-
-  headers.forEach((h,i)=>{
-    obj[h]=valores[i]?valores[i].trim():"";
-  });
-
-  return obj;
- }).filter(l=>Object.values(l).some(v=>v));
-}
-
-// ===== CONFIG =====
-function getConfig(chave){
- let item=tabela.config.find(c=>c.chave===chave);
- return item?Number(item.valor):0;
-}
-
-// ===== LOAD =====
-async function carregarDados(){
-
- const urls={
-  config:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv",
-  servicos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv",
-  produtos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv",
-  materiais:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv"
- };
-
- for(let key in urls){
-  let r=await fetch(urls[key]);
-  let t=await r.text();
-  tabela[key]=csvToJson(t);
- }
-
- montarSelects();
-}
-
-// ===== SELECTS =====
-function montarSelects(){
-
- servico.innerHTML='<option value="">Serviço</option>'+
- tabela.servicos.map(s=>`<option>${s.nome}</option>`).join("");
-
- material.innerHTML='<option value="">Material</option>'+
- tabela.materiais.map(m=>`<option>${m.nome}</option>`).join("");
-
- atualizarProdutos();
- atualizarEspessura();
-}
-
-// ===== PRODUTOS =====
-function atualizarProdutos(){
-
- let serv=servico.value;
-
- let lista=tabela.produtos.filter(p=>{
-  if(serv==="Corte" && p.permite_corte==="não") return false;
-  return true;
- });
-
- produto.innerHTML='<option value="">Produto</option>'+
- lista.map(p=>`<option>${p.nome}</option>`).join("");
-}
-
 // ===== ESPESSURA =====
-function atualizarEspessura(){
-
- let mat=tabela.materiais.find(m=>m.nome===material.value);
-
- if(!mat||!mat.espessura){
-  espessura.innerHTML="<option>-</option>";
-  return;
- }
-
- let lista=mat.espessura.split("|");
-
- espessura.innerHTML=lista.map(e=>`<option>${e}mm</option>`).join("");
-}
-
-servico.onchange=atualizarProdutos;
-material.onchange=atualizarEspessura;
+const espMap={
+ MDF:[3,6],
+ Acrílico:[2,3,5],
+ Madeira:[3,5],
+ Compensado:[3,4]
+};
 
 // ===== CEP =====
 cep.onblur=async()=>{
@@ -169,62 +117,114 @@ cep.onblur=async()=>{
  cidade.value=d.localidade||"";
 };
 
+// ===== CONTROLE CAMPOS =====
+servico.onchange=()=>{
+ controlarCampos();
+};
+
+produto.onchange=()=>{
+ if(produto.value==="CAMISETA"){
+  tamanho.classList.remove("hidden");
+  cor.classList.remove("hidden");
+ }else{
+  tamanho.classList.add("hidden");
+  cor.classList.add("hidden");
+ }
+};
+
+material.onchange=()=>{
+ let lista=espMap[material.value]||[];
+ espessura.innerHTML=lista.map(e=>`<option>${e}mm</option>`).join("");
+};
+
+function controlarCampos(){
+
+ if(servico.value==="Gravação"){
+  material.classList.add("hidden");
+  espessura.classList.add("hidden");
+ }else{
+  material.classList.remove("hidden");
+  espessura.classList.remove("hidden");
+ }
+
+ if(["COPO","TAÇA","GARRAFA","CANETA","LÁPIS"].includes(produto.value)){
+  largura.classList.add("hidden");
+  altura.classList.add("hidden");
+ }else{
+  largura.classList.remove("hidden");
+  altura.classList.remove("hidden");
+ }
+}
+
 // ===== LIMITES =====
 largura.oninput=()=>{if(largura.value>400)largura.value=400;}
 altura.oninput=()=>{if(altura.value>400)altura.value=400;}
 
 // ===== CALCULO =====
-function calcularValor(l,a,q){
+function calcular(){
 
- let mat=tabela.materiais.find(m=>m.nome===material.value);
- let base=Number(mat?.valor_base||0);
+ let q=Number(qtd.value)||1;
+
+ // PRODUTOS
+ if(produto.value){
+
+  if(produto.value==="CAMISETA"){
+   let base={P:18,M:20,G:22,GG:25}[tamanho.value]||20;
+   if(cor.value==="Colorido") base+=3;
+   return base*q;
+  }
+
+  let precos={
+   COPO:8,TAÇA:10,GARRAFA:15,
+   CHAVEIRO:3,CANETA:2,"LÁPIS":1
+  };
+
+  return (precos[produto.value]||5)*q;
+ }
+
+ // MATERIAL
+ let l=Number(largura.value)||0;
+ let a=Number(altura.value)||0;
+
+ if(l<=0||a<=0){alert("Informe medidas");return 0;}
 
  let area=(l*a)/100;
 
- let custoMaterial=area*base;
- let custoTempo=area*getConfig("custo_tempo");
+ let base={
+  MDF:0.08,Acrílico:0.15,Madeira:0.12,Compensado:0.07
+ }[material.value]||0.1;
 
- let custo=custoMaterial+custoTempo+1;
+ let custo=area*base;
+ let tempo=area*0.04;
 
- let lucro=custo*getConfig("lucro");
-
- let total=custo+lucro;
+ let total=(custo+tempo+1)*1.4;
 
  if(servico.value==="Gravação") total*=1.2;
  if(servico.value==="Corte + Gravação") total*=1.5;
 
- total*=q;
-
- if(total<getConfig("valor_minimo")*q){
-  total=getConfig("valor_minimo")*q;
- }
-
- return total;
+ return total*q;
 }
 
 // ===== ADD =====
 function addItem(){
 
  if(!nome.value||!email.value||!cep.value||!numero.value){
-  alert("Preencha cliente");
+  alert("Preencha dados do cliente");
   return;
  }
 
- let l=Number(largura.value);
- let a=Number(altura.value);
- let q=Number(qtd.value);
-
- if(!l||!a){alert("Informe medidas");return;}
- if(l>400||a>400){alert("Máx 400mm");return;}
-
- let valor=calcularValor(l,a,q);
+ let valor=calcular();
+ if(valor<=0)return;
 
  itens.push({
   servico:servico.value,
   material:material.value,
   produto:produto.value,
-  espessura:espessura.value,
-  l,a,q,valor
+  esp:espessura.value||"-",
+  l:largura.value||"-",
+  a:altura.value||"-",
+  q:qtd.value,
+  valor
  });
 
  render();
@@ -236,9 +236,8 @@ function render(){
  let total=0;
 
  let html=`<b>Pedido #${Date.now().toString().slice(-6)}</b><br><br>
- <b>Cliente:</b><br>
- ${nome.value}<br>
- ${email.value}<br>
+ Nome: ${nome.value}<br>
+ Email: ${email.value}<br>
  ${endereco.value}, ${numero.value}<br>
  ${bairro.value} - ${cidade.value}<br><br>`;
 
@@ -246,19 +245,19 @@ function render(){
   total+=i.valor;
 
   html+=`${x+1}) ${i.servico}<br>
-  ${i.material} (${i.espessura})<br>
-  ${i.produto}<br>
-  ${i.l}x${i.a}mm | Qtd:${i.q}<br>
+  ${i.material||""} ${i.esp}<br>
+  ${i.produto||""}<br>
+  ${i.l}x${i.a} Qtd:${i.q}<br>
   R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
- let desconto=total*getConfig("desconto_pix");
+ let desconto=total*0.05;
  let final=total-desconto;
 
  html+=`
  Subtotal: R$ ${total.toFixed(2)}<br>
  Desconto PIX: -R$ ${desconto.toFixed(2)}<br>
- <b>Total: R$ ${final.toFixed(2)}</b><br><br>
+ <b>Total: R$ ${final.toFixed(2)}</b><br>
  Prazo: 2 a 5 dias úteis
  `;
 
@@ -269,7 +268,12 @@ function render(){
 async function gerarPix(){
 
  let total=itens.reduce((s,i)=>s+i.valor,0);
- let final=total-(total*getConfig("desconto_pix"));
+ let final=total-(total*0.05);
+
+ if(final<=0){
+  alert("Valor inválido");
+  return;
+ }
 
  pix.innerHTML="Gerando PIX...";
 
@@ -284,25 +288,23 @@ async function gerarPix(){
  pix.innerHTML=`
  <img src="data:image/png;base64,${d.qr}" width="200"><br>
  <textarea style="width:100%">${d.copia}</textarea>
- <p>Aguardando pagamento...</p>
  `;
 
- statusPix(d.id);
+ acompanhar(d.id);
 }
 
 // ===== STATUS =====
-function statusPix(id){
+function acompanhar(id){
 
- let i=setInterval(async()=>{
+ let t=setInterval(async()=>{
 
   let r=await fetch(API+"/status/"+id);
   let d=await r.json();
 
   if(d.status==="approved"){
-   clearInterval(i);
-
-   pix.innerHTML+="<br><b style='color:lightgreen;'>Pagamento aprovado!</b>";
-   btnEnviar.disabled=false;
+   clearInterval(t);
+   pix.innerHTML+="<br><b style='color:lightgreen;'>Pago!</b>";
+   btnWhats.disabled=false;
   }
 
  },3000);
@@ -310,11 +312,8 @@ function statusPix(id){
 
 // ===== WHATS =====
 function enviarWhats(){
- window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
+ window.open(`https://wa.me/${WHATS}?text=${encodeURIComponent(resumo.innerText)}`);
 }
-
-// ===== START =====
-carregarDados();
 
 </script>
 
