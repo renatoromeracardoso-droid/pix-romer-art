@@ -2,19 +2,227 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Teste Limpo</title>
-</head>
+<title>RomerArt Pedidos</title>
 
+<style>
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+.whats{background:#25d366;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+</style>
+
+</head>
 <body>
 
-<h2>Teste RomerArt</h2>
+<div class="app">
 
-<button onclick="addItem()">Adicionar</button>
+<div class="card">
+<h3>Cliente</h3>
+<input id="cliente" placeholder="Nome">
+<input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
+<input id="endereco" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
+</div>
+
+<div class="card">
+<h3>Serviço</h3>
+
+<select id="tipo">
+<option value="">Selecione</option>
+<option>Corte</option>
+<option>Gravação</option>
+<option>Corte + Gravação</option>
+</select>
+
+<select id="item">
+<option value="">Selecione</option>
+<option value="MDF">MDF</option>
+<option value="ACRILICO">Acrílico</option>
+<option value="CAMISETA">Camiseta</option>
+<option value="COPO">Copo</option>
+</select>
+
+<input id="larg" placeholder="Largura mm">
+<input id="alt" placeholder="Altura mm">
+<input id="qtd" value="1">
+
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button class="whats" onclick="enviarWhats()" id="btnWhats" disabled>Enviar Pedido</button>
+
+</div>
+
+<div id="resumo" class="box"></div>
+
+</div>
 
 <script>
 
+var itens=[];
+var pagamentoId=null;
+var pago=false;
+var WHATS="5511946447040";
+
+// CEP AUTO
+document.getElementById("cep").onblur=async function(){
+ var c=this.value.replace(/\D/g,'');
+ if(c.length!==8)return;
+ var r=await fetch("https://viacep.com.br/ws/"+c+"/json/");
+ var d=await r.json();
+ document.getElementById("endereco").value=d.logradouro||"";
+ document.getElementById("bairro").value=d.bairro||"";
+ document.getElementById("cidade").value=d.localidade||"";
+};
+
+// LIMITES
+document.getElementById("larg").oninput=function(){ if(this.value>400)this.value=400; };
+document.getElementById("alt").oninput=function(){ if(this.value>400)this.value=400; };
+
+// PREÇOS
+var precos={
+ MDF:0.08,
+ ACRILICO:0.15,
+ CAMISETA:25,
+ COPO:8
+};
+
+// ADD ITEM
 function addItem(){
-  alert("AGORA FUNCIONOU 100%");
+
+ var tipo=document.getElementById("tipo").value;
+ var item=document.getElementById("item").value;
+ var q=Number(document.getElementById("qtd").value)||1;
+
+ if(!tipo || !item){
+  alert("Preencha serviço e item");
+  return;
+ }
+
+ var valor=0;
+
+ if(item==="CAMISETA" || item==="COPO"){
+  valor=precos[item]*q;
+ }else{
+
+  var l=Number(document.getElementById("larg").value);
+  var a=Number(document.getElementById("alt").value);
+
+  if(!l || !a){
+   alert("Informe medidas");
+   return;
+  }
+
+  if(l>400 || a>400){
+   alert("Máximo 400mm");
+   return;
+  }
+
+  var area=(l*a)/100;
+  var material=area*precos[item];
+  var tempo=area*0.04;
+  var custo=(tempo/60)*60;
+
+  valor=(material+custo+1)*1.4;
+
+  if(tipo==="Gravação") valor*=1.2;
+  if(tipo==="Corte + Gravação") valor*=1.5;
+
+  valor*=q;
+ }
+
+ itens.push({tipo:tipo,item:item,valor:valor});
+ render();
+}
+
+// RENDER
+function render(){
+
+ var html="";
+ var total=0;
+
+ for(var i=0;i<itens.length;i++){
+  total+=itens[i].valor;
+  html+=(i+1)+") "+itens[i].tipo+" - "+itens[i].item+" - R$ "+itens[i].valor.toFixed(2)+"<br>";
+ }
+
+ var frete=15;
+ var desconto=total*0.05;
+ var final=total+frete-desconto;
+
+ html+="<br>Frete: R$ "+frete;
+ html+="<br>Subtotal: R$ "+total.toFixed(2);
+ html+="<br>Desconto PIX: -R$ "+desconto.toFixed(2);
+ html+="<br><b>Total: R$ "+final.toFixed(2)+"</b>";
+
+ document.getElementById("resumo").innerHTML=html;
+}
+
+// PIX
+async function gerarPix(){
+
+ if(itens.length===0){
+  alert("Adicione itens");
+  return;
+ }
+
+ var total=0;
+ for(var i=0;i<itens.length;i++){ total+=itens[i].valor; }
+
+ var final=total-(total*0.05);
+
+ var r=await fetch("/pix",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({valor:final,email:document.getElementById("email").value})
+ });
+
+ var d=await r.json();
+ pagamentoId=d.id;
+
+ document.getElementById("resumo").innerHTML+=
+ "<br><br><img width='200' src='data:image/png;base64,"+d.img+"'>" +
+ "<textarea style='width:100%'>"+d.qr+"</textarea>" +
+ "<br><b id='statusPix'>Aguardando pagamento...</b>";
+
+ verificar();
+}
+
+// STATUS
+function verificar(){
+
+ var intervalo=setInterval(async function(){
+
+  var r=await fetch("/status/"+pagamentoId);
+  var d=await r.json();
+
+  if(d.status==="pago"){
+   document.getElementById("statusPix").innerHTML="PAGAMENTO APROVADO";
+   pago=true;
+   document.getElementById("btnWhats").disabled=false;
+   clearInterval(intervalo);
+  }
+
+ },3000);
+}
+
+// WHATS
+function enviarWhats(){
+
+ if(!pago){
+  alert("Pagamento não confirmado");
+  return;
+ }
+
+ var texto=document.getElementById("resumo").innerText;
+ window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(texto));
 }
 
 </script>
