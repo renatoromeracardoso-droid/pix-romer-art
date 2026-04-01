@@ -1,187 +1,270 @@
 const API = "https://pix-romer-art.onrender.com/pix";
+const WHATS = "5511946447040";
 
 let itens = [];
 
 let tabela = {
   materiais: [],
   produtos: [],
-  servicos: [],
-  config: []
+  servicos: []
 };
 
-// 🔥 CONVERTER CSV PRA JSON
-function csvToJson(csv) {
-  let linhas = csv.split("\n");
-  let headers = linhas[0].split(",");
+// ===== CSV =====
+function csvToJson(csv){
+  let linhas = csv.trim().split("\n");
+  let headers = linhas[0].split(",").map(h => h.trim());
 
-  return linhas.slice(1).map(linha => {
-    let valores = linha.split(",");
+  return linhas.slice(1).map(l => {
+    let valores = l.split(",");
     let obj = {};
-    headers.forEach((h, i) => obj[h.trim()] = valores[i]?.trim());
+
+    headers.forEach((h,i)=>{
+      obj[h] = valores[i] ? valores[i].trim() : "";
+    });
+
     return obj;
-  });
+  }).filter(l => Object.values(l).some(v => v));
 }
 
-// 🔥 CARREGAR TODAS AS PLANILHAS
-async function carregarDados() {
+// ===== LOAD =====
+async function carregarDados(){
 
-  const urls = {
-    config: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv",
-    servicos: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv",
-    produtos: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv",
-    materiais: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv"
+  const urls={
+    servicos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv",
+    produtos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv",
+    materiais:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv"
   };
 
-  for (let key in urls) {
+  for(let key in urls){
     let r = await fetch(urls[key]);
-    let text = await r.text();
-    tabela[key] = csvToJson(text);
+    let t = await r.text();
+    tabela[key] = csvToJson(t);
   }
 
   montarSelects();
 }
 
-// 🔥 MONTAR SELECTS
-function montarSelects() {
+// ===== SELECTS =====
+function montarSelects(){
 
-  servico.innerHTML = tabela.servicos
-    .map(s => `<option value="${s.nome}">${s.nome}</option>`)
-    .join("");
+  servico.innerHTML = '<option value="">Serviço</option>' +
+    tabela.servicos.map(s=>`<option>${s.nome}</option>`).join("");
 
-  material.innerHTML = tabela.materiais
-    .map(m => `<option value="${m.nome}">${m.nome}</option>`)
-    .join("");
+  material.innerHTML = '<option value="">Material</option>' +
+    tabela.materiais.map(m=>`<option>${m.nome}</option>`).join("");
 
   atualizarProdutos();
 }
 
-// 🔥 FILTRAR PRODUTOS POR SERVIÇO
-function atualizarProdutos() {
+// ===== REGRA INTELIGENTE =====
+function atualizarProdutos(){
 
   let serv = servico.value;
 
-  let filtrados = tabela.produtos.filter(p => {
+  let lista = tabela.produtos.filter(p => {
 
-    if (serv === "Corte" && p.permite_corte === "não") return false;
+    // corte → só quem permite corte
+    if(serv === "Corte" && p.permite_corte === "não") return false;
 
     return true;
   });
 
-  produto.innerHTML = filtrados
-    .map(p => `<option value="${p.nome}">${p.nome}</option>`)
-    .join("");
+  produto.innerHTML = '<option value="">Produto</option>' +
+    lista.map(p=>`<option>${p.nome}</option>`).join("");
 }
 
-servico.addEventListener("change", atualizarProdutos);
+servico.onchange = atualizarProdutos;
 
-// 🔥 ADICIONAR ITEM
-function addItem() {
+// ===== CEP =====
+cep.onblur = async ()=>{
+  let c = cep.value.replace(/\D/g,'');
+
+  if(c.length !== 8) return;
+
+  let r = await fetch(`https://viacep.com.br/ws/${c}/json/`);
+  let d = await r.json();
+
+  endereco.value = d.logradouro || "";
+  bairro.value = d.bairro || "";
+  cidade.value = d.localidade || "";
+};
+
+// ===== LIMITES =====
+largura.oninput = ()=>{ if(largura.value > 400) largura.value = 400; }
+altura.oninput  = ()=>{ if(altura.value > 400) altura.value = 400; }
+
+// ===== VALIDAÇÃO PROFISSIONAL =====
+function validar(){
+
+  if(!nome.value) return "Informe o nome";
+  if(!email.value) return "Informe o email";
+  if(!cep.value) return "Informe o CEP";
+  if(!numero.value) return "Informe o número";
+  if(!servico.value) return "Selecione serviço";
+  if(!material.value) return "Selecione material";
+  if(!produto.value) return "Selecione produto";
+
+  return null;
+}
+
+// ===== CALCULO PROFISSIONAL =====
+function calcularValor(l,a,q){
+
+  let mat = tabela.materiais.find(m => m.nome === material.value);
+
+  let base = Number(mat?.valor_base || 0);
+
+  if(base <= 0) return 0;
+
+  let area = (l * a) / 100;
+
+  let custoMaterial = area * base;
+
+  let custoTempo = area * 0.04;
+
+  let custo = custoMaterial + custoTempo + 1;
+
+  let lucro = custo * 0.5;
+
+  let total = custo + lucro;
+
+  if(servico.value === "Gravação") total *= 1.2;
+  if(servico.value === "Corte + Gravação") total *= 1.5;
+
+  total *= q;
+
+  if(total < 15*q) total = 15*q;
+
+  return total;
+}
+
+// ===== ADD =====
+function addItem(){
+
+  let erro = validar();
+  if(erro){ alert(erro); return; }
 
   let l = Number(largura.value);
   let a = Number(altura.value);
   let q = Number(qtd.value);
 
-  if (!l || !a || !q) {
-    alert("Preencha medidas e quantidade");
+  if(!l || !a){ alert("Informe medidas"); return; }
+
+  if(l > 400 || a > 400){
+    alert("Máximo 400mm");
     return;
   }
 
-  if (l > 400 || a > 400) {
-    alert("Máximo permitido: 400mm");
+  let valor = calcularValor(l,a,q);
+
+  if(valor <= 0){
+    alert("Erro no cálculo (ver planilha)");
     return;
   }
-
-  let mat = tabela.materiais.find(m => m.nome === material.value);
-
-  if (!mat) {
-    alert("Material não encontrado");
-    return;
-  }
-
-  let valorBase = Number(mat.valor_base || 0.1);
-
-  let valor = ((l * a) / 100) * valorBase * q;
 
   itens.push({
+    servico: servico.value,
     material: material.value,
     produto: produto.value,
-    servico: servico.value,
-    l, a, q, valor
+    l,a,q,valor
   });
 
-  atualizarResumo();
+  render();
 }
 
-// 🔥 RESUMO
-function atualizarResumo() {
+// ===== RESUMO PROFISSIONAL =====
+function render(){
 
-  let html = "";
   let total = 0;
 
-  itens.forEach((i, idx) => {
-    html += `${idx + 1}) ${i.produto} - ${i.l}x${i.a} - R$ ${i.valor.toFixed(2)}<br>`;
+  let html = `<b>Pedido #${Date.now().toString().slice(-6)}</b><br><br>
+  Cliente: ${nome.value}<br>
+  Email: ${email.value}<br>
+  Endereço: ${endereco.value}, ${numero.value} - ${bairro.value} - ${cidade.value}<br><br>`;
+
+  itens.forEach((i,x)=>{
     total += i.valor;
+
+    html += `${x+1}) ${i.servico}<br>
+    ${i.material} | ${i.produto}<br>
+    ${i.l}x${i.a}mm | Qtd:${i.q}<br>
+    R$ ${i.valor.toFixed(2)}<br><br>`;
   });
 
-  document.getElementById("resumo").innerHTML = html;
-  document.getElementById("total").innerHTML = "Total: R$ " + total.toFixed(2);
+  let desconto = total * 0.05;
+  let final = total - desconto;
+
+  html += `
+  Subtotal: R$ ${total.toFixed(2)}<br>
+  Desconto PIX: -R$ ${desconto.toFixed(2)}<br>
+  <b>Total: R$ ${final.toFixed(2)}</b><br><br>
+  Prazo: 2 a 5 dias úteis<br>
+  Frete calculado após confirmação
+  `;
+
+  resumo.innerHTML = html;
 }
 
-// 🔥 GERAR PIX
-async function gerarPix() {
+// ===== PIX =====
+async function gerarPix(){
 
-  if (!nome.value || !email.value || !cep.value || !numero.value) {
-    alert("Preencha os dados obrigatórios");
+  let erro = validar();
+  if(erro){ alert(erro); return; }
+
+  if(itens.length === 0){
+    alert("Adicione item");
     return;
   }
 
-  let total = itens.reduce((s, i) => s + i.valor, 0);
+  let total = itens.reduce((s,i)=>s+i.valor,0);
+  let final = total - (total*0.05);
 
-  try {
+  pix.innerHTML = "⏳ Gerando pagamento...";
 
-    let r = await fetch(API, {
-      method: "POST",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ valor: total })
-    });
+  let r = await fetch(API,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({valor:Number(final.toFixed(2))})
+  });
 
-    let data = await r.json();
+  let d = await r.json();
 
-    document.getElementById("pix").innerHTML = `
-      <img src="data:image/png;base64,${data.qr}">
-      <textarea>${data.copia}</textarea>
-      <p>Aguardando pagamento...</p>
-    `;
-
-    verificarPagamento(data.id);
-
-  } catch (e) {
-    alert("Erro ao gerar PIX");
+  if(!d.qr){
+    pix.innerHTML = "Erro ao gerar PIX";
+    return;
   }
+
+  pix.innerHTML = `
+  <img src="data:image/png;base64,${d.qr}" width="200"><br>
+  <textarea style="width:100%">${d.copia}</textarea>
+  <p>⏳ Aguardando pagamento...</p>
+  `;
+
+  statusPix(d.id);
 }
 
-// 🔥 STATUS AUTOMÁTICO
-async function verificarPagamento(id) {
+// ===== STATUS =====
+function statusPix(id){
 
-  let tentativas = 0;
+  let i = setInterval(async()=>{
 
-  let interval = setInterval(async () => {
+    let r = await fetch(API+"/status/"+id);
+    let d = await r.json();
 
-    let r = await fetch(API + "/status/" + id);
-    let data = await r.json();
+    if(d.status === "approved"){
+      clearInterval(i);
 
-    if (data.status === "approved") {
-      clearInterval(interval);
-
-      document.getElementById("pix").innerHTML += "<h3>✅ PAGAMENTO APROVADO</h3>";
-      document.getElementById("btnEnviar").disabled = false;
+      pix.innerHTML += "<br><b style='color:#22c55e;'>Pagamento aprovado!</b>";
+      btnEnviar.disabled = false;
     }
 
-    tentativas++;
-    if (tentativas > 20) clearInterval(interval);
-
-  }, 3000);
+  },3000);
 }
 
-// 🔥 INICIAR
+// ===== WHATS =====
+function enviarWhats(){
+  window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
+}
+
+// ===== START =====
 carregarDados();
