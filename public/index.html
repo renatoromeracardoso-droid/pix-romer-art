@@ -3,180 +3,143 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RomerArt Pedidos</title>
+<title>Pedidos</title>
 
 <style>
-
-*{
-  box-sizing:border-box;
-}
-
 body{
   margin:0;
-  font-family:Arial, sans-serif;
+  font-family:Arial;
   background: linear-gradient(135deg,#ff416c,#ff4b2b);
-}
-
-/* CENTRALIZAÇÃO CORRETA */
-.wrapper{
   display:flex;
   justify-content:center;
   align-items:center;
-  min-height:100vh;
-  padding:20px;
+  height:100vh;
 }
 
-.card{
+.box{
   background:#1e293b;
-  padding:25px;
-  border-radius:12px;
-  width:100%;
-  max-width:360px;
+  padding:20px;
+  border-radius:10px;
+  width:320px;
   color:#fff;
-  box-shadow:0 10px 25px rgba(0,0,0,0.3);
 }
 
-h2{
-  text-align:center;
-  margin-bottom:15px;
-}
-
-input, select{
+input,select{
   width:100%;
   padding:10px;
-  margin:8px 0;
+  margin:5px 0;
   border:none;
-  border-radius:6px;
+  border-radius:5px;
 }
 
 button{
   width:100%;
-  padding:12px;
+  padding:10px;
+  margin-top:5px;
   border:none;
-  border-radius:6px;
-  margin-top:8px;
+  border-radius:5px;
+  color:#fff;
   font-weight:bold;
-  cursor:pointer;
 }
 
-.add{background:#f97316;color:#fff;}
-.pix{background:#16a34a;color:#fff;}
+.add{background:orange;}
+.pix{background:green;}
 
 #resumo{
-  margin-top:15px;
-  font-size:14px;
+  margin-top:10px;
 }
-
 </style>
 </head>
 
 <body>
 
-<div class="wrapper">
-  <div class="card">
+<div class="box">
 
-    <h2>Pedidos Online</h2>
+<h3>Pedidos Online</h3>
 
-    <select id="material">
-      <option value="0.08">MDF</option>
-      <option value="0.15">Acrílico</option>
-    </select>
+<select id="material">
+<option value="0.08">MDF</option>
+<option value="0.15">Acrílico</option>
+</select>
 
-    <input id="largura" type="number" placeholder="Largura (mm)">
-    <input id="altura" type="number" placeholder="Altura (mm)">
-    <input id="quantidade" type="number" value="1">
+<input id="l" placeholder="Largura">
+<input id="a" placeholder="Altura">
+<input id="q" value="1">
 
-    <button class="add" onclick="adicionarItem()">Adicionar</button>
-    <button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button class="add" onclick="add()">Adicionar</button>
+<button class="pix" onclick="pix()">Gerar PIX</button>
 
-    <div id="resumo"></div>
+<div id="resumo"></div>
 
-  </div>
 </div>
 
 <script>
 
-let carrinho = [];
+let itens = [];
 
-function adicionarItem(){
+function add(){
 
-  const largura = Number(document.getElementById("largura").value);
-  const altura = Number(document.getElementById("altura").value);
-  const qtd = Number(document.getElementById("quantidade").value);
-  const preco = Number(document.getElementById("material").value);
+  let l = Number(document.getElementById("l").value);
+  let a = Number(document.getElementById("a").value);
+  let q = Number(document.getElementById("q").value);
+  let p = Number(document.getElementById("material").value);
 
-  if(!largura || !altura){
+  if(!l || !a){
     alert("Preencha largura e altura");
     return;
   }
 
-  const area = (largura * altura) / 100;
-  const valor = ((area * preco) + 2) * qtd;
+  let area = (l*a)/100;
+  let v = ((area*p)+2)*q;
 
-  carrinho.push({largura, altura, qtd, valor});
+  itens.push({l,a,q,v});
 
-  atualizarResumo();
+  render();
 }
 
-function atualizarResumo(){
+function render(){
 
-  let total = 0;
-  let html = "<b>Pedido:</b><br>";
+  let total=0;
+  let html="";
 
-  carrinho.forEach((item,i)=>{
-    total += item.valor;
-    html += ${i+1}) ${item.largura}x${item.altura} | Qtd:${item.qtd} | R$ ${item.valor.toFixed(2)}<br>;
+  itens.forEach((i,n)=>{
+    total += i.v;
+    html += ${n+1}) ${i.l}x${i.a} - R$ ${i.v.toFixed(2)}<br>;
   });
 
-  const desconto = total * 0.05;
-  const final = total - desconto;
+  let final = total*0.95;
 
-  html += <br>Subtotal: R$ ${total.toFixed(2)};
-  html += <br>Desconto PIX: -R$ ${desconto.toFixed(2)};
-  html += <br><b>Total: R$ ${final.toFixed(2)}</b>;
+  html += <br>Total: R$ ${final.toFixed(2)};
 
   document.getElementById("resumo").innerHTML = html;
 }
 
-async function gerarPix(){
+async function pix(){
 
-  if(carrinho.length === 0){
-    alert("Adicione itens primeiro");
-    return;
-  }
+  let total=0;
+  itens.forEach(i=> total+=i.v);
 
-  let total = 0;
-  carrinho.forEach(i => total += i.valor);
-
-  const final = Number((total * 0.95).toFixed(2));
+  let final = Number((total*0.95).toFixed(2));
 
   try{
 
-    const res = await fetch("/pix",{
+    let r = await fetch("/pix",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        valor: final,
-        email:"romerartbrasil@gmail.com"
-      })
+      body:JSON.stringify({valor:final})
     });
 
-    const data = await res.json();
-
-    if(data.erro){
-      alert(data.erro);
-      return;
-    }
+    let d = await r.json();
 
     document.getElementById("resumo").innerHTML += `
-      <br><br><b>PIX:</b><br>
-      <img width="200" src="data:image/png;base64,${data.img}">
-      <textarea style="width:100%;margin-top:10px">${data.qr}</textarea>
+    <br><img width="200" src="data:image/png;base64,${d.img}">
+    <textarea>${d.qr}</textarea>
     `;
 
   }catch(e){
-    alert("Erro ao conectar com servidor");
+    alert("Erro PIX");
   }
+
 }
 
 </script>
