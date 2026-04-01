@@ -1,69 +1,93 @@
-const express = require("express");
-const mercadopago = require("mercadopago");
-const path = require("path");
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>RomerArt Pedidos</title>
 
-const app = express();
+<style>
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;font-weight:bold;}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+.whats{background:#25d366;display:none;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+</style>
 
-app.use(express.json());
-app.use(express.static("public"));
+</head>
+<body>
 
-// INDEX
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+<div class="app">
 
-// TOKEN
-mercadopago.configurations.setAccessToken(process.env.MP_TOKEN);
+<div class="card">
+<h3>Cliente</h3>
+<input id="cliente" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
+<input id="endereco" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
+</div>
 
-// PIX
-app.post("/pix", async (req, res) => {
-  try {
+<div class="card">
+<h3>Pedido</h3>
 
-    let { valor, email } = req.body;
-    valor = Number(valor);
+<select id="material">
+<option>MDF</option>
+<option>ACRILICO</option>
+</select>
 
-    if (!valor || valor <= 0) {
-      return res.status(400).json({ erro: "Valor inválido" });
-    }
+<input id="larg" placeholder="Largura mm">
+<input id="alt" placeholder="Altura mm">
+<input id="qtd" value="1">
 
-    const pagamento = await mercadopago.payment.create({
-      transaction_amount: valor,
-      description: "Pedido RomerArt",
-      payment_method_id: "pix",
-      payer: {
-        email: email || "teste@email.com"
-      }
-    });
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button id="btnWhats" class="whats" onclick="enviarWhats()">Enviar Pedido</button>
 
-    res.json({
-      id: pagamento.body.id,
-      qr_code: pagamento.body.point_of_interaction.transaction_data.qr_code,
-      qr_code_base64: pagamento.body.point_of_interaction.transaction_data.qr_code_base64
-    });
+</div>
 
-  } catch (e) {
-    console.log("ERRO PIX:", e);
-    res.status(500).json({ erro: "Erro ao gerar PIX" });
-  }
-});
+<div id="resumo" class="box"></div>
 
-// STATUS
-app.get("/status/:id", async (req, res) => {
-  try {
+</div>
 
-    const pagamento = await mercadopago.payment.get(req.params.id);
+<script>
 
-    res.json({
-      status: pagamento.body.status
-    });
+let itens = [];
+let pago = false;
 
-  } catch (e) {
-    res.status(500).json({ erro: "Erro status" });
-  }
-});
+const WHATS = "5511946447040";
 
-const PORT = process.env.PORT || 10000;
+// CEP
+cep.onblur = async ()=>{
+ let c = cep.value.replace(/\D/g,'');
+ if(c.length!==8)return;
 
-app.listen(PORT, () => {
-  console.log("Servidor rodando 🚀");
-});
+ let r = await fetch(https://viacep.com.br/ws/${c}/json/);
+ let d = await r.json();
+
+ endereco.value=d.logradouro||"";
+ bairro.value=d.bairro||"";
+ cidade.value=d.localidade||"";
+};
+
+// ADD
+function addItem(){
+
+ let l=Number(larg.value);
+ let a=Number(alt.value);
+ let q=Number(qtd.value);
+
+ if(!l||!a||!q){
+   alert("Preencha corretamente");
+   return;
+ }
+
+ let valor=((l*a)/100)*0.1*q+2;
+
+ itens.push({material:material.value,l,a,q,valor});
+
+ render();
