@@ -1,83 +1,49 @@
 const express = require("express");
 const mercadopago = require("mercadopago");
+const cors = require("cors");
 
 const app = express();
-
 app.use(express.json());
+app.use(cors());
 
-// 🔥 LIBERA CORS (ESSENCIAL)
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  next();
+mercadopago.configure({
+ access_token: "SEU_TOKEN_MP"
 });
 
-// 🔥 RESPONDE PREFLIGHT (CORS)
-app.options("*", (req, res) => {
-  res.sendStatus(200);
-});
+app.post("/pix", async (req,res)=>{
 
-// 🔐 TOKEN
-mercadopago.configurations.setAccessToken(process.env.MP_TOKEN);
+ try{
 
-// ================= PIX =================
-app.post("/pix", async (req, res) => {
-  try {
+  let valor = Number(req.body.valor);
 
-    let { valor, email } = req.body;
-
-    valor = Number(valor);
-
-    if (!valor || valor <= 0) {
-      return res.status(400).json({ erro: "Valor inválido" });
-    }
-
-    const pagamento = await mercadopago.payment.create({
-      transaction_amount: valor,
-      description: "Pedido RomerArt",
-      payment_method_id: "pix",
-      payer: {
-        email: email || "teste@email.com"
-      }
-    });
-
-    res.json({
-      id: pagamento.body.id,
-      qr_code: pagamento.body.point_of_interaction.transaction_data.qr_code,
-      qr_code_base64: pagamento.body.point_of_interaction.transaction_data.qr_code_base64
-    });
-
-  } catch (erro) {
-    console.log("ERRO PIX:", erro);
-    res.status(500).json({ erro: "Erro ao gerar PIX" });
+  if(!valor || valor <= 0){
+   return res.status(400).json({erro:"Valor inválido"});
   }
+
+  let pagamento = await mercadopago.payment.create({
+   transaction_amount: valor,
+   payment_method_id: "pix",
+   payer:{email:"teste@email.com"}
+  });
+
+  res.json({
+   id: pagamento.body.id,
+   qr: pagamento.body.point_of_interaction.transaction_data.qr_code_base64,
+   copia: pagamento.body.point_of_interaction.transaction_data.qr_code
+  });
+
+ }catch(e){
+  console.log(e);
+  res.status(500).json({erro:"Erro PIX"});
+ }
+
 });
 
-// ================= STATUS =================
-app.get("/status/:id", async (req, res) => {
-  try {
+app.get("/pix/status/:id", async (req,res)=>{
 
-    const pagamento = await mercadopago.payment.get(req.params.id);
+ let pagamento = await mercadopago.payment.get(req.params.id);
 
-    res.json({
-      status: pagamento.body.status
-    });
-
-  } catch (erro) {
-    console.log("ERRO STATUS:", erro);
-    res.status(500).json({ erro: "Erro ao consultar status" });
-  }
+ res.json({status: pagamento.body.status});
 });
 
-// ================= ROOT TEST =================
-app.get("/", (req, res) => {
-  res.send("Servidor PIX rodando 🚀");
-});
-
-// ================= START =================
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, () => {
-  console.log("Servidor rodando na porta " + PORT);
-});
+app.listen(3000, ()=>console.log("Servidor rodando 🚀"));
