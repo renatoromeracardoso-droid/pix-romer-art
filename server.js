@@ -1,71 +1,42 @@
 const express = require("express");
 const mercadopago = require("mercadopago");
+const cors = require("cors");
 
 const app = express();
 app.use(express.json());
 
-// ===== LIBERAR CORS (IMPORTANTÍSSIMO) =====
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "*");
-  next();
-});
+// 🔥 LIBERA CORS TOTAL
+app.use(cors());
 
-// ===== TOKEN MERCADO PAGO =====
 mercadopago.configure({
-  access_token: "SEU_TOKEN_AQUI"
+ access_token: process.env.MP_ACCESS_TOKEN
 });
 
-// ===== CRIAR PIX =====
 app.post("/pix", async (req, res) => {
+ try {
 
-  try{
+  const pagamento = await mercadopago.payment.create({
+   transaction_amount: Number(req.body.valor),
+   description: "Pedido RomerArt",
+   payment_method_id: "pix",
+   payer: {
+    email: "teste@email.com"
+   }
+  });
 
-    let valor = Number(req.body.valor);
+  const qr = pagamento.body.point_of_interaction.transaction_data.qr_code_base64;
+  const copia = pagamento.body.point_of_interaction.transaction_data.qr_code;
 
-    if(!valor || valor <= 0){
-      return res.status(400).json({erro:"Valor inválido"});
-    }
+  res.json({ qr, copia });
 
-    const pagamento = await mercadopago.payment.create({
-      transaction_amount: Number(valor.toFixed(2)),
-      description: "Pedido RomerArt",
-      payment_method_id: "pix",
-      payer: {
-        email: "teste@teste.com"
-      }
-    });
-
-    const dados = pagamento.body;
-
-    res.json({
-      id: dados.id,
-      qr: dados.point_of_interaction.transaction_data.qr_code_base64,
-      copia: dados.point_of_interaction.transaction_data.qr_code
-    });
-
-  }catch(e){
-    console.log("ERRO PIX:", e.message);
-    res.status(500).json({erro:"Erro ao gerar PIX"});
-  }
-
+ } catch (err) {
+  console.log(err);
+  res.status(500).json({ erro: "erro pix" });
+ }
 });
 
-// ===== STATUS =====
-app.get("/pix/status/:id", async (req,res)=>{
-
-  try{
-
-    let pagamento = await mercadopago.payment.findById(req.params.id);
-
-    res.json({
-      status: pagamento.body.status
-    });
-
-  }catch{
-    res.status(500).json({erro:"Erro status"});
-  }
-
+app.get("/", (req,res)=>{
+ res.send("Servidor rodando");
 });
 
-app.listen(3000, ()=> console.log("Servidor rodando 🚀"));
+app.listen(process.env.PORT || 3000);
