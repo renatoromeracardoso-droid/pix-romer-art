@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pedidos</title>
+<title>RomerArt - Pedidos</title>
 
 <style>
 body{
@@ -15,54 +15,74 @@ body{
   height:100vh;
   margin:0;
 }
-.box{
+
+.container{
   background:#1e293b;
-  padding:20px;
+  padding:25px;
   border-radius:12px;
-  width:350px;
+  width:360px;
   color:#fff;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
 }
-input,select{
+
+h2{
+  text-align:center;
+  margin-bottom:15px;
+}
+
+input, select{
   width:100%;
-  margin-bottom:10px;
   padding:10px;
+  margin-bottom:10px;
   border:none;
   border-radius:6px;
 }
+
 button{
   width:100%;
   padding:12px;
   border:none;
   border-radius:6px;
-  margin-top:5px;
+  margin-top:6px;
   color:#fff;
   font-weight:bold;
   cursor:pointer;
+  transition:0.2s;
 }
-.add{background:#f97316;}
-.pix{background:#16a34a;}
-</style>
 
+button:hover{
+  opacity:0.9;
+}
+
+.btn-add{background:#f97316;}
+.btn-pix{background:#16a34a;}
+
+.resumo{
+  margin-top:15px;
+  font-size:14px;
+}
+</style>
 </head>
+
 <body>
 
-<div class="box">
+<div class="container">
 
-<h3>Pedidos Online</h3>
+<h2>Pedidos Online</h2>
 
 <select id="material">
 <option value="0.08">MDF</option>
-<option value="0.15">ACRILICO</option>
+<option value="0.15">ACRÍLICO</option>
 </select>
 
-<input id="larg" type="number" placeholder="Largura mm">
-<input id="alt" type="number" placeholder="Altura mm">
+<input id="largura" type="number" placeholder="Largura (mm)">
+<input id="altura" type="number" placeholder="Altura (mm)">
 <input id="qtd" type="number" value="1">
 
-<button class="add" onclick="addItem()">Adicionar</button>
-<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button class="btn-add" onclick="adicionar()">Adicionar</button>
+<button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
 
-<div id="resumo"></div>
+<div id="resumo" class="resumo"></div>
 
 </div>
 
@@ -70,100 +90,95 @@ button{
 
 let itens = [];
 
-function addItem(){
+function adicionar(){
 
- let l = parseFloat(document.getElementById("larg").value) || 0;
- let a = parseFloat(document.getElementById("alt").value) || 0;
- let q = parseInt(document.getElementById("qtd").value) || 1;
- let preco = parseFloat(document.getElementById("material").value) || 0;
+  let l = parseFloat(document.getElementById("largura").value) || 0;
+  let a = parseFloat(document.getElementById("altura").value) || 0;
+  let q = parseInt(document.getElementById("qtd").value) || 1;
+  let preco = parseFloat(document.getElementById("material").value) || 0;
 
- if(l <= 0 || a <= 0){
-   alert("Preencha largura e altura");
-   return;
- }
+  if(l <= 0 || a <= 0){
+    alert("Preencha largura e altura");
+    return;
+  }
 
- if(l > 400 || a > 400){
-   alert("Máximo 400mm");
-   return;
- }
+  if(l > 400 || a > 400){
+    alert("Máximo permitido: 400mm");
+    return;
+  }
 
- let area = (l * a)/100;
- let valor = (area * preco)+2;
- valor = valor * q;
+  let area = (l * a) / 100;
+  let valor = ((area * preco) + 2) * q;
 
- if(isNaN(valor)){
-   alert("Erro no cálculo");
-   return;
- }
+  if(isNaN(valor)){
+    alert("Erro no cálculo");
+    return;
+  }
 
- itens.push({
-   l:Number(l),
-   a:Number(a),
-   q:Number(q),
-   valor:Number(valor)
- });
-
- render();
+  itens.push({l, a, q, valor});
+  render();
 }
 
 function render(){
 
- let total=0;
- let html="<br><b>Pedido:</b><br>";
+  let total = 0;
+  let html = "<b>Pedido:</b><br>";
 
- itens.forEach((i,x)=>{
-   let v = Number(i.valor || 0);
-   total += v;
-   html += ${x+1}) ${i.l}x${i.a} | Qtd:${i.q} | R$ ${v.toFixed(2)}<br>;
- });
+  itens.forEach((item, i)=>{
+    total += item.valor;
+    html += ${i+1}) ${item.l}x${item.a} | Qtd:${item.q} | R$ ${item.valor.toFixed(2)}<br>;
+  });
 
- let desc = total*0.05;
- let final = total-desc;
+  let desconto = total * 0.05;
+  let final = total - desconto;
 
- html += <br>Subtotal: R$ ${total.toFixed(2)};
- html += <br>Desconto PIX: -R$ ${desc.toFixed(2)};
- html += <br><b>Total: R$ ${final.toFixed(2)}</b>;
+  html += <br>Subtotal: R$ ${total.toFixed(2)};
+  html += <br>Desconto PIX: -R$ ${desconto.toFixed(2)};
+  html += <br><b>Total: R$ ${final.toFixed(2)}</b>;
 
- document.getElementById("resumo").innerHTML = html;
+  document.getElementById("resumo").innerHTML = html;
 }
 
 async function gerarPix(){
 
- if(itens.length === 0){
-   alert("Adicione item primeiro");
-   return;
- }
+  if(itens.length === 0){
+    alert("Adicione itens primeiro");
+    return;
+  }
 
- let total=0;
- itens.forEach(i=> total+=Number(i.valor||0));
+  let total = 0;
+  itens.forEach(i => total += i.valor);
 
- let final = Number((total*0.95).toFixed(2));
+  let final = Number((total * 0.95).toFixed(2));
 
- try{
+  try{
 
-   let r = await fetch("https://pix-romer-art.onrender.com/pix",{
-     method:"POST",
-     headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({
-       valor: final,
-       email:"romerartbrasil@gmail.com"
-     })
-   });
+    let resposta = await fetch("/pix", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        valor: final,
+        email: "romerartbrasil@gmail.com"
+      })
+    });
 
-   let d = await r.json();
+    let dados = await resposta.json();
 
-   let qr = d.qr || d.qr_code || "";
-   let img = d.img || d.qr_code_base64 || "";
+    if(dados.erro){
+      alert(dados.erro);
+      return;
+    }
 
-   document.getElementById("resumo").innerHTML += `
-   <br><br><b>Pague com PIX:</b><br>
-   ${img ? <img width="200" src="data:image/png;base64,${img}"> : ""}
-   <textarea style="width:100%">${qr}</textarea>
-   `;
+    document.getElementById("resumo").innerHTML += `
+      <br><br><b>Pague com PIX:</b><br>
+      <img width="200" src="data:image/png;base64,${dados.img}">
+      <textarea style="width:100%;margin-top:10px">${dados.qr}</textarea>
+    `;
 
- }catch(e){
-   alert("Erro ao gerar PIX");
- }
+  }catch(e){
+    alert("Erro ao conectar com servidor");
+    console.log(e);
+  }
 }
 
 </script>
