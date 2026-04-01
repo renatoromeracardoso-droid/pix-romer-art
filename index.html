@@ -1,73 +1,39 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>RomerArt Pedidos</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RomerArt Pedido</title>
 
 <style>
-body{
-  font-family: Arial;
-  background:#0f172a;
-  color:#fff;
-  display:flex;
-  justify-content:center;
-  padding:20px;
-}
-
-.container{
-  width:100%;
-  max-width:420px;
-}
-
-.card{
-  background:#1e293b;
-  padding:20px;
-  border-radius:12px;
-  margin-bottom:15px;
-}
-
-input, select{
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-  border-radius:6px;
-  border:none;
-}
-
-button{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border:none;
-  border-radius:6px;
-  font-weight:bold;
-}
-
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;}
 .add{background:#f97316;}
-.pix{background:#22c55e;}
-.enviar{background:#16a34a;}
-
+.pix{background:#16a34a;}
+.whats{background:#25d366;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
 </style>
-</head>
 
+</head>
 <body>
 
-<div class="container">
+<div class="app">
 
 <div class="card">
 <h3>Cliente</h3>
-<input id="nome" placeholder="Nome*" required>
-<input id="email" placeholder="Email*" required>
-<input id="cep" placeholder="CEP*" required>
-<input id="numero" placeholder="Número*" required>
-<input id="rua" placeholder="Rua" disabled>
-<input id="bairro" placeholder="Bairro" disabled>
-<input id="cidade" placeholder="Cidade" disabled>
+<input id="nome" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
+<input id="endereco" placeholder="Rua" readonly>
+<input id="bairro" placeholder="Bairro" readonly>
+<input id="cidade" placeholder="Cidade" readonly>
+<input id="numero" placeholder="Número *">
 </div>
 
 <div class="card">
-<h3>Pedido</h3>
+<h3>Serviço</h3>
 
 <select id="servico"></select>
 <select id="material"></select>
@@ -79,19 +45,239 @@ button{
 
 <button class="add" onclick="addItem()">Adicionar</button>
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button class="enviar" id="btnEnviar" disabled onclick="enviarPedido()">Enviar Pedido</button>
-</div>
-
-<div class="card">
-<h3>Resumo</h3>
-<div id="resumo"></div>
-<div id="total"></div>
-<div id="pix"></div>
-</div>
+<button class="whats" id="btnEnviar" disabled onclick="enviarWhats()">Enviar Pedido</button>
 
 </div>
 
-<script src="script.js"></script>
+<div id="resumo" class="box"></div>
+<div id="total" class="box"></div>
+<div id="pix" class="box"></div>
+
+</div>
+
+<script>
+
+// ===== CONFIG =====
+const API = "https://pix-romer-art.onrender.com/pix";
+const WHATS = "5511946447040";
+
+let itens=[];
+
+let tabela={
+ materiais:[],
+ produtos:[],
+ servicos:[]
+};
+
+// ===== CSV =====
+function csvToJson(csv){
+ let linhas=csv.trim().split("\n");
+ let headers=linhas[0].split(",").map(h=>h.trim());
+
+ return linhas.slice(1).map(l=>{
+  let valores=l.split(",");
+  let obj={};
+
+  headers.forEach((h,i)=>{
+    obj[h]=valores[i]?valores[i].trim():"";
+  });
+
+  return obj;
+ }).filter(l=>Object.values(l).some(v=>v));
+}
+
+// ===== CARREGAR GOOGLE =====
+async function carregarDados(){
+
+ const urls={
+  servicos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv",
+  produtos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv",
+  materiais:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv"
+ };
+
+ for(let key in urls){
+  let r=await fetch(urls[key]);
+  let t=await r.text();
+  tabela[key]=csvToJson(t);
+ }
+
+ montarSelects();
+}
+
+// ===== SELECTS =====
+function montarSelects(){
+
+ servico.innerHTML='<option value="">Serviço</option>'+
+ tabela.servicos.map(s=>`<option>${s.nome}</option>`).join("");
+
+ material.innerHTML='<option value="">Material</option>'+
+ tabela.materiais.map(m=>`<option>${m.nome}</option>`).join("");
+
+ atualizarProdutos();
+}
+
+// ===== REGRAS =====
+function atualizarProdutos(){
+
+ let serv=servico.value;
+
+ let lista=tabela.produtos.filter(p=>{
+  if(serv==="Corte" && p.permite_corte==="não") return false;
+  return true;
+ });
+
+ produto.innerHTML='<option value="">Produto</option>'+
+ lista.map(p=>`<option>${p.nome}</option>`).join("");
+}
+
+servico.onchange=atualizarProdutos;
+
+// ===== CEP =====
+cep.onblur=async()=>{
+ let c=cep.value.replace(/\D/g,'');
+ if(c.length!==8)return;
+
+ let r=await fetch(`https://viacep.com.br/ws/${c}/json/`);
+ let d=await r.json();
+
+ endereco.value=d.logradouro||"";
+ bairro.value=d.bairro||"";
+ cidade.value=d.localidade||"";
+};
+
+// ===== LIMITES =====
+largura.oninput=()=>{if(largura.value>400)largura.value=400;}
+altura.oninput=()=>{if(altura.value>400)altura.value=400;}
+
+// ===== ADD =====
+function addItem(){
+
+ let l=Number(largura.value);
+ let a=Number(altura.value);
+ let q=Number(qtd.value);
+
+ if(!servico.value||!material.value||!produto.value){
+  alert("Selecione tudo");
+  return;
+ }
+
+ if(!l||!a||!q){
+  alert("Preencha medidas");
+  return;
+ }
+
+ if(l>400||a>400){
+  alert("Máx 400mm");
+  return;
+ }
+
+ let mat=tabela.materiais.find(m=>m.nome===material.value);
+
+ let base=Number(mat.valor_base||0);
+
+ if(base<=0){
+  alert("Erro valor material");
+  return;
+ }
+
+ let valor=((l*a)/100)*base*q;
+
+ itens.push({servico:servico.value,produto:produto.value,l,a,q,valor});
+
+ render();
+}
+
+// ===== RESUMO =====
+function render(){
+
+ let total=0;
+ let html="<b>Resumo:</b><br><br>";
+
+ itens.forEach((i,x)=>{
+  total+=i.valor;
+
+  html+=`${x+1}) ${i.servico}<br>
+  ${i.produto}<br>
+  ${i.l}x${i.a}mm | Qtd:${i.q}<br>
+  R$ ${i.valor.toFixed(2)}<br><br>`;
+ });
+
+ let desc=total*0.05;
+ let final=total-desc;
+
+ html+=`<b>Total: R$ ${final.toFixed(2)}</b><br>
+ (5% desconto PIX)`;
+
+ resumo.innerHTML=html;
+}
+
+// ===== PIX =====
+async function gerarPix(){
+
+ if(!nome.value||!email.value||!cep.value||!numero.value){
+  alert("Preencha cliente");
+  return;
+ }
+
+ if(itens.length===0){
+  alert("Adicione item");
+  return;
+ }
+
+ let total=itens.reduce((s,i)=>s+i.valor,0);
+ let final=total-(total*0.05);
+
+ pix.innerHTML="⏳ Gerando PIX...";
+
+ let r=await fetch(API,{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({valor:Number(final.toFixed(2))})
+ });
+
+ let d=await r.json();
+
+ if(!d.qr){
+  pix.innerHTML="❌ Erro PIX";
+  return;
+ }
+
+ pix.innerHTML=`
+ <img src="data:image/png;base64,${d.qr}" width="200"><br>
+ <textarea style="width:100%">${d.copia}</textarea>
+ <p>⏳ Aguardando pagamento...</p>
+ `;
+
+ statusPix(d.id);
+}
+
+// ===== STATUS =====
+function statusPix(id){
+
+ let i=setInterval(async()=>{
+
+  let r=await fetch(API+"/status/"+id);
+  let d=await r.json();
+
+  if(d.status==="approved"){
+   clearInterval(i);
+
+   pix.innerHTML+="<br><b style='color:lightgreen;'>Pagamento aprovado!</b>";
+   btnEnviar.disabled=false;
+  }
+
+ },3000);
+}
+
+// ===== WHATS =====
+function enviarWhats(){
+ window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
+}
+
+// ===== START =====
+carregarDados();
+
+</script>
 
 </body>
 </html>
