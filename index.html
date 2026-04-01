@@ -93,8 +93,10 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 const API="https://pix-romer-art.onrender.com/pix";
 const WHATS="5511946447040";
+const CEP_ORIGEM="03822000";
 
 let itens=[];
+let freteValor=0;
 
 // ===== ESPESSURA =====
 const espMap={
@@ -115,22 +117,13 @@ cep.onblur=async()=>{
  endereco.value=d.logradouro||"";
  bairro.value=d.bairro||"";
  cidade.value=d.localidade||"";
+
+ await render();
 };
 
-// ===== CONTROLE CAMPOS =====
-servico.onchange=()=>{
- controlarCampos();
-};
-
-produto.onchange=()=>{
- if(produto.value==="CAMISETA"){
-  tamanho.classList.remove("hidden");
-  cor.classList.remove("hidden");
- }else{
-  tamanho.classList.add("hidden");
-  cor.classList.add("hidden");
- }
-};
+// ===== CONTROLE =====
+servico.onchange=controlarCampos;
+produto.onchange=controlarCampos;
 
 material.onchange=()=>{
  let lista=espMap[material.value]||[];
@@ -154,18 +147,47 @@ function controlarCampos(){
   largura.classList.remove("hidden");
   altura.classList.remove("hidden");
  }
+
+ if(produto.value==="CAMISETA"){
+  tamanho.classList.remove("hidden");
+  cor.classList.remove("hidden");
+ }else{
+  tamanho.classList.add("hidden");
+  cor.classList.add("hidden");
+ }
 }
 
 // ===== LIMITES =====
 largura.oninput=()=>{if(largura.value>400)largura.value=400;}
 altura.oninput=()=>{if(altura.value>400)altura.value=400;}
 
+// ===== FRETE =====
+async function calcularFrete(){
+
+ let cepDestino=cep.value.replace(/\D/g,'');
+
+ if(cepDestino.length!==8) return 0;
+
+ try{
+  let origem=await fetch(`https://viacep.com.br/ws/${CEP_ORIGEM}/json/`).then(r=>r.json());
+  let destino=await fetch(`https://viacep.com.br/ws/${cepDestino}/json/`).then(r=>r.json());
+
+  if(origem.localidade===destino.localidade){
+    return 0;
+  }
+
+  return 15;
+
+ }catch{
+  return 20;
+ }
+}
+
 // ===== CALCULO =====
 function calcular(){
 
  let q=Number(qtd.value)||1;
 
- // PRODUTOS
  if(produto.value){
 
   if(produto.value==="CAMISETA"){
@@ -182,7 +204,6 @@ function calcular(){
   return (precos[produto.value]||5)*q;
  }
 
- // MATERIAL
  let l=Number(largura.value)||0;
  let a=Number(altura.value)||0;
 
@@ -206,7 +227,7 @@ function calcular(){
 }
 
 // ===== ADD =====
-function addItem(){
+async function addItem(){
 
  if(!nome.value||!email.value||!cep.value||!numero.value){
   alert("Preencha dados do cliente");
@@ -227,11 +248,11 @@ function addItem(){
   valor
  });
 
- render();
+ await render();
 }
 
 // ===== RESUMO =====
-function render(){
+async function render(){
 
  let total=0;
 
@@ -251,12 +272,14 @@ function render(){
   R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
+ let frete=await calcularFrete();
  let desconto=total*0.05;
- let final=total-desconto;
+ let final=(total-desconto)+frete;
 
  html+=`
  Subtotal: R$ ${total.toFixed(2)}<br>
  Desconto PIX: -R$ ${desconto.toFixed(2)}<br>
+ Frete: ${frete===0?"Grátis 🎉":"R$ "+frete.toFixed(2)}<br>
  <b>Total: R$ ${final.toFixed(2)}</b><br>
  Prazo: 2 a 5 dias úteis
  `;
@@ -268,7 +291,8 @@ function render(){
 async function gerarPix(){
 
  let total=itens.reduce((s,i)=>s+i.valor,0);
- let final=total-(total*0.05);
+ let desconto=total*0.05;
+ let final=total-desconto;
 
  if(final<=0){
   alert("Valor inválido");
@@ -277,20 +301,31 @@ async function gerarPix(){
 
  pix.innerHTML="Gerando PIX...";
 
- let r=await fetch(API,{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({valor:Number(final.toFixed(2))})
- });
+ try{
 
- let d=await r.json();
+  let r=await fetch(API,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({valor:Number(final.toFixed(2))})
+  });
 
- pix.innerHTML=`
- <img src="data:image/png;base64,${d.qr}" width="200"><br>
- <textarea style="width:100%">${d.copia}</textarea>
- `;
+  let d=await r.json();
 
- acompanhar(d.id);
+  if(!d || !d.qr){
+    pix.innerHTML="Erro ao gerar PIX";
+    return;
+  }
+
+  pix.innerHTML=`
+    <img src="data:image/png;base64,${d.qr}" width="200"><br>
+    <textarea style="width:100%">${d.copia}</textarea>
+  `;
+
+  acompanhar(d.id);
+
+ }catch{
+  pix.innerHTML="Erro de conexão";
+ }
 }
 
 // ===== STATUS =====
@@ -303,7 +338,7 @@ function acompanhar(id){
 
   if(d.status==="approved"){
    clearInterval(t);
-   pix.innerHTML+="<br><b style='color:lightgreen;'>Pago!</b>";
+   pix.innerHTML+="<br><b style='color:lightgreen;'>Pagamento aprovado!</b>";
    btnWhats.disabled=false;
   }
 
