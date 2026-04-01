@@ -1,187 +1,327 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RomerArt - Pedidos</title>
-
 <style>
-body{
-  font-family: Arial;
-  background: linear-gradient(135deg,#ff416c,#ff4b2b);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  margin:0;
-}
-
-.container{
-  background:#1e293b;
-  padding:25px;
-  border-radius:12px;
-  width:360px;
-  color:#fff;
-  box-shadow:0 10px 30px rgba(0,0,0,0.3);
-}
-
-h2{
-  text-align:center;
-  margin-bottom:15px;
-}
-
-input, select{
-  width:100%;
-  padding:10px;
-  margin-bottom:10px;
-  border:none;
-  border-radius:6px;
-}
-
-button{
-  width:100%;
-  padding:12px;
-  border:none;
-  border-radius:6px;
-  margin-top:6px;
-  color:#fff;
-  font-weight:bold;
-  cursor:pointer;
-  transition:0.2s;
-}
-
-button:hover{
-  opacity:0.9;
-}
-
-.btn-add{background:#f97316;}
-.btn-pix{background:#16a34a;}
-
-.resumo{
-  margin-top:15px;
-  font-size:14px;
-}
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+.whats{background:#25d366;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
 </style>
 </head>
-
 <body>
 
-<div class="container">
+<div class="app">
 
-<h2>Pedidos Online</h2>
+<div class="card">
+<h3>Cliente</h3>
+<input id="cliente" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
+<input id="endereco" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
+</div>
 
-<select id="material">
-<option value="0.08">MDF</option>
-<option value="0.15">ACRÍLICO</option>
+<div class="card">
+<h3>Serviço</h3>
+
+<select id="tipo"></select>
+<select id="item"></select>
+<select id="esp"></select>
+
+<select id="tamanho" style="display:none">
+<option>P</option><option>M</option><option>G</option><option>GG</option>
 </select>
 
-<input id="largura" type="number" placeholder="Largura (mm)">
-<input id="altura" type="number" placeholder="Altura (mm)">
-<input id="qtd" type="number" value="1">
+<select id="cor" style="display:none">
+<option>Branco</option><option>Preto</option><option>Colorido</option>
+</select>
 
-<button class="btn-add" onclick="adicionar()">Adicionar</button>
-<button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
+<input id="larg" placeholder="Largura mm">
+<input id="alt" placeholder="Altura mm">
+<input id="qtd" value="1">
 
-<div id="resumo" class="resumo"></div>
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button class="whats" onclick="enviarWhats()">Enviar Pedido</button>
+
+</div>
+
+<div id="resumo" class="box"></div>
 
 </div>
 
 <script>
 
-let itens = [];
+// CONFIG
+const WHATS = "5511946447040";
 
-function adicionar(){
+// DADOS
+const materiais={
+ MDF:{preco:0.08, esp:[3,6]},
+ ACRILICO:{preco:0.15, esp:[2,3,5]},
+ COMPENSADO:{preco:0.07, esp:[3,4]},
+ MADEIRA:{preco:0.12, esp:[3,5]}
+};
 
-  let l = parseFloat(document.getElementById("largura").value) || 0;
-  let a = parseFloat(document.getElementById("altura").value) || 0;
-  let q = parseInt(document.getElementById("qtd").value) || 1;
-  let preco = parseFloat(document.getElementById("material").value) || 0;
+const produtos={
+ CAMISETA:{P:18,M:20,G:22,GG:25},
+ COPO:8,
+ TACA:10,
+ GARRAFA:15,
+ CHAVEIRO:3,
+ CANETA:2,
+ LAPIS:1
+};
 
-  if(l <= 0 || a <= 0){
-    alert("Preencha largura e altura");
-    return;
-  }
+let itens=[];
 
-  if(l > 400 || a > 400){
-    alert("Máximo permitido: 400mm");
-    return;
-  }
+// INIT
+tipo.innerHTML=`
+<option value="">Selecione o serviço</option>
+<option>Corte</option>
+<option>Gravação</option>
+<option>Corte + Gravação</option>
+`;
 
-  let area = (l * a) / 100;
-  let valor = ((area * preco) + 2) * q;
+tipo.onchange=carregar;
+item.onchange=extras;
 
-  if(isNaN(valor)){
-    alert("Erro no cálculo");
-    return;
-  }
+function carregar(){
 
-  itens.push({l, a, q, valor});
-  render();
+ item.innerHTML="<option value=''>Selecione</option>";
+
+ if(!tipo.value) return;
+
+ let lista=[];
+
+ if(tipo.value==="Corte") lista=Object.keys(materiais);
+ if(tipo.value==="Gravação") lista=[...Object.keys(materiais),...Object.keys(produtos)];
+ if(tipo.value==="Corte + Gravação") lista=[...Object.keys(materiais),...Object.keys(produtos)];
+
+ lista.forEach(i=>item.innerHTML+=<option>${i}</option>);
+
+ extras();
 }
 
+function extras(){
+
+ esp.style.display="none";
+ tamanho.style.display="none";
+ cor.style.display="none";
+
+ if(materiais[item.value]){
+   esp.style.display="block";
+   esp.innerHTML="";
+   materiais[item.value].esp.forEach(e=>esp.innerHTML+=<option>${e}mm</option>);
+ }
+
+ if(item.value==="CAMISETA"){
+   tamanho.style.display="block";
+   cor.style.display="block";
+   esp.style.display="none";
+ }
+}
+
+// CEP AUTO
+cep.onblur=async()=>{
+ let c=cep.value.replace(/\D/g,'');
+ if(c.length!==8)return;
+ let r=await fetch(https://viacep.com.br/ws/${c}/json/);
+ let d=await r.json();
+ endereco.value=d.logradouro||"";
+ bairro.value=d.bairro||"";
+ cidade.value=d.localidade||"";
+};
+
+// LIMITES
+larg.oninput=()=>{if(larg.value>400)larg.value=400;}
+alt.oninput=()=>{if(alt.value>400)alt.value=400;}
+
+// VALIDAR
+function validar(){
+
+ if(!cliente.value){alert("Informe o nome");return false;}
+ if(!email.value){alert("Informe o email");return false;}
+ if(!cep.value){alert("Informe o CEP");return false;}
+ if(!tipo.value){alert("Selecione o serviço");return false;}
+ if(!item.value){alert("Selecione o item");return false;}
+
+ return true;
+}
+
+// CALCULO
+function calcular(){
+
+ let q=+qtd.value||1;
+
+ if(produtos[item.value]){
+   if(item.value==="CAMISETA"){
+     let base=produtos.CAMISETA[tamanho.value]||20;
+     if(cor.value==="Colorido") base+=3;
+     return base*q;
+   }
+   return produtos[item.value]*q;
+ }
+
+ let l=+larg.value||0;
+ let a=+alt.value||0;
+
+ if(l<=0||a<=0){alert("Informe medidas");return 0;}
+ if(l>400||a>400){alert("Máx 400mm");return 0;}
+
+ let area=(l*a)/100;
+
+ let material=area*materiais[item.value].preco;
+ let tempo=area*0.04;
+ let custoTempo=(tempo/60)*60;
+
+ let custo=material+custoTempo+1;
+ let lucro=custo*0.4;
+
+ let total=custo+lucro;
+
+ if(tipo.value==="Gravação") total*=1.2;
+ if(tipo.value==="Corte + Gravação") total*=1.5;
+
+ return total*q;
+}
+
+// FRETE
+function calcularFrete(){
+ let c=cep.value.replace(/\D/g,'');
+ if(c.startsWith("03822")) return 0;
+ return 15;
+}
+
+// ADD
+function addItem(){
+
+ if(!validar()) return;
+
+ let valor=calcular();
+ if(valor===0)return;
+
+ itens.push({
+   tipo:tipo.value,
+   item:item.value,
+   esp:esp.value||"-",
+   l:larg.value||"-",
+   a:alt.value||"-",
+   qtd:qtd.value,
+   valor
+ });
+
+ render();
+}
+
+// RESUMO
 function render(){
 
-  let total = 0;
-  let html = "<b>Pedido:</b><br>";
+ let total=0;
 
-  itens.forEach((item, i)=>{
-    total += item.valor;
-    html += ${i+1}) ${item.l}x${item.a} | Qtd:${item.q} | R$ ${item.valor.toFixed(2)}<br>;
-  });
+ let html=<b>Pedido #${Date.now()}</b><br><br>;
 
-  let desconto = total * 0.05;
-  let final = total - desconto;
+ html+=`
+ Nome: ${cliente.value}<br>
+ Email: ${email.value}<br>
+ ${endereco.value}, ${numero.value}<br>
+ ${bairro.value} - ${cidade.value}<br><br>
+ `;
 
-  html += <br>Subtotal: R$ ${total.toFixed(2)};
-  html += <br>Desconto PIX: -R$ ${desconto.toFixed(2)};
-  html += <br><b>Total: R$ ${final.toFixed(2)}</b>;
+ itens.forEach((i,x)=>{
+   total+=i.valor;
 
-  document.getElementById("resumo").innerHTML = html;
+   html+=`${x+1}) ${i.tipo}<br>
+   ${i.item} | Esp:${i.esp}<br>
+   Tam:${i.l}x${i.a} | Qtd:${i.qtd}<br>
+   R$ ${i.valor.toFixed(2)}<br><br>`;
+ });
+
+ let frete=calcularFrete();
+ let desconto=total*0.05;
+ let final=total+frete-desconto;
+
+ html+=`
+ Frete: ${frete===0?"GRÁTIS":"R$ "+frete}
+ <br>Subtotal: R$ ${total.toFixed(2)}
+ <br>Desconto PIX: -R$ ${desconto.toFixed(2)}
+ <br><b>Total: R$ ${final.toFixed(2)}</b>
+ `;
+
+ resumo.innerHTML=html;
 }
 
+// PIX
 async function gerarPix(){
 
-  if(itens.length === 0){
-    alert("Adicione itens primeiro");
-    return;
-  }
+ if(!validar()) return;
 
-  let total = 0;
-  itens.forEach(i => total += i.valor);
+ if(itens.length===0){
+   alert("Adicione pelo menos 1 item");
+   return;
+ }
 
-  let final = Number((total * 0.95).toFixed(2));
+ let total=0;
+ itens.forEach(i=> total+=i.valor);
 
-  try{
+ let final=total-(total*0.05);
 
-    let resposta = await fetch("/pix", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        valor: final,
-        email: "romerartbrasil@gmail.com"
-      })
-    });
+ if(final < 5){
+   alert("Valor mínimo para PIX é R$ 5,00");
+   return;
+ }
 
-    let dados = await resposta.json();
+ resumo.innerHTML += "<br><br>⏳ Gerando PIX...";
 
-    if(dados.erro){
-      alert(dados.erro);
-      return;
-    }
+ try{
 
-    document.getElementById("resumo").innerHTML += `
-      <br><br><b>Pague com PIX:</b><br>
-      <img width="200" src="data:image/png;base64,${dados.img}">
-      <textarea style="width:100%;margin-top:10px">${dados.qr}</textarea>
-    `;
+   let r=await fetch("https://romer-art.onrender.com/pix",{
+     method:"POST",
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({
+       valor:Number(final.toFixed(2)),
+       email:email.value
+     })
+   });
 
-  }catch(e){
-    alert("Erro ao conectar com servidor");
-    console.log(e);
-  }
+   let data=await r.json();
+
+   console.log(data);
+
+   if(!data.qr_code){
+     resumo.innerHTML+="<br>❌ "+JSON.stringify(data);
+     return;
+   }
+
+   resumo.innerHTML+=`
+   <br><br>
+   <img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
+   <textarea style="width:100%">${data.qr_code}</textarea>
+   `;
+
+ }catch(e){
+   console.log(e);
+   resumo.innerHTML+="<br>❌ Erro conexão servidor";
+ }
 }
 
-</script>
+// WHATS
+function enviarWhats(){
+ let url=https://wa.me/${WHATS}?text=${encodeURIComponent(resumo.innerText)};
+ window.open(url);
+}
 
+// START
+carregar();
+
+</script>
 </body>
 </html>
