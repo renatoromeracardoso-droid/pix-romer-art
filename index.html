@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>RomerArt Pedidos</title>
+<title>RomerArt</title>
 
 <style>
 body{background:#0f172a;font-family:Arial;color:#fff;}
@@ -58,21 +58,21 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-// ===== PLANILHAS =====
+// ===== LINKS =====
 const URL_SERVICOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv";
 const URL_PRODUTOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv";
 const URL_MATERIAIS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv";
+const URL_CONFIG="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv";
 
 const API="https://pix-romer-art.onrender.com/pix";
 
-let servicos=[],produtos=[],materiais=[];
+let servicos=[],produtos=[],materiais=[],config={};
 let itens=[];
 
 // ===== CSV =====
 function csvToJson(csv){
  let linhas=csv.trim().split("\n");
  let headers=linhas[0].split(",");
-
  return linhas.slice(1).map(l=>{
   let values=l.split(",");
   let obj={};
@@ -81,34 +81,36 @@ function csvToJson(csv){
  });
 }
 
-// ===== NUMERO SEGURO =====
-function numeroSeguro(valor){
- if(!valor) return 0;
- valor = valor.toString().replace(",", ".");
- let n = parseFloat(valor);
- return isNaN(n) ? 0 : n;
+// ===== NUMERO =====
+function n(v){
+ if(!v) return 0;
+ v=v.toString().replace(",",".");
+ return isNaN(parseFloat(v))?0:parseFloat(v);
+}
+
+// ===== NORMALIZAR =====
+function norm(t){
+ return t?.toString().trim().toLowerCase();
 }
 
 // ===== CARREGAR =====
 async function carregar(){
 
- let s=await fetch(URL_SERVICOS).then(r=>r.text());
- let p=await fetch(URL_PRODUTOS).then(r=>r.text());
- let m=await fetch(URL_MATERIAIS).then(r=>r.text());
+ servicos=csvToJson(await fetch(URL_SERVICOS).then(r=>r.text()));
+ produtos=csvToJson(await fetch(URL_PRODUTOS).then(r=>r.text()));
+ materiais=csvToJson(await fetch(URL_MATERIAIS).then(r=>r.text()));
+ let conf=csvToJson(await fetch(URL_CONFIG).then(r=>r.text()));
 
- servicos=csvToJson(s);
- produtos=csvToJson(p);
- materiais=csvToJson(m);
+ conf.forEach(c=>config[c.tipo]=n(c.valor));
 
- servico.innerHTML='<option value="">Serviço</option>'+servicos.map(x=>`<option>${x.nome}</option>`).join("");
- produto.innerHTML='<option value="">Produto</option>'+produtos.map(x=>`<option>${x.nome}</option>`).join("");
- material.innerHTML='<option value="">Material</option>'+materiais.map(x=>`<option>${x.nome}</option>`).join("");
+ servico.innerHTML='<option>Serviço</option>'+servicos.map(x=>`<option>${x.nome}</option>`).join("");
+ produto.innerHTML='<option>Produto</option>'+produtos.map(x=>`<option>${x.nome}</option>`).join("");
+ material.innerHTML='<option>Material</option>'+materiais.map(x=>`<option>${x.nome}</option>`).join("");
 
  material.onchange=()=>{
-  let lista=materiais.filter(x=>x.nome===material.value);
+  let lista=materiais.filter(x=>norm(x.nome)==norm(material.value));
   let esp=[...new Set(lista.map(x=>x.espessura))];
-
-  espessura.innerHTML='<option value="">Espessura</option>'+esp.map(e=>`<option>${e}</option>`).join("");
+  espessura.innerHTML='<option>Espessura</option>'+esp.map(e=>`<option>${e}</option>`).join("");
  };
 
 }
@@ -134,8 +136,7 @@ altura.oninput=()=>{if(altura.value>400)altura.value=400;}
 
 // ===== CEP =====
 cep.onblur=async()=>{
- let r=await fetch(`https://viacep.com.br/ws/${cep.value}/json/`);
- let d=await r.json();
+ let d=await fetch(`https://viacep.com.br/ws/${cep.value}/json/`).then(r=>r.json());
  endereco.value=d.logradouro;
  bairro.value=d.bairro;
  cidade.value=d.localidade;
@@ -144,33 +145,25 @@ cep.onblur=async()=>{
 // ===== CALCULO =====
 function calcular(){
 
- let q = Number(qtd.value) || 1;
+ let q=n(qtd.value);
 
  if(produto.value){
-  let p = produtos.find(x=>x.nome===produto.value);
-  return numeroSeguro(p?.preco) * q;
+  let p=produtos.find(x=>norm(x.nome)==norm(produto.value));
+  return n(p?.preco)*q;
  }
 
- let mat = materiais.find(x =>
-   x.nome === material.value &&
-   x.espessura === espessura.value
+ let mat=materiais.find(x=>
+  norm(x.nome)==norm(material.value)&&
+  norm(x.espessura)==norm(espessura.value)
  );
 
- let serv = servicos.find(x=>x.nome===servico.value);
+ let serv=servicos.find(x=>norm(x.nome)==norm(servico.value));
 
- if(!mat || !serv) return 0;
+ if(!mat||!serv) return 0;
 
- let l = Number(largura.value) || 0;
- let a = Number(altura.value) || 0;
+ let area=(n(largura.value)*n(altura.value))/100;
 
- if(l<=0 || a<=0) return 0;
-
- let area = (l * a) / 100;
-
- return area *
-   numeroSeguro(mat.preco) *
-   numeroSeguro(serv.multiplicador) *
-   q;
+ return area*n(mat.valor_base)*n(serv.multiplicador)*q;
 }
 
 // ===== ADD =====
@@ -179,7 +172,7 @@ function addItem(){
  let valor=calcular();
 
  if(valor<=0){
-  alert("Preencha corretamente");
+  alert("Erro no cálculo - verifique planilha");
   return;
  }
 
@@ -206,21 +199,21 @@ function render(){
  itens.forEach((i,x)=>{
   total+=i.valor;
 
-  html+=`
-  <b>${x+1}) ${i.servico}</b><br>
-  ${i.material||""} ${i.espessura||""}<br>
+  html+=`${x+1}) ${i.servico}<br>
+  ${i.material} ${i.espessura}<br>
   ${i.produto||""}<br>
   ${i.l}x${i.a} Qtd:${i.q}<br>
   R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
- let desconto=total*0.05;
- let final=total-desconto;
+ let desconto=(config.desconto_pix||5)/100;
+ let final=total-(total*desconto);
+
+ if(final<(config.minimo||0)) final=config.minimo;
 
  html+=`
- <hr>
  Subtotal: R$ ${total.toFixed(2)}<br>
- Desconto PIX: -R$ ${desconto.toFixed(2)}<br>
+ Desconto PIX: -R$ ${(total*desconto).toFixed(2)}<br>
  <b>Total: R$ ${final.toFixed(2)}</b>`;
 
  resumo.innerHTML=html;
@@ -230,43 +223,30 @@ function render(){
 async function gerarPix(){
 
  let total=itens.reduce((s,i)=>s+i.valor,0);
- let final=total-(total*0.05);
+ let desconto=(config.desconto_pix||5)/100;
+ let final=total-(total*desconto);
 
- if(final<1){
-  pix.innerHTML="Valor inválido";
+ if(final<(config.minimo||0)) final=config.minimo;
+
+ let r=await fetch(API,{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({valor:Number(final.toFixed(2))})
+ });
+
+ let d=await r.json();
+
+ if(!d || !d.qr){
+  pix.innerHTML="Erro PIX";
   return;
  }
 
- try{
-  let r=await fetch(API,{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({valor:Number(final.toFixed(2))})
-  });
-
-  let d=await r.json();
-
-  if(!d || !d.qr){
-   pix.innerHTML="Erro ao gerar PIX";
-   return;
-  }
-
-  pix.innerHTML=`
-  <img src="data:image/png;base64,${d.qr}" width="200"><br>
-  <textarea>${d.copia}</textarea>`;
-
- }catch(e){
-  pix.innerHTML="Erro servidor PIX";
- }
-
+ pix.innerHTML=`<img src="data:image/png;base64,${d.qr}" width="200"><br><textarea>${d.copia}</textarea>`;
 }
 
 // ===== WHATS =====
 function enviarWhats(){
-
- let texto=`Pedido:\n${resumo.innerText}`;
-
- window.open("https://wa.me/5511946447040?text="+encodeURIComponent(texto));
+ window.open("https://wa.me/5511946447040?text="+encodeURIComponent(resumo.innerText));
 }
 
 </script>
