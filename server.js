@@ -15,7 +15,7 @@ app.use((req,res,next)=>{
 // TOKEN
 mercadopago.configurations.setAccessToken(process.env.MP_TOKEN);
 
-// BANCO TEMP
+// MEMÓRIA
 let pagamentos = {};
 
 // PIX
@@ -41,7 +41,7 @@ app.post("/pix", async (req,res)=>{
  });
 
  }catch(e){
-   console.log(e);
+   console.log("ERRO PIX:", e);
    res.status(500).json({erro:"PIX erro"});
  }
 
@@ -49,36 +49,36 @@ app.post("/pix", async (req,res)=>{
 
 // STATUS
 app.get("/status/:id",(req,res)=>{
- res.json({status:pagamentos[req.params.id]||"pending"});
+ res.json({status:pagamentos[req.params.id] || "pending"});
 });
 
-// WEBHOOK
+// WEBHOOK CORRIGIDO
 app.post("/webhook", async (req,res)=>{
 
  try{
 
- const data = req.body;
+ const body = req.body;
 
- if(data.type === "payment"){
+ if(body.type === "payment"){
 
-   const pagamento = await mercadopago.payment.get(data.data.id);
+   const id = body.data.id;
 
-   pagamentos[data.data.id] = pagamento.body.status;
+   const pagamento = await mercadopago.payment.get(id);
 
-   console.log("WEBHOOK:", pagamento.body.status);
+   pagamentos[id] = pagamento.body.status;
+
+   console.log("STATUS ATUALIZADO:", id, pagamento.body.status);
  }
 
  res.sendStatus(200);
 
  }catch(e){
-   console.log(e);
+   console.log("ERRO WEBHOOK:", e);
    res.sendStatus(500);
  }
 
 });
 
-// ROOT
 app.get("/",(req,res)=>res.send("OK"));
 
-// START
-app.listen(process.env.PORT||10000,()=>console.log("Servidor rodando 🚀"));
+app.listen(process.env.PORT||10000,()=>console.log("Servidor ON 🚀"));
