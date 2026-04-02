@@ -1,200 +1,298 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Orçamento Laser</title>
+<title>RomerArt</title>
 
 <style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-  padding: 20px;
-}
-.card {
-  background: #1e293b;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 15px;
-}
-input, select {
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  border-radius: 5px;
-  border: none;
-}
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-}
-.btn-add { background: orange; }
-.btn-pix { background: green; color: white; }
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+.whats{background:#22c55e;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+.hidden{display:none;}
 </style>
 
 </head>
 <body>
 
+<div class="app">
+
 <div class="card">
-  <h3>Cliente</h3>
-  <input id="nome" placeholder="Nome *">
-  <input id="email" placeholder="Email *">
+<h3>Cliente</h3>
+<input id="nome" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
+<input id="endereco" placeholder="Rua" readonly>
+<input id="bairro" placeholder="Bairro" readonly>
+<input id="cidade" placeholder="Cidade" readonly>
+<input id="numero" placeholder="Número *">
 </div>
 
 <div class="card">
-  <h3>Pedido</h3>
+<h3>Pedido</h3>
 
-  <select id="servico">
-    <option value="">Serviço</option>
-    <option>Corte</option>
-    <option>Gravação</option>
-  </select>
+<select id="servico"></select>
+<select id="material"></select>
+<select id="espessura"></select>
+<select id="produto"></select>
 
-  <select id="material">
-    <option>MDF</option>
-    <option>ACRILICO</option>
-  </select>
+<input id="largura" placeholder="Largura mm">
+<input id="altura" placeholder="Altura mm">
+<input id="qtd" value="1">
 
-  <input id="largura" placeholder="Largura (mm)">
-  <input id="altura" placeholder="Altura (mm)">
-  <input id="qtd" placeholder="Quantidade">
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" id="btnPix" onclick="gerarPix()" disabled>Gerar PIX</button>
+<button class="whats" id="btnWhats" onclick="enviarWhats()" disabled>Enviar Pedido</button>
 
-  <button class="btn-add" onclick="adicionarItem()">Adicionar</button>
-  <button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
 </div>
 
-<div class="card" id="resumo"></div>
-<div class="card" id="pixStatus"></div>
+<div id="resumo" class="box"></div>
+<div id="pix" class="box"></div>
+
+</div>
 
 <script>
-// 🔥 BACKEND (CONFERE SE É ESSE MESMO)
-const API = "https://pix-romer-art.onrender.com";
 
-let itens = [];
-let total = 0;
-let pedidoId = Math.floor(Math.random() * 999999);
+// ===== CONFIG =====
+const API="https://pix-romer-art.onrender.com/pix";
 
-// =====================
-// ADICIONAR ITEM
-// =====================
-async function adicionarItem() {
+const URL_SERVICOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv";
+const URL_PRODUTOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv";
+const URL_MATERIAIS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv";
+const URL_CONFIG="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv";
 
-  const servico = document.getElementById("servico").value;
-  const material = document.getElementById("material").value;
-  const largura = document.getElementById("largura").value;
-  const altura = document.getElementById("altura").value;
-  const qtd = document.getElementById("qtd").value;
+// ===== VARS =====
+let servicos=[],produtos=[],materiais=[],config={},itens=[];
+let pedidoId = Math.floor(Math.random()*900000)+100000;
+let statusPagamento="Aguardando pagamento";
 
-  if (!servico || !largura || !altura || !qtd) {
-    alert("Preencha os campos obrigatórios");
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API}/calcular`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        servico,
-        material,
-        largura,
-        altura,
-        quantidade: qtd
-      })
-    });
-
-    const data = await res.json();
-
-    if (data.erro) {
-      alert(data.erro);
-      return;
-    }
-
-    itens.push({
-      servico,
-      material,
-      largura,
-      altura,
-      qtd,
-      valor: data.valor
-    });
-
-    atualizarResumo();
-
-  } catch (e) {
-    alert("Erro ao calcular");
-  }
+// ===== UTILS =====
+function csvToJson(csv){
+ let linhas=csv.trim().split("\n");
+ let headers=linhas[0].split(",");
+ return linhas.slice(1).map(l=>{
+  let values=l.split(",");
+  let obj={};
+  headers.forEach((h,i)=>obj[h.trim()]=(values[i]||"").trim());
+  return obj;
+ });
 }
 
-// =====================
-// RESUMO
-// =====================
-function atualizarResumo() {
+function n(v){
+ if(!v) return 0;
+ v=v.toString().replace(",",".");
+ return isNaN(parseFloat(v))?0:parseFloat(v);
+}
 
-  total = itens.reduce((s, i) => s + i.valor, 0);
+function norm(t){
+ return t?.toString().trim().toLowerCase();
+}
 
-  let html = `<h3>Pedido #${pedidoId}</h3>`;
+// ===== LOAD =====
+async function carregar(){
 
-  itens.forEach((i, idx) => {
-    html += `
-      <p><b>${idx+1}) ${i.servico}</b></p>
-      <p>${i.material} - ${i.largura}x${i.altura} Qtd:${i.qtd}</p>
-      <p>R$ ${i.valor.toFixed(2)}</p>
-      <hr>
-    `;
+ servicos=csvToJson(await fetch(URL_SERVICOS).then(r=>r.text()));
+ produtos=csvToJson(await fetch(URL_PRODUTOS).then(r=>r.text()));
+ materiais=csvToJson(await fetch(URL_MATERIAIS).then(r=>r.text()));
+ let conf=csvToJson(await fetch(URL_CONFIG).then(r=>r.text()));
+
+ conf.forEach(c=>config[c.tipo]=n(c.valor));
+
+ servico.innerHTML='<option>Serviço</option>'+servicos.map(x=>`<option>${x.nome}</option>`).join("");
+ produto.innerHTML='<option>Produto</option>'+produtos.map(x=>`<option>${x.nome}</option>`).join("");
+ material.innerHTML='<option>Material</option>'+materiais.map(x=>`<option>${x.nome}</option>`).join("");
+
+ material.onchange=()=>{
+  let lista=materiais.filter(x=>norm(x.nome)==norm(material.value));
+  let esp=[...new Set(lista.map(x=>x.espessura))];
+  espessura.innerHTML='<option>Espessura</option>'+esp.map(e=>`<option>${e}</option>`).join("");
+ };
+
+}
+
+carregar();
+
+// ===== REGRAS =====
+servico.onchange=()=>{
+ if(servico.value==="Gravação"){
+  material.classList.add("hidden");
+  espessura.classList.add("hidden");
+  produto.classList.remove("hidden");
+  produto.disabled=false;
+ }else{
+  material.classList.remove("hidden");
+  espessura.classList.remove("hidden");
+  produto.classList.add("hidden");
+  produto.disabled=true;
+  produto.value="";
+ }
+};
+
+largura.oninput=()=>{if(largura.value>400)largura.value=400;}
+altura.oninput=()=>{if(altura.value>400)altura.value=400;}
+
+// ===== CEP =====
+cep.onblur=async()=>{
+ let d=await fetch(`https://viacep.com.br/ws/${cep.value}/json/`).then(r=>r.json());
+ endereco.value=d.logradouro;
+ bairro.value=d.bairro;
+ cidade.value=d.localidade;
+};
+
+// ===== CALCULO =====
+function calcular(){
+
+ let q=n(qtd.value);
+
+ if(servico.value==="Gravação" && produto.value){
+  let p=produtos.find(x=>norm(x.nome)==norm(produto.value));
+  return n(p?.preco)*q;
+ }
+
+ let mat=materiais.find(x=>
+  norm(x.nome)==norm(material.value) &&
+  String(x.espessura).trim()==String(espessura.value).trim()
+ );
+
+ let serv=servicos.find(x=>norm(x.nome)==norm(servico.value));
+
+ if(!mat||!serv) return 0;
+
+ let area=(n(largura.value)*n(altura.value))/100;
+
+ return area*n(mat.valor_base)*n(serv.multiplicador)*q;
+}
+
+// ===== ADD =====
+function addItem(){
+
+ let valor=calcular();
+
+ if(valor<=0){
+  alert("Erro no cálculo - verifique planilha");
+  return;
+ }
+
+ itens.push({
+  servico:servico.value,
+  material:material.value,
+  espessura:espessura.value,
+  produto:produto.value,
+  l:largura.value,
+  a:altura.value,
+  q:qtd.value,
+  valor
+ });
+
+ btnPix.disabled=false;
+
+ render();
+}
+
+// ===== RESUMO =====
+function render(){
+
+ let total=0;
+ let html="";
+
+ itens.forEach((i,x)=>{
+  total+=i.valor;
+
+  html+=`${x+1}) ${i.servico}<br>
+  ${i.material} ${i.espessura}<br>
+  ${i.produto||""}<br>
+  ${i.l}x${i.a} Qtd:${i.q}<br>
+  R$ ${i.valor.toFixed(2)}<br><br>`;
+ });
+
+ let desconto=(config.desconto_pix||5)/100;
+ let final=total-(total*desconto);
+
+ if(final<(config.minimo||0)) final=config.minimo;
+
+ html=`
+ <b>Pedido #${pedidoId}</b><br><br>
+
+ <b>Cliente:</b><br>
+ ${nome.value}<br>
+ ${email.value}<br>
+ ${endereco.value}, ${numero.value}<br>
+ ${bairro.value} - ${cidade.value}<br><br>
+
+ ${html}
+
+ Subtotal: R$ ${total.toFixed(2)}<br>
+ Desconto PIX: -R$ ${(total*desconto).toFixed(2)}<br>
+ <b>Total: R$ ${final.toFixed(2)}</b><br><br>
+
+ <b>Status:</b> ${statusPagamento}<br>
+ Prazo: 2 a 5 dias úteis
+ `;
+
+ resumo.innerHTML=html;
+}
+
+// ===== PIX =====
+async function gerarPix(){
+
+ if(itens.length==0){
+  alert("Adicione item primeiro");
+  return;
+ }
+
+ let total=itens.reduce((s,i)=>s+i.valor,0);
+ let desconto=(config.desconto_pix||5)/100;
+ let final=total-(total*desconto);
+
+ if(final<(config.minimo||0)) final=config.minimo;
+
+ try{
+
+  let r=await fetch(API,{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({valor:Number(final.toFixed(2))})
   });
 
-  html += `<h2>Total: R$ ${total.toFixed(2)}</h2>`;
+  let d=await r.json();
 
-  document.getElementById("resumo").innerHTML = html;
+  if(!d || !d.qr) throw "erro";
+
+  pix.innerHTML=`
+  <img src="data:image/png;base64,${d.qr}" width="200"><br>
+  <textarea>${d.copia}</textarea>
+  <br><br>
+  <button onclick="confirmarPagamento()">Já paguei</button>
+  `;
+
+ }catch(e){
+
+  pix.innerHTML=`
+  ⚠️ PIX indisponível no momento<br><br>
+  Valor: R$ ${final.toFixed(2)}<br><br>
+  <button onclick="confirmarPagamento()">Já paguei</button>
+  `;
+ }
+
 }
 
-// =====================
-// PIX
-// =====================
-async function gerarPix() {
-
-  if (total <= 0) {
-    alert("Adicione itens primeiro");
-    return;
-  }
-
-  const email = document.getElementById("email").value;
-
-  try {
-    const res = await fetch(`${API}/pix`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        valor: total,
-        descricao: "Pedido #" + pedidoId,
-        email: email
-      })
-    });
-
-    const data = await res.json();
-
-    if (data.erro) {
-      throw new Error();
-    }
-
-    document.getElementById("pixStatus").innerHTML = `
-      <h3>💳 PIX</h3>
-      <img src="data:image/png;base64,${data.qr_code_base64}" width="200"/>
-      <p>Copie o código:</p>
-      <textarea style="width:100%">${data.qr_code}</textarea>
-    `;
-
-  } catch (e) {
-    document.getElementById("pixStatus").innerHTML =
-      "⚠ PIX indisponível no momento";
-  }
+// ===== PAGAMENTO =====
+function confirmarPagamento(){
+ statusPagamento="Pagamento aprovado ✅";
+ btnWhats.disabled=false;
+ render();
 }
+
+// ===== WHATS =====
+function enviarWhats(){
+ window.open("https://wa.me/5511946447040?text="+encodeURIComponent(resumo.innerText));
+}
+
 </script>
 
 </body>
