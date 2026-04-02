@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
 import pkg from "mercadopago";
 
 const { MercadoPagoConfig, Payment } = pkg;
@@ -10,14 +9,14 @@ app.use(cors());
 app.use(express.json());
 
 // ===============================
-// 🔐 CONFIG MERCADO PAGO
+// 🔐 MERCADO PAGO
 // ===============================
 const client = new MercadoPagoConfig({
   accessToken: process.env.ACCESS_TOKEN
 });
 
 // ===============================
-// 📊 LINKS DAS PLANILHAS
+// 📊 PLANILHAS
 // ===============================
 const SHEETS = {
   config: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&single=true&output=csv",
@@ -27,7 +26,7 @@ const SHEETS = {
 };
 
 // ===============================
-// 🔄 CONVERTER CSV → JSON
+// 🔄 CSV → JSON
 // ===============================
 function csvToJson(csv) {
   const lines = csv.split("\n").filter(l => l.trim() !== "");
@@ -44,7 +43,7 @@ function csvToJson(csv) {
 }
 
 // ===============================
-// 📥 BUSCAR PLANILHAS
+// 📥 BUSCAR PLANILHA
 // ===============================
 async function getSheet(url) {
   const res = await fetch(url);
@@ -53,11 +52,11 @@ async function getSheet(url) {
 }
 
 // ===============================
-// 💰 CALCULAR VALOR
+// 💰 CALCULAR
 // ===============================
 app.post("/calcular", async (req, res) => {
   try {
-    const { servico, material, espessura, largura, altura, quantidade, produto } = req.body;
+    const { servico, material, produto, largura, altura, quantidade } = req.body;
 
     if (!servico || !largura || !altura || !quantidade) {
       return res.status(400).json({ erro: "Dados incompletos" });
@@ -73,26 +72,21 @@ app.post("/calcular", async (req, res) => {
 
     let base = 0;
 
-    // 🔹 CORTE usa material
-    if (servico !== "Gravação") {
+    if (servico === "Gravação") {
+      const prod = produtos.find(p => p.nome === produto);
+      if (!prod) throw new Error("Produto não encontrado");
+
+      base = Number(prod.preco) || 0;
+    } else {
       const mat = materiais.find(m => m.nome === material);
       if (!mat) throw new Error("Material não encontrado");
 
       base = Number(mat.valor_base) || 0;
     }
 
-    // 🔹 GRAVAÇÃO usa produto
-    if (servico === "Gravação") {
-      const prod = produtos.find(p => p.nome === produto);
-      if (!prod) throw new Error("Produto não encontrado");
-
-      base = Number(prod.preco) || 0;
-    }
-
     let area = (Number(largura) * Number(altura)) / 100;
     let valor = area * base * Number(serv.multiplicador || 1) * Number(quantidade);
 
-    // mínimo
     if (valor < Number(serv.base_minima)) {
       valor = Number(serv.base_minima);
     }
@@ -108,7 +102,7 @@ app.post("/calcular", async (req, res) => {
 });
 
 // ===============================
-// 💳 GERAR PIX
+// 💳 PIX
 // ===============================
 app.post("/pix", async (req, res) => {
   try {
