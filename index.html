@@ -33,7 +33,11 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 </div>
 
 <div class="card">
-<h3>Pedido</h3>
+<h3>Serviço</h3>
+
+<select id="tipo"></select>
+<select id="item"></select>
+<select id="esp"></select>
 
 <input id="larg" placeholder="Largura mm (máx 400)">
 <input id="alt" placeholder="Altura mm (máx 400)">
@@ -54,154 +58,148 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 // ================= CONFIG =================
 const WHATS = "5511946447040";
 
+const URLS = {
+ config:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv",
+ servicos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv",
+ produtos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv",
+ materiais:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv"
+};
+
+let DB = {servicos:[],produtos:[],materiais:[]};
 let itens = [];
 let pago = false;
 
-// ================= LIMITES =================
-larg.oninput = ()=>{ if(larg.value > 400) larg.value = 400; }
-alt.oninput = ()=>{ if(alt.value > 400) alt.value = 400; }
+// ================= CSV =================
+function csvToJson(csv){
+ let linhas = csv.split("\n").filter(l=>l.trim());
+ let headers = linhas[0].split(",");
+ return linhas.slice(1).map(l=>{
+   let obj={};
+   l.split(",").forEach((v,i)=> obj[headers[i].trim()] = v.trim());
+   return obj;
+ });
+}
+
+// ================= CARREGAR PLANILHA =================
+async function carregarDB(){
+
+ DB.servicos = csvToJson(await (await fetch(URLS.servicos)).text());
+ DB.produtos = csvToJson(await (await fetch(URLS.produtos)).text());
+ DB.materiais = csvToJson(await (await fetch(URLS.materiais)).text());
+
+ tipo.innerHTML = "<option value=''>Selecione</option>";
+ DB.servicos.forEach(s=> tipo.innerHTML += `<option>${s.nome}</option>`);
+}
+
+// ================= TROCA SERVIÇO =================
+tipo.onchange = ()=>{
+
+ item.innerHTML="<option value=''>Selecione</option>";
+
+ if(tipo.value==="Corte"){
+   DB.materiais.forEach(m=> item.innerHTML+=`<option>${m.nome}</option>`);
+ }
+
+ if(tipo.value==="Gravação"){
+   DB.produtos.forEach(p=> item.innerHTML+=`<option>${p.nome}</option>`);
+ }
+
+ if(tipo.value==="Corte + Gravação"){
+   [...DB.materiais,...DB.produtos].forEach(x=> item.innerHTML+=`<option>${x.nome}</option>`);
+ }
+}
+
+// ================= ESPESSURA =================
+item.onchange = ()=>{
+
+ esp.innerHTML="";
+ esp.style.display="none";
+
+ let mat = DB.materiais.find(m=>m.nome===item.value);
+
+ if(mat && tipo.value !== "Gravação"){
+   esp.style.display="block";
+   mat.espessuras.split("|").forEach(e=>{
+     esp.innerHTML+=`<option>${e}mm</option>`;
+   });
+ }
+}
 
 // ================= CEP =================
 cep.onblur = async ()=>{
  let c = cep.value.replace(/\D/g,'');
- if(c.length !== 8) return;
-
- let r = await fetch("https://viacep.com.br/ws/"+c+"/json/");
- let d = await r.json();
-
- endereco.value = d.logradouro || "";
- bairro.value = d.bairro || "";
- cidade.value = d.localidade || "";
+ if(c.length!==8)return;
+ let d = await (await fetch("https://viacep.com.br/ws/"+c+"/json/")).json();
+ endereco.value=d.logradouro||"";
+ bairro.value=d.bairro||"";
+ cidade.value=d.localidade||"";
 }
 
-// ================= VALIDAÇÃO =================
-function validar(){
+// ================= LIMITES =================
+larg.oninput=()=>{ if(larg.value>400) larg.value=400; }
+alt.oninput=()=>{ if(alt.value>400) alt.value=400; }
 
- if(!cliente.value) return alert("Nome obrigatório");
- if(!email.value) return alert("Email obrigatório");
- if(!cep.value) return alert("CEP obrigatório");
- if(!numero.value) return alert("Número obrigatório");
-
- return true;
-}
-
-// ================= ADD ITEM =================
+// ================= ADD =================
 function addItem(){
 
- if(!validar()) return;
+ let l=+larg.value,a=+alt.value,q=+qtd.value;
 
- let l = Number(larg.value);
- let a = Number(alt.value);
- let q = Number(qtd.value);
-
- if(!l || !a || !q){
-   alert("Preencha corretamente");
-   return;
- }
-
- if(l > 400 || a > 400){
-   alert("Máx 400mm");
-   return;
- }
+ if(!l||!a||!q)return alert("Preencha medidas");
 
  let valor = ((l*a)/100)*0.1*q + 2;
 
- itens.push({l,a,q,valor});
+ itens.push({
+   tipo:tipo.value,
+   item:item.value,
+   esp:esp.value||"-",
+   l,a,q,valor
+ });
 
  render();
 }
 
-// ================= RESUMO PROFISSIONAL =================
+// ================= RESUMO =================
 function render(){
 
- let total = 0;
- let codigo = "PED-" + Date.now().toString().slice(-6);
+ let total=0;
+ let html=`<b>Pedido ${Date.now()}</b><br><br>`;
 
- let html = `
- <b>📦 Pedido ${codigo}</b><br><br>
-
- <b>👤 Cliente</b><br>
- ${cliente.value}<br>
- ${email.value}<br>
- ${endereco.value}, ${numero.value}<br>
- ${bairro.value} - ${cidade.value}<br><br>
-
- <b>📋 Itens</b><br>
- `;
+ html+=`${cliente.value}<br>${email.value}<br>${endereco.value}, ${numero.value}<br>${bairro.value} - ${cidade.value}<br><br>`;
 
  itens.forEach((i,x)=>{
-   total += i.valor;
-
-   html += `
-   ${x+1}) ${i.l}x${i.a} mm<br>
-   Qtd: ${i.q}<br>
-   R$ ${i.valor.toFixed(2)}<br><br>
-   `;
+   total+=i.valor;
+   html+=`${x+1}) ${i.tipo}<br>${i.item} | Esp:${i.esp}<br>${i.l}x${i.a} Qtd:${i.q}<br>R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
- let frete = cep.value.startsWith("03822") ? 0 : 15;
+ let frete = cep.value.startsWith("03822")?0:15;
 
- total += frete;
+ total+=frete;
 
- let desconto = total * 0.05;
- let final = total - desconto;
+ let desc=total*0.05;
+ let final=total-desc;
 
- html += `
- <b>🚚 Frete:</b> ${frete===0?"GRÁTIS":"R$ "+frete}<br>
- <b>Subtotal:</b> R$ ${total.toFixed(2)}<br>
- <b>Desconto PIX:</b> -R$ ${desconto.toFixed(2)}<br>
- <b>Total:</b> R$ ${final.toFixed(2)}<br><br>
+ html+=`Frete:${frete===0?"Grátis":"R$"+frete}<br>Subtotal:R$${total.toFixed(2)}<br>Desconto:-R$${desc.toFixed(2)}<br><b>Total:R$${final.toFixed(2)}</b>`;
 
- ⚠️ Envie sua arte após pagamento
- `;
-
- resumo.innerHTML = html;
+ resumo.innerHTML=html;
 }
 
 // ================= PIX =================
 function gerarPix(){
 
- if(!validar()) return;
-
- if(itens.length === 0){
-   alert("Adicione item");
-   return;
- }
-
- let total = itens.reduce((s,i)=>s+i.valor,0);
- let final = Number((total - total*0.05).toFixed(2));
-
- if(final <= 0){
-   alert("Erro no valor");
-   return;
- }
-
- resumo.innerHTML += "<br>Gerando PIX...";
+ let total=itens.reduce((s,i)=>s+i.valor,0);
+ let final=Number((total-total*0.05).toFixed(2));
 
  fetch("https://pix-romer-art.onrender.com/pix",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({
-     valor: final,
-     email: email.value
-   })
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({valor:final,email:email.value})
  })
  .then(r=>r.json())
  .then(d=>{
 
-   if(!d.qr_code){
-     alert("Erro PIX");
-     return;
-   }
+ resumo.innerHTML+=`<br><img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br><textarea>${d.qr_code}</textarea><br><b id="status">Aguardando...</b>`;
 
-   resumo.innerHTML += `
-   <br><br>
-   <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
-   <textarea style="width:100%">${d.qr_code}</textarea><br>
-   <b id="status">Aguardando pagamento...</b>
-   `;
-
-   verificar(d.id);
+ verificar(d.id);
 
  });
 }
@@ -209,16 +207,16 @@ function gerarPix(){
 // ================= STATUS =================
 function verificar(id){
 
- let t = setInterval(()=>{
+ let t=setInterval(()=>{
 
  fetch("https://pix-romer-art.onrender.com/status/"+id)
  .then(r=>r.json())
  .then(d=>{
 
- if(d.status === "approved"){
-   status.innerHTML = "✅ PAGAMENTO APROVADO";
-   btnWhats.style.display = "block";
-   pago = true;
+ if(d.status==="approved"){
+   status.innerHTML="✅ Pago";
+   btnWhats.style.display="block";
+   pago=true;
    clearInterval(t);
  }
 
@@ -230,15 +228,13 @@ function verificar(id){
 // ================= WHATS =================
 function enviarWhats(){
 
- if(!pago){
-   alert("Pagamento não confirmado");
-   return;
- }
+ if(!pago)return alert("Pague primeiro");
 
- let txt = resumo.innerText;
-
- window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(txt));
+ window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
 }
+
+// ================= START =================
+carregarDB();
 
 </script>
 
