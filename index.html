@@ -92,59 +92,85 @@ cep.onblur=async()=>{
 larg.oninput=()=>{if(larg.value>400)larg.value=400;}
 alt.oninput=()=>{if(alt.value>400)alt.value=400;}
 
-// ================= CARREGAR ITENS =================
+// ================= TIPO =================
 tipo.onchange=()=>{
- item.innerHTML="<option>Selecione</option>";
+ item.innerHTML="<option value=''>Selecione</option>";
  esp.innerHTML="";
  esp.style.display="none";
 
  if(tipo.value==="Corte"){
-   Object.keys(materiais).forEach(i=>item.innerHTML+=`<option>${i}</option>`);
+   Object.keys(materiais).forEach(i=>{
+     item.innerHTML+=`<option>${i}</option>`;
+   });
  }
 
  if(tipo.value==="Gravação"){
-   Object.keys(produtos).forEach(i=>item.innerHTML+=`<option>${i}</option>`);
+   Object.keys(produtos).forEach(i=>{
+     item.innerHTML+=`<option>${i}</option>`;
+   });
  }
 }
 
 // ================= ESPESSURA =================
 item.onchange=()=>{
+ esp.innerHTML="";
+ esp.style.display="none";
+
  if(materiais[item.value]){
    esp.style.display="block";
-   esp.innerHTML="";
    materiais[item.value].esp.forEach(e=>{
      esp.innerHTML+=`<option>${e}mm</option>`;
    });
  }
 }
 
-// ================= VALIDAÇÃO =================
+// ================= VALIDAR =================
 function validar(){
- if(!cliente.value||!email.value||!cep.value||!numero.value){
-   alert("Preencha os dados obrigatórios");
-   return false;
- }
+
+ if(!cliente.value) return alert("Nome obrigatório");
+ if(!email.value) return alert("Email obrigatório");
+ if(!cep.value) return alert("CEP obrigatório");
+ if(!numero.value) return alert("Número obrigatório");
+
+ if(!tipo.value) return alert("Selecione o serviço");
+ if(!item.value) return alert("Selecione o item");
+
  return true;
 }
 
-// ================= ADD ITEM =================
+// ================= ADD =================
 function addItem(){
 
- if(!validar())return;
+ if(!validar()) return;
 
- let l=+larg.value,a=+alt.value,q=+qtd.value;
+ let l=Number(larg.value);
+ let a=Number(alt.value);
+ let q=Number(qtd.value);
 
- if(!l||!a||!q)return alert("Preencha medidas");
+ if(!l || !a || !q){
+   alert("Preencha medidas corretamente");
+   return;
+ }
+
+ if(l>400 || a>400){
+   alert("Máximo permitido 400mm");
+   return;
+ }
 
  let valor;
 
  if(produtos[item.value]){
-   valor=produtos[item.value]*q;
+   valor = produtos[item.value] * q;
  }else{
-   valor=((l*a)/100)*materiais[item.value].preco*q;
+   valor = ((l*a)/100) * materiais[item.value].preco * q;
  }
 
- itens.push({tipo:tipo.value,item:item.value,esp:esp.value||"-",l,a,q,valor});
+ itens.push({
+   tipo:tipo.value,
+   item:item.value,
+   esp:esp.value||"-",
+   l,a,q,valor
+ });
 
  render();
 }
@@ -154,17 +180,26 @@ function render(){
 
  let total=0;
 
- let html=`<b>Pedido ${Date.now()}</b><br><br>`;
+ let html=`<b>📦 Pedido ${Date.now()}</b><br><br>`;
 
- html+=`${cliente.value}<br>${email.value}<br>${endereco.value}, ${numero.value}<br>${bairro.value} - ${cidade.value}<br><br>`;
+ html+=`
+ <b>Cliente</b><br>
+ ${cliente.value}<br>
+ ${email.value}<br>
+ ${endereco.value}, ${numero.value}<br>
+ ${bairro.value} - ${cidade.value}<br><br>
+ `;
 
  itens.forEach((i,x)=>{
+
  total+=i.valor;
 
- html+=`${x+1}) ${i.tipo}<br>
+ html+=`
+ ${x+1}) ${i.tipo}<br>
  ${i.item} | Esp:${i.esp}<br>
- ${i.l}x${i.a} Qtd:${i.q}<br>
- R$ ${i.valor.toFixed(2)}<br><br>`;
+ ${i.l}x${i.a} mm | Qtd:${i.q}<br>
+ R$ ${i.valor.toFixed(2)}<br><br>
+ `;
  });
 
  let frete=cep.value.startsWith("03822")?0:15;
@@ -173,10 +208,12 @@ function render(){
  let desc=total*0.05;
  let final=total-desc;
 
- html+=`Frete:${frete===0?"Grátis":"R$"+frete}<br>
- Subtotal:R$${total.toFixed(2)}<br>
- Desconto:-R$${desc.toFixed(2)}<br>
- <b>Total:R$${final.toFixed(2)}</b>`;
+ html+=`
+ <b>Frete:</b> ${frete===0?"GRÁTIS":"R$ "+frete}<br>
+ <b>Subtotal:</b> R$ ${total.toFixed(2)}<br>
+ <b>Desconto PIX:</b> -R$ ${desc.toFixed(2)}<br>
+ <b>Total:</b> R$ ${final.toFixed(2)}
+ `;
 
  resumo.innerHTML=html;
 }
@@ -184,27 +221,44 @@ function render(){
 // ================= PIX =================
 function gerarPix(){
 
- if(itens.length===0)return alert("Adicione item");
+ if(!validar()) return;
+
+ if(itens.length===0){
+   alert("Adicione item");
+   return;
+ }
+
+ pago=false;
+ btnWhats.style.display="none";
 
  let total=itens.reduce((s,i)=>s+i.valor,0);
  let final=Number((total-total*0.05).toFixed(2));
 
- resumo.innerHTML+="<br>Gerando PIX...";
+ resumo.innerHTML += "<br><br>Gerando PIX...";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
  method:"POST",
  headers:{"Content-Type":"application/json"},
- body:JSON.stringify({valor:final,email:email.value})
+ body:JSON.stringify({
+   valor: final,
+   email: email.value
+ })
  })
  .then(r=>r.json())
  .then(d=>{
 
- if(!d.qr_code)return alert("Erro PIX");
+ if(!d.qr_code){
+   console.log(d);
+   alert("Erro ao gerar PIX");
+   return;
+ }
 
- resumo.innerHTML+=`<br><br>
+ resumo.innerHTML+=`
+ <br><br>
  <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
  <textarea style="width:100%">${d.qr_code}</textarea><br>
- <b id="status">Aguardando pagamento...</b>`;
+ <b id="status">Aguardando pagamento...</b>
+ `;
 
  verificar(d.id);
 
@@ -213,6 +267,8 @@ function gerarPix(){
 
 // ================= STATUS =================
 function verificar(id){
+
+ let tentativas=0;
 
  let t=setInterval(()=>{
 
@@ -237,12 +293,14 @@ function verificar(id){
    status.innerHTML="⏳ Processando...";
  }
 
- else if(d.status==="rejected"){
-   status.innerHTML="❌ Pagamento rejeitado";
-   clearInterval(t);
+ else{
+   status.innerHTML="⚠️ Status: "+d.status;
  }
 
  });
+
+ tentativas++;
+ if(tentativas>40) clearInterval(t);
 
  },3000);
 }
