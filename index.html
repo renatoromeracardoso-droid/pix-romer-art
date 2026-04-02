@@ -24,13 +24,13 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <div class="card">
 <h3>Cliente</h3>
-<input id="nome" placeholder="Nome *" required>
-<input id="email" placeholder="Email *" required>
-<input id="cep" placeholder="CEP *" required>
+<input id="nome" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
 <input id="endereco" placeholder="Rua" readonly>
 <input id="bairro" placeholder="Bairro" readonly>
 <input id="cidade" placeholder="Cidade" readonly>
-<input id="numero" placeholder="Número *" required>
+<input id="numero" placeholder="Número *">
 </div>
 
 <div class="card">
@@ -58,7 +58,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-// ===== LINKS PLANILHA =====
+// ===== PLANILHAS =====
 const URL_SERVICOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv";
 const URL_PRODUTOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv";
 const URL_MATERIAIS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv";
@@ -79,6 +79,14 @@ function csvToJson(csv){
   headers.forEach((h,i)=>obj[h.trim()]=(values[i]||"").trim());
   return obj;
  });
+}
+
+// ===== NUMERO SEGURO =====
+function numeroSeguro(valor){
+ if(!valor) return 0;
+ valor = valor.toString().replace(",", ".");
+ let n = parseFloat(valor);
+ return isNaN(n) ? 0 : n;
 }
 
 // ===== CARREGAR =====
@@ -136,36 +144,44 @@ cep.onblur=async()=>{
 // ===== CALCULO =====
 function calcular(){
 
- let q=Number(qtd.value)||1;
+ let q = Number(qtd.value) || 1;
 
  if(produto.value){
-  let p=produtos.find(x=>x.nome===produto.value);
-  return Number(p?.preco||0)*q;
+  let p = produtos.find(x=>x.nome===produto.value);
+  return numeroSeguro(p?.preco) * q;
  }
 
  let mat = materiais.find(x =>
-   x.nome===material.value && x.espessura===espessura.value
+   x.nome === material.value &&
+   x.espessura === espessura.value
  );
 
  let serv = servicos.find(x=>x.nome===servico.value);
 
  if(!mat || !serv) return 0;
 
- let l=Number(largura.value)||0;
- let a=Number(altura.value)||0;
+ let l = Number(largura.value) || 0;
+ let a = Number(altura.value) || 0;
 
  if(l<=0 || a<=0) return 0;
 
- let area=(l*a)/100;
+ let area = (l * a) / 100;
 
- return area * Number(mat.preco) * Number(serv.multiplicador) * q;
+ return area *
+   numeroSeguro(mat.preco) *
+   numeroSeguro(serv.multiplicador) *
+   q;
 }
 
 // ===== ADD =====
 function addItem(){
 
  let valor=calcular();
- if(valor<=0){alert("Preencha corretamente");return;}
+
+ if(valor<=0){
+  alert("Preencha corretamente");
+  return;
+ }
 
  itens.push({
   servico:servico.value,
