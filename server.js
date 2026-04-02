@@ -1,86 +1,83 @@
-import express from "express";
-import cors from "cors";
-import mercadopago from "mercadopago";
+const express = require("express");
+const mercadopago = require("mercadopago");
 
 const app = express();
-app.use(cors());
+
 app.use(express.json());
 
-// 🔐 TOKEN (Render)
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
-
-// 🔥 CONFIG MERCADO PAGO (VERSÃO CORRETA)
-mercadopago.configure({
-  access_token: ACCESS_TOKEN
+// 🔥 LIBERA CORS (ESSENCIAL)
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  next();
 });
 
-// =======================
-// HEALTH CHECK
-// =======================
-app.get("/", (req, res) => {
-  res.send("Servidor rodando 🚀");
+// 🔥 RESPONDE PREFLIGHT (CORS)
+app.options("*", (req, res) => {
+  res.sendStatus(200);
 });
 
-// =======================
-// CALCULO (MANTIDO SIMPLES)
-// =======================
-app.post("/calcular", (req, res) => {
-  try {
-    const { largura, altura, quantidade } = req.body;
+// 🔐 TOKEN
+mercadopago.configurations.setAccessToken(process.env.MP_TOKEN);
 
-    const area = (largura * altura) / 100;
-    let valor = area * quantidade;
-
-    if (valor < 15) valor = 15;
-
-    res.json({ valor });
-
-  } catch (e) {
-    res.json({ erro: "Erro no cálculo" });
-  }
-});
-
-// =======================
-// PIX
-// =======================
+// ================= PIX =================
 app.post("/pix", async (req, res) => {
   try {
 
-    if (!ACCESS_TOKEN) {
-      return res.json({ erro: "TOKEN não configurado" });
+    let { valor, email } = req.body;
+
+    valor = Number(valor);
+
+    if (!valor || valor <= 0) {
+      return res.status(400).json({ erro: "Valor inválido" });
     }
 
-    const { valor, descricao, email } = req.body;
-
-    const payment_data = {
-      transaction_amount: Number(valor),
-      description: descricao,
+    const pagamento = await mercadopago.payment.create({
+      transaction_amount: valor,
+      description: "Pedido RomerArt",
       payment_method_id: "pix",
       payer: {
         email: email || "teste@email.com"
       }
-    };
-
-    const pagamento = await mercadopago.payment.create(payment_data);
-
-    const qr = pagamento.body.point_of_interaction.transaction_data;
+    });
 
     res.json({
-      qr_code: qr.qr_code,
-      qr_code_base64: qr.qr_code_base64
+      id: pagamento.body.id,
+      qr_code: pagamento.body.point_of_interaction.transaction_data.qr_code,
+      qr_code_base64: pagamento.body.point_of_interaction.transaction_data.qr_code_base64
     });
 
   } catch (erro) {
-    console.log("ERRO PIX:", erro.message);
-    res.json({ erro: "Erro ao gerar PIX" });
+    console.log("ERRO PIX:", erro);
+    res.status(500).json({ erro: "Erro ao gerar PIX" });
   }
 });
 
-// =======================
-// START
-// =======================
-const PORT = process.env.PORT || 3000;
+// ================= STATUS =================
+app.get("/status/:id", async (req, res) => {
+  try {
+
+    const pagamento = await mercadopago.payment.get(req.params.id);
+
+    res.json({
+      status: pagamento.body.status
+    });
+
+  } catch (erro) {
+    console.log("ERRO STATUS:", erro);
+    res.status(500).json({ erro: "Erro ao consultar status" });
+  }
+});
+
+// ================= ROOT TEST =================
+app.get("/", (req, res) => {
+  res.send("Servidor PIX rodando 🚀");
+});
+
+// ================= START =================
+const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-  console.log("Servidor rodando 🚀 na porta " + PORT);
+  console.log("Servidor rodando na porta " + PORT);
 });
