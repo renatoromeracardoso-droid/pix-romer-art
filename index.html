@@ -46,8 +46,8 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <input id="qtd" value="1">
 
 <button class="add" onclick="addItem()">Adicionar</button>
-<button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button class="whats" onclick="enviarWhats()">Enviar Pedido</button>
+<button class="pix" id="btnPix" onclick="gerarPix()" disabled>Gerar PIX</button>
+<button class="whats" id="btnWhats" onclick="enviarWhats()" disabled>Enviar Pedido</button>
 
 </div>
 
@@ -152,9 +152,9 @@ function calcular(){
   return n(p?.preco)*q;
  }
 
- let mat=materiais.find(x=>
-  norm(x.nome)==norm(material.value)&&
-  norm(x.espessura)==norm(espessura.value)
+ let mat = materiais.find(x =>
+  norm(x.nome)==norm(material.value) &&
+  String(x.espessura).trim()==String(espessura.value).trim()
  );
 
  let serv=servicos.find(x=>norm(x.nome)==norm(servico.value));
@@ -186,6 +186,8 @@ function addItem(){
   q:qtd.value,
   valor
  });
+
+ btnPix.disabled=false;
 
  render();
 }
@@ -222,6 +224,11 @@ function render(){
 // ===== PIX =====
 async function gerarPix(){
 
+ if(itens.length==0){
+  alert("Adicione um item primeiro");
+  return;
+ }
+
  let total=itens.reduce((s,i)=>s+i.valor,0);
  let desconto=(config.desconto_pix||5)/100;
  let final=total-(total*desconto);
@@ -241,7 +248,18 @@ async function gerarPix(){
   return;
  }
 
- pix.innerHTML=`<img src="data:image/png;base64,${d.qr}" width="200"><br><textarea>${d.copia}</textarea>`;
+ pix.innerHTML=`
+ <img src="data:image/png;base64,${d.qr}" width="200"><br>
+ <textarea>${d.copia}</textarea>
+ <br><br>
+ <button onclick="confirmarPagamento()">Já paguei</button>
+ `;
+}
+
+// ===== CONFIRMAR PAGAMENTO =====
+function confirmarPagamento(){
+ alert("Pagamento confirmado!");
+ btnWhats.disabled=false;
 }
 
 // ===== WHATS =====
