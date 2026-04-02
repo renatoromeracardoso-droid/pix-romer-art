@@ -15,7 +15,7 @@ app.use((req,res,next)=>{
 // TOKEN
 mercadopago.configurations.setAccessToken(process.env.MP_TOKEN);
 
-// ================= PIX =================
+// PIX
 app.post("/pix", async (req,res)=>{
 
  try{
@@ -36,25 +36,27 @@ app.post("/pix", async (req,res)=>{
  });
 
  }catch(e){
-   console.log("ERRO PIX:", e);
+   console.log("ERRO PIX:", e.response?.data || e);
    res.status(500).json({erro:"Erro ao gerar PIX"});
  }
 
 });
 
-// ================= STATUS DIRETO MP =================
+// STATUS (COM LOG)
 app.get("/status/:id", async (req,res)=>{
 
  try{
 
  const pagamento = await mercadopago.payment.get(req.params.id);
 
+ console.log("STATUS MP:", pagamento.body.status);
+
  res.json({
    status: pagamento.body.status
  });
 
  }catch(e){
-   console.log("ERRO STATUS:", e);
+   console.log("ERRO STATUS:", e.response?.data || e);
    res.status(500).json({status:"erro"});
  }
 
@@ -63,7 +65,6 @@ app.get("/status/:id", async (req,res)=>{
 // ROOT
 app.get("/",(req,res)=>res.send("Servidor OK 🚀"));
 
-// START
-app.listen(process.env.PORT || 10000, ()=>{
+app.listen(process.env.PORT||10000,()=>{
  console.log("Servidor rodando 🚀");
 });
