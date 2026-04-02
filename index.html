@@ -42,14 +42,15 @@ button {
 
 <div class="card">
   <h3>Cliente</h3>
-  <input id="nome" placeholder="Nome">
-  <input id="email" placeholder="Email">
+  <input id="nome" placeholder="Nome *">
+  <input id="email" placeholder="Email *">
 </div>
 
 <div class="card">
   <h3>Pedido</h3>
 
   <select id="servico">
+    <option value="">Serviço</option>
     <option>Corte</option>
     <option>Gravação</option>
   </select>
@@ -63,82 +64,87 @@ button {
   <input id="altura" placeholder="Altura (mm)">
   <input id="qtd" placeholder="Quantidade">
 
-  <button class="btn-add" onclick="adicionar()">Adicionar</button>
+  <button class="btn-add" onclick="adicionarItem()">Adicionar</button>
   <button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
 </div>
 
 <div class="card" id="resumo"></div>
-<div class="card" id="pix"></div>
+<div class="card" id="pixStatus"></div>
 
 <script>
-// 🔥 SUA API DO RENDER
+// 🔥 BACKEND (CONFERE SE É ESSE MESMO)
 const API = "https://pix-romer-art.onrender.com";
 
-let pedido = [];
+let itens = [];
 let total = 0;
 let pedidoId = Math.floor(Math.random() * 999999);
 
-// =======================
-// ➕ ADICIONAR ITEM
-// =======================
-async function adicionar() {
+// =====================
+// ADICIONAR ITEM
+// =====================
+async function adicionarItem() {
 
   const servico = document.getElementById("servico").value;
   const material = document.getElementById("material").value;
   const largura = document.getElementById("largura").value;
   const altura = document.getElementById("altura").value;
-  const quantidade = document.getElementById("qtd").value;
+  const qtd = document.getElementById("qtd").value;
 
-  if (!largura || !altura || !quantidade) {
-    alert("Preencha os campos");
+  if (!servico || !largura || !altura || !qtd) {
+    alert("Preencha os campos obrigatórios");
     return;
   }
 
-  const res = await fetch(`${API}/calcular`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
+  try {
+    const res = await fetch(`${API}/calcular`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        servico,
+        material,
+        largura,
+        altura,
+        quantidade: qtd
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.erro) {
+      alert(data.erro);
+      return;
+    }
+
+    itens.push({
       servico,
       material,
       largura,
       altura,
-      quantidade
-    })
-  });
+      qtd,
+      valor: data.valor
+    });
 
-  const data = await res.json();
+    atualizarResumo();
 
-  if (data.erro) {
-    alert(data.erro);
-    return;
+  } catch (e) {
+    alert("Erro ao calcular");
   }
-
-  pedido.push({
-    servico,
-    material,
-    largura,
-    altura,
-    quantidade,
-    valor: data.valor
-  });
-
-  atualizarResumo();
 }
 
-// =======================
-// 📊 RESUMO
-// =======================
+// =====================
+// RESUMO
+// =====================
 function atualizarResumo() {
 
-  total = pedido.reduce((s, i) => s + i.valor, 0);
+  total = itens.reduce((s, i) => s + i.valor, 0);
 
   let html = `<h3>Pedido #${pedidoId}</h3>`;
 
-  pedido.forEach((p, i) => {
+  itens.forEach((i, idx) => {
     html += `
-      <p>${i+1}) ${p.servico} - ${p.material}</p>
-      <p>${p.largura}x${p.altura} Qtd:${p.quantidade}</p>
-      <p>R$ ${p.valor}</p>
+      <p><b>${idx+1}) ${i.servico}</b></p>
+      <p>${i.material} - ${i.largura}x${i.altura} Qtd:${i.qtd}</p>
+      <p>R$ ${i.valor.toFixed(2)}</p>
       <hr>
     `;
   });
@@ -148,19 +154,19 @@ function atualizarResumo() {
   document.getElementById("resumo").innerHTML = html;
 }
 
-// =======================
-// 💳 PIX
-// =======================
+// =====================
+// PIX
+// =====================
 async function gerarPix() {
+
+  if (total <= 0) {
+    alert("Adicione itens primeiro");
+    return;
+  }
+
+  const email = document.getElementById("email").value;
+
   try {
-
-    if (total <= 0) {
-      alert("Adicione itens");
-      return;
-    }
-
-    const email = document.getElementById("email").value;
-
     const res = await fetch(`${API}/pix`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
@@ -174,19 +180,19 @@ async function gerarPix() {
     const data = await res.json();
 
     if (data.erro) {
-      alert("Erro PIX");
-      return;
+      throw new Error();
     }
 
-    document.getElementById("pix").innerHTML = `
+    document.getElementById("pixStatus").innerHTML = `
       <h3>💳 PIX</h3>
       <img src="data:image/png;base64,${data.qr_code_base64}" width="200"/>
-      <p>Copie:</p>
-      <textarea>${data.qr_code}</textarea>
+      <p>Copie o código:</p>
+      <textarea style="width:100%">${data.qr_code}</textarea>
     `;
 
   } catch (e) {
-    alert("Erro ao gerar PIX");
+    document.getElementById("pixStatus").innerHTML =
+      "⚠ PIX indisponível no momento";
   }
 }
 </script>
