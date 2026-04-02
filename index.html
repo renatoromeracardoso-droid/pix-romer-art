@@ -5,73 +5,15 @@
 <title>RomerArt Pedidos</title>
 
 <style>
-body{
-  background:#0f172a;
-  font-family:Arial;
-  margin:0;
-}
-
-.app{
-  max-width:420px;
-  margin:20px auto;
-  padding:15px;
-}
-
-h3{
-  color:#fff;
-  text-align:center;
-}
-
-.card{
-  background:#fff;
-  border-radius:16px;
-  padding:18px;
-  margin-bottom:15px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.2);
-}
-
-label{
-  font-size:13px;
-  font-weight:bold;
-  color:#334155;
-  display:block;
-  margin-top:10px;
-}
-
-.campo{
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid #e2e8f0;
-  margin-top:5px;
-  font-size:14px;
-}
-
-.row{
-  display:flex;
-  gap:8px;
-}
-
-.btn{
-  width:100%;
-  padding:14px;
-  border:none;
-  border-radius:12px;
-  margin-top:10px;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-.add{background:#f97316;color:#fff;}
-.pix{background:#16a34a;color:#fff;}
-.whats{background:#25d366;color:#fff;display:none;}
-
-.box{
-  background:#fff;
-  border-radius:16px;
-  padding:15px;
-  font-size:14px;
-}
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;font-weight:bold;}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+.whats{background:#25d366;display:none;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
 </style>
 
 </head>
@@ -79,52 +21,27 @@ label{
 
 <div class="app">
 
-<h3>Pedido Personalizado</h3>
-
 <div class="card">
-
-<label>Nome *</label>
-<input id="cliente" class="campo">
-
-<label>Email *</label>
-<input id="email" class="campo">
-
-<label>CEP *</label>
-<input id="cep" class="campo">
-
-<label>Endereço</label>
-<input id="endereco" class="campo" readonly>
-
-<label>Número *</label>
-<input id="numero" class="campo">
-
-<label>Bairro</label>
-<input id="bairro" class="campo" readonly>
-
-<label>Cidade</label>
-<input id="cidade" class="campo" readonly>
-
+<h3>Cliente</h3>
+<input id="cliente" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
+<input id="endereco" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número *">
 </div>
 
 <div class="card">
+<h3>Pedido</h3>
 
-<label>Material</label>
-<select id="material" class="campo">
-<option>MDF</option>
-<option>ACRILICO</option>
-</select>
+<input id="larg" placeholder="Largura mm (máx 400)">
+<input id="alt" placeholder="Altura mm (máx 400)">
+<input id="qtd" value="1">
 
-<div class="row">
-<input id="larg" class="campo" placeholder="Largura (mm)">
-<input id="alt" class="campo" placeholder="Altura (mm)">
-</div>
-
-<label>Quantidade</label>
-<input id="qtd" class="campo" value="1">
-
-<button class="btn add" onclick="addItem()">Adicionar Item</button>
-<button class="btn pix" onclick="gerarPix()">Gerar PIX</button>
-<button id="btnWhats" class="btn whats" onclick="enviarWhats()">Enviar Pedido</button>
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button id="btnWhats" class="whats" onclick="enviarWhats()">Enviar Pedido</button>
 
 </div>
 
@@ -134,37 +51,55 @@ label{
 
 <script>
 
-// ================= VARIÁVEIS =================
+// ================= CONFIG =================
+const WHATS = "5511946447040";
+
 let itens = [];
 let pago = false;
-const WHATS = "5511946447040";
+
+// ================= LIMITES =================
+larg.oninput = ()=>{ if(larg.value > 400) larg.value = 400; }
+alt.oninput = ()=>{ if(alt.value > 400) alt.value = 400; }
 
 // ================= CEP =================
 cep.onblur = async ()=>{
  let c = cep.value.replace(/\D/g,'');
- if(c.length!==8) return;
+ if(c.length !== 8) return;
 
  let r = await fetch("https://viacep.com.br/ws/"+c+"/json/");
  let d = await r.json();
 
- endereco.value = d.logradouro||"";
- bairro.value = d.bairro||"";
- cidade.value = d.localidade||"";
+ endereco.value = d.logradouro || "";
+ bairro.value = d.bairro || "";
+ cidade.value = d.localidade || "";
 }
 
-// ================= ADD =================
+// ================= VALIDAÇÃO =================
+function validar(){
+
+ if(!cliente.value) return alert("Nome obrigatório");
+ if(!email.value) return alert("Email obrigatório");
+ if(!cep.value) return alert("CEP obrigatório");
+ if(!numero.value) return alert("Número obrigatório");
+
+ return true;
+}
+
+// ================= ADD ITEM =================
 function addItem(){
 
- let l = +larg.value;
- let a = +alt.value;
- let q = +qtd.value;
+ if(!validar()) return;
+
+ let l = Number(larg.value);
+ let a = Number(alt.value);
+ let q = Number(qtd.value);
 
  if(!l || !a || !q){
-   alert("Preencha os campos");
+   alert("Preencha corretamente");
    return;
  }
 
- if(l>400 || a>400){
+ if(l > 400 || a > 400){
    alert("Máx 400mm");
    return;
  }
@@ -176,28 +111,49 @@ function addItem(){
  render();
 }
 
-// ================= RESUMO =================
+// ================= RESUMO PROFISSIONAL =================
 function render(){
 
  let total = 0;
- let html = "<b>Resumo do Pedido</b><br><br>";
+ let codigo = "PED-" + Date.now().toString().slice(-6);
+
+ let html = `
+ <b>📦 Pedido ${codigo}</b><br><br>
+
+ <b>👤 Cliente</b><br>
+ ${cliente.value}<br>
+ ${email.value}<br>
+ ${endereco.value}, ${numero.value}<br>
+ ${bairro.value} - ${cidade.value}<br><br>
+
+ <b>📋 Itens</b><br>
+ `;
 
  itens.forEach((i,x)=>{
    total += i.valor;
 
-   html += `${x+1}) ${i.l}x${i.a} Qtd:${i.q}<br>
-   R$ ${i.valor.toFixed(2)}<br><br>`;
+   html += `
+   ${x+1}) ${i.l}x${i.a} mm<br>
+   Qtd: ${i.q}<br>
+   R$ ${i.valor.toFixed(2)}<br><br>
+   `;
  });
 
- let desc = total * 0.05;
- if(desc > total) desc = 0;
+ let frete = cep.value.startsWith("03822") ? 0 : 15;
 
- let final = total - desc;
- if(final < 15) final = 15;
+ total += frete;
 
- html += `Subtotal: R$ ${total.toFixed(2)}<br>`;
- html += `Desconto PIX: -R$ ${desc.toFixed(2)}<br>`;
- html += `<b>Total: R$ ${final.toFixed(2)}</b>`;
+ let desconto = total * 0.05;
+ let final = total - desconto;
+
+ html += `
+ <b>🚚 Frete:</b> ${frete===0?"GRÁTIS":"R$ "+frete}<br>
+ <b>Subtotal:</b> R$ ${total.toFixed(2)}<br>
+ <b>Desconto PIX:</b> -R$ ${desconto.toFixed(2)}<br>
+ <b>Total:</b> R$ ${final.toFixed(2)}<br><br>
+
+ ⚠️ Envie sua arte após pagamento
+ `;
 
  resumo.innerHTML = html;
 }
@@ -205,32 +161,47 @@ function render(){
 // ================= PIX =================
 function gerarPix(){
 
- if(itens.length===0) return alert("Adicione item");
+ if(!validar()) return;
+
+ if(itens.length === 0){
+   alert("Adicione item");
+   return;
+ }
 
  let total = itens.reduce((s,i)=>s+i.valor,0);
- let final = total - total*0.05;
+ let final = Number((total - total*0.05).toFixed(2));
 
- if(final < 15) final = 15;
+ if(final <= 0){
+   alert("Erro no valor");
+   return;
+ }
+
+ resumo.innerHTML += "<br>Gerando PIX...";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
- method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({
-   valor: final,
-   email: email.value
- })
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+     valor: final,
+     email: email.value
+   })
  })
  .then(r=>r.json())
  .then(d=>{
 
- resumo.innerHTML += `
- <br><br>
- <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
- <textarea>${d.qr_code}</textarea>
- <br><b id="status">Aguardando pagamento...</b>
- `;
+   if(!d.qr_code){
+     alert("Erro PIX");
+     return;
+   }
 
- verificar(d.id);
+   resumo.innerHTML += `
+   <br><br>
+   <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
+   <textarea style="width:100%">${d.qr_code}</textarea><br>
+   <b id="status">Aguardando pagamento...</b>
+   `;
+
+   verificar(d.id);
 
  });
 }
@@ -238,34 +209,35 @@ function gerarPix(){
 // ================= STATUS =================
 function verificar(id){
 
- let t=setInterval(()=>{
+ let t = setInterval(()=>{
 
  fetch("https://pix-romer-art.onrender.com/status/"+id)
  .then(r=>r.json())
  .then(d=>{
 
- if(d.status==="approved"){
-   status.innerHTML="✅ Pagamento aprovado";
-   btnWhats.style.display="block";
-   pago=true;
+ if(d.status === "approved"){
+   status.innerHTML = "✅ PAGAMENTO APROVADO";
+   btnWhats.style.display = "block";
+   pago = true;
    clearInterval(t);
  }
 
  });
 
  },3000);
-
 }
 
 // ================= WHATS =================
 function enviarWhats(){
 
- if(!pago) return alert("Pagamento não confirmado");
+ if(!pago){
+   alert("Pagamento não confirmado");
+   return;
+ }
 
  let txt = resumo.innerText;
 
  window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(txt));
-
 }
 
 </script>
