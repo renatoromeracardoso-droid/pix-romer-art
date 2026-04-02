@@ -69,8 +69,8 @@ button:active{transform:scale(.97);}
 }
 
 .status{
- padding:8px;
- border-radius:8px;
+ padding:10px;
+ border-radius:10px;
  font-weight:bold;
  text-align:center;
  margin-top:10px;
@@ -80,9 +80,9 @@ button:active{transform:scale(.97);}
 .wait{background:#f59e0b;}
 </style>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+<!-- FIREBASE (CORRETO CDN) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
 </head>
 <body>
@@ -132,11 +132,11 @@ button:active{transform:scale(.97);}
 
 <script>
 
-// 🔥 COLE SEU FIREBASE AQUI
-const firebaseConfig = {
- apiKey: "SUA_KEY",
- authDomain: "SEU_DOMINIO",
- projectId: "SEU_ID"
+// 🔥 FIREBASE CONFIG (SEU)
+var firebaseConfig = {
+ apiKey: "AIzaSyCLvB0Eydzka9KU09w9lTou9CIF-oGiVHo",
+ authDomain: "firestore-database-9b92d.firebaseapp.com",
+ projectId: "firestore-database-9b92d"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -170,6 +170,11 @@ function addItem(){
  let a=Number(alt.value);
  let q=Number(qtd.value);
 
+ if(!l || !a || !q){
+   alert("Preencha corretamente");
+   return;
+ }
+
  let valor=((l*a)/100)*0.1*q+2;
 
  itens.push({l,a,q,valor});
@@ -180,17 +185,33 @@ function addItem(){
 function render(){
 
  let total=0;
- let html="";
+ let html=`<b>📦 Pedido ${Date.now()}</b><br><br>`;
+
+ html+=`
+ <b>Cliente</b><br>
+ ${cliente.value}<br>
+ ${email.value}<br>
+ ${endereco.value}, ${numero.value}<br>
+ ${bairro.value} - ${cidade.value}<br><br>
+ `;
 
  itens.forEach((i,x)=>{
  total+=i.valor;
 
- html+=`${x+1}) ${i.l}x${i.a} Qtd:${i.q}<br>R$ ${i.valor.toFixed(2)}<br><br>`;
+ html+=`
+ ${x+1}) ${i.l}x${i.a} mm | Qtd:${i.q}<br>
+ R$ ${i.valor.toFixed(2)}<br><br>
+ `;
  });
 
- let final=total-total*0.05;
+ let desc=total*0.05;
+ let final=total-desc;
 
- html+=`<b>Total: R$ ${final.toFixed(2)}</b>`;
+ html+=`
+ <b>Subtotal:</b> R$ ${total.toFixed(2)}<br>
+ <b>Desconto PIX:</b> -R$ ${desc.toFixed(2)}<br>
+ <b>Total:</b> R$ ${final.toFixed(2)}
+ `;
 
  resumo.innerHTML=html;
 }
@@ -198,8 +219,18 @@ function render(){
 // ================= PIX =================
 function gerarPix(){
 
+ if(itens.length===0){
+   alert("Adicione item");
+   return;
+ }
+
+ pago=false;
+ btnWhats.disabled=true;
+
  let total=itens.reduce((s,i)=>s+i.valor,0);
  let final=Number((total-total*0.05).toFixed(2));
+
+ resumo.innerHTML += "<br><br>Gerando PIX...";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
  method:"POST",
@@ -212,14 +243,22 @@ function gerarPix(){
  .then(r=>r.json())
  .then(async d=>{
 
- resumo.innerHTML+=`
- <br><img src="data:image/png;base64,${d.qr_code_base64}" width="200">
+ if(!d.qr_code){
+   alert("Erro ao gerar PIX");
+   return;
+ }
+
+ resumo.innerHTML += `
+ <br><br>
+ <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
+ <textarea style="width:100%">${d.qr_code}</textarea>
  <div id="status" class="status wait">Aguardando pagamento...</div>
  `;
 
  // 🔥 SALVA PEDIDO
  let doc = await db.collection("pedidos").add({
    cliente:cliente.value,
+   email:email.value,
    total:final,
    status:"pendente",
    criado:new Date()
@@ -237,15 +276,17 @@ function verificar(id){
 
  let t=setInterval(()=>{
 
- fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now())
+ fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now(),{
+   cache:"no-store"
+ })
  .then(r=>r.json())
  .then(async d=>{
 
- let s=d.status;
+ let s=String(d.status).toLowerCase();
 
  if(s==="approved"){
 
- document.getElementById("status").innerHTML="✅ Pago";
+ document.getElementById("status").innerHTML="✅ PAGAMENTO APROVADO";
  document.getElementById("status").className="status ok";
 
  btnWhats.disabled=false;
@@ -270,10 +311,12 @@ function verificar(id){
 // ================= WHATS =================
 function enviarWhats(){
 
- if(!pago) return alert("Aguardando pagamento");
+ if(!pago){
+   alert("Pagamento não confirmado");
+   return;
+ }
 
  window.open("https://wa.me/5511946447040?text="+encodeURIComponent(resumo.innerText));
-
 }
 
 </script>
