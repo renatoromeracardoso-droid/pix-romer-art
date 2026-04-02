@@ -60,7 +60,6 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-// ================= CONFIG =================
 const WHATS="5511946447040";
 
 const materiais={
@@ -76,7 +75,7 @@ const produtos={
 let itens=[];
 let pago=false;
 
-// ================= CEP =================
+// CEP
 cep.onblur=async()=>{
  let c=cep.value.replace(/\D/g,'');
  if(c.length!==8)return;
@@ -88,11 +87,11 @@ cep.onblur=async()=>{
  cidade.value=d.localidade||"";
 }
 
-// ================= LIMITES =================
+// LIMITES
 larg.oninput=()=>{if(larg.value>400)larg.value=400;}
 alt.oninput=()=>{if(alt.value>400)alt.value=400;}
 
-// ================= TIPO =================
+// TIPO
 tipo.onchange=()=>{
  item.innerHTML="<option value=''>Selecione</option>";
  esp.innerHTML="";
@@ -111,7 +110,7 @@ tipo.onchange=()=>{
  }
 }
 
-// ================= ESPESSURA =================
+// ESPESSURA
 item.onchange=()=>{
  esp.innerHTML="";
  esp.style.display="none";
@@ -124,7 +123,7 @@ item.onchange=()=>{
  }
 }
 
-// ================= VALIDAR =================
+// VALIDAR
 function validar(){
 
  if(!cliente.value) return alert("Nome obrigatório");
@@ -138,7 +137,7 @@ function validar(){
  return true;
 }
 
-// ================= ADD =================
+// ADD ITEM
 function addItem(){
 
  if(!validar()) return;
@@ -149,11 +148,6 @@ function addItem(){
 
  if(!l || !a || !q){
    alert("Preencha medidas corretamente");
-   return;
- }
-
- if(l>400 || a>400){
-   alert("Máximo permitido 400mm");
    return;
  }
 
@@ -175,7 +169,7 @@ function addItem(){
  render();
 }
 
-// ================= RESUMO =================
+// RESUMO
 function render(){
 
  let total=0;
@@ -191,7 +185,6 @@ function render(){
  `;
 
  itens.forEach((i,x)=>{
-
  total+=i.valor;
 
  html+=`
@@ -218,7 +211,7 @@ function render(){
  resumo.innerHTML=html;
 }
 
-// ================= PIX =================
+// PIX
 function gerarPix(){
 
  if(!validar()) return;
@@ -253,7 +246,7 @@ function gerarPix(){
    return;
  }
 
- resumo.innerHTML+=`
+ resumo.innerHTML = resumo.innerHTML + `
  <br><br>
  <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
  <textarea style="width:100%">${d.qr_code}</textarea><br>
@@ -265,47 +258,57 @@ function gerarPix(){
  });
 }
 
-// ================= STATUS =================
+// STATUS FINAL CORRIGIDO
 function verificar(id){
 
- let tentativas=0;
+ let tentativas = 0;
 
- let t=setInterval(()=>{
+ let t = setInterval(()=>{
 
- fetch("https://pix-romer-art.onrender.com/status/"+id)
+ fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now(),{
+   cache:"no-store"
+ })
  .then(r=>r.json())
  .then(d=>{
 
- console.log("STATUS:",d.status);
+ let statusAtual = String(d.status).toLowerCase();
 
- if(d.status==="approved"){
-   status.innerHTML="✅ PAGAMENTO APROVADO";
-   btnWhats.style.display="block";
-   pago=true;
+ console.log("STATUS FRONT:", statusAtual);
+
+ if(statusAtual === "approved"){
+   document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
+   document.getElementById("btnWhats").style.display = "block";
+   pago = true;
    clearInterval(t);
  }
 
- else if(d.status==="pending"){
-   status.innerHTML="⏳ Aguardando pagamento...";
+ else if(statusAtual === "pending"){
+   document.getElementById("status").innerHTML = "⏳ Aguardando pagamento...";
  }
 
- else if(d.status==="in_process"){
-   status.innerHTML="⏳ Processando...";
+ else if(statusAtual === "in_process"){
+   document.getElementById("status").innerHTML = "⏳ Processando...";
  }
 
  else{
-   status.innerHTML="⚠️ Status: "+d.status;
+   document.getElementById("status").innerHTML = "⚠️ " + statusAtual;
  }
 
+ })
+ .catch(err=>{
+   console.log("ERRO FETCH:", err);
  });
 
  tentativas++;
- if(tentativas>40) clearInterval(t);
+
+ if(tentativas > 40){
+   clearInterval(t);
+ }
 
  },3000);
 }
 
-// ================= WHATS =================
+// WHATS
 function enviarWhats(){
 
  if(!pago){
