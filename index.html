@@ -2,22 +2,92 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>RomerArt Pedidos</title>
+<title>RomerArt</title>
 
 <style>
-body{background:#0f172a;font-family:Arial;color:#fff;}
-.app{max-width:420px;margin:auto;padding:20px;}
-.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
-input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
-button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;font-weight:bold;}
+body{
+ background:#0f172a;
+ font-family:Arial;
+ color:#fff;
+ margin:0;
+}
+
+.header{
+ background:#020617;
+ padding:15px;
+ text-align:center;
+ font-weight:bold;
+ font-size:20px;
+}
+
+.app{
+ max-width:420px;
+ margin:auto;
+ padding:15px;
+}
+
+.card{
+ background:#1e293b;
+ padding:15px;
+ border-radius:14px;
+ margin-bottom:12px;
+ box-shadow:0 5px 15px rgba(0,0,0,0.3);
+}
+
+input,select{
+ width:100%;
+ padding:12px;
+ margin-top:8px;
+ border-radius:10px;
+ border:none;
+ font-size:14px;
+}
+
+button{
+ width:100%;
+ padding:14px;
+ margin-top:10px;
+ border:none;
+ border-radius:12px;
+ color:#fff;
+ font-weight:bold;
+ font-size:15px;
+ transition:.2s;
+}
+
+button:active{transform:scale(.97);}
+
 .add{background:#f97316;}
 .pix{background:#16a34a;}
-.whats{background:#25d366;display:none;}
-.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+.whats{background:#22c55e;}
+
+.box{
+ background:#1e293b;
+ padding:15px;
+ border-radius:14px;
+ margin-top:10px;
+}
+
+.status{
+ padding:8px;
+ border-radius:8px;
+ font-weight:bold;
+ text-align:center;
+ margin-top:10px;
+}
+
+.ok{background:#16a34a;}
+.wait{background:#f59e0b;}
 </style>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
 
 </head>
 <body>
+
+<div class="header">🚀 RomerArt</div>
 
 <div class="app">
 
@@ -33,7 +103,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 </div>
 
 <div class="card">
-<h3>Serviço</h3>
+<h3>Pedido</h3>
 
 <select id="tipo">
 <option value="">Selecione</option>
@@ -41,16 +111,18 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <option>Gravação</option>
 </select>
 
-<select id="item"></select>
-<select id="esp"></select>
+<select id="material">
+<option>MDF</option>
+<option>ACRILICO</option>
+</select>
 
-<input id="larg" placeholder="Largura mm (máx 400)">
-<input id="alt" placeholder="Altura mm (máx 400)">
+<input id="larg" placeholder="Largura (máx 400)">
+<input id="alt" placeholder="Altura (máx 400)">
 <input id="qtd" value="1">
 
 <button class="add" onclick="addItem()">Adicionar</button>
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button id="btnWhats" class="whats" onclick="enviarWhats()">Enviar Pedido</button>
+<button id="btnWhats" class="whats" onclick="enviarWhats()" disabled>Enviar Pedido</button>
 
 </div>
 
@@ -60,22 +132,22 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-const WHATS="5511946447040";
-
-const materiais={
- MDF:{preco:0.1,esp:[3,6]},
- COMPENSADO:{preco:0.08,esp:[3,4]}
+// 🔥 COLE SEU FIREBASE AQUI
+const firebaseConfig = {
+ apiKey: "SUA_KEY",
+ authDomain: "SEU_DOMINIO",
+ projectId: "SEU_ID"
 };
 
-const produtos={
- COPO:10,
- TACA:12
-};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
+// ================= VARS =================
 let itens=[];
 let pago=false;
+let pedidoId=null;
 
-// CEP
+// ================= CEP =================
 cep.onblur=async()=>{
  let c=cep.value.replace(/\D/g,'');
  if(c.length!==8)return;
@@ -87,147 +159,47 @@ cep.onblur=async()=>{
  cidade.value=d.localidade||"";
 }
 
-// LIMITES
+// ================= LIMITES =================
 larg.oninput=()=>{if(larg.value>400)larg.value=400;}
 alt.oninput=()=>{if(alt.value>400)alt.value=400;}
 
-// TIPO
-tipo.onchange=()=>{
- item.innerHTML="<option value=''>Selecione</option>";
- esp.innerHTML="";
- esp.style.display="none";
-
- if(tipo.value==="Corte"){
-   Object.keys(materiais).forEach(i=>{
-     item.innerHTML+=`<option>${i}</option>`;
-   });
- }
-
- if(tipo.value==="Gravação"){
-   Object.keys(produtos).forEach(i=>{
-     item.innerHTML+=`<option>${i}</option>`;
-   });
- }
-}
-
-// ESPESSURA
-item.onchange=()=>{
- esp.innerHTML="";
- esp.style.display="none";
-
- if(materiais[item.value]){
-   esp.style.display="block";
-   materiais[item.value].esp.forEach(e=>{
-     esp.innerHTML+=`<option>${e}mm</option>`;
-   });
- }
-}
-
-// VALIDAR
-function validar(){
-
- if(!cliente.value) return alert("Nome obrigatório");
- if(!email.value) return alert("Email obrigatório");
- if(!cep.value) return alert("CEP obrigatório");
- if(!numero.value) return alert("Número obrigatório");
-
- if(!tipo.value) return alert("Selecione o serviço");
- if(!item.value) return alert("Selecione o item");
-
- return true;
-}
-
-// ADD ITEM
+// ================= ADD =================
 function addItem(){
-
- if(!validar()) return;
 
  let l=Number(larg.value);
  let a=Number(alt.value);
  let q=Number(qtd.value);
 
- if(!l || !a || !q){
-   alert("Preencha medidas corretamente");
-   return;
- }
+ let valor=((l*a)/100)*0.1*q+2;
 
- let valor;
-
- if(produtos[item.value]){
-   valor = produtos[item.value] * q;
- }else{
-   valor = ((l*a)/100) * materiais[item.value].preco * q;
- }
-
- itens.push({
-   tipo:tipo.value,
-   item:item.value,
-   esp:esp.value||"-",
-   l,a,q,valor
- });
-
+ itens.push({l,a,q,valor});
  render();
 }
 
-// RESUMO
+// ================= RENDER =================
 function render(){
 
  let total=0;
-
- let html=`<b>📦 Pedido ${Date.now()}</b><br><br>`;
-
- html+=`
- <b>Cliente</b><br>
- ${cliente.value}<br>
- ${email.value}<br>
- ${endereco.value}, ${numero.value}<br>
- ${bairro.value} - ${cidade.value}<br><br>
- `;
+ let html="";
 
  itens.forEach((i,x)=>{
  total+=i.valor;
 
- html+=`
- ${x+1}) ${i.tipo}<br>
- ${i.item} | Esp:${i.esp}<br>
- ${i.l}x${i.a} mm | Qtd:${i.q}<br>
- R$ ${i.valor.toFixed(2)}<br><br>
- `;
+ html+=`${x+1}) ${i.l}x${i.a} Qtd:${i.q}<br>R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
- let frete=cep.value.startsWith("03822")?0:15;
- total+=frete;
+ let final=total-total*0.05;
 
- let desc=total*0.05;
- let final=total-desc;
-
- html+=`
- <b>Frete:</b> ${frete===0?"GRÁTIS":"R$ "+frete}<br>
- <b>Subtotal:</b> R$ ${total.toFixed(2)}<br>
- <b>Desconto PIX:</b> -R$ ${desc.toFixed(2)}<br>
- <b>Total:</b> R$ ${final.toFixed(2)}
- `;
+ html+=`<b>Total: R$ ${final.toFixed(2)}</b>`;
 
  resumo.innerHTML=html;
 }
 
-// PIX
+// ================= PIX =================
 function gerarPix(){
-
- if(!validar()) return;
-
- if(itens.length===0){
-   alert("Adicione item");
-   return;
- }
-
- pago=false;
- btnWhats.style.display="none";
 
  let total=itens.reduce((s,i)=>s+i.valor,0);
  let final=Number((total-total*0.05).toFixed(2));
-
- resumo.innerHTML += "<br><br>Gerando PIX...";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
  method:"POST",
@@ -238,85 +210,70 @@ function gerarPix(){
  })
  })
  .then(r=>r.json())
- .then(d=>{
+ .then(async d=>{
 
- if(!d.qr_code){
-   console.log(d);
-   alert("Erro ao gerar PIX");
-   return;
- }
-
- resumo.innerHTML = resumo.innerHTML + `
- <br><br>
- <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
- <textarea style="width:100%">${d.qr_code}</textarea><br>
- <b id="status">Aguardando pagamento...</b>
+ resumo.innerHTML+=`
+ <br><img src="data:image/png;base64,${d.qr_code_base64}" width="200">
+ <div id="status" class="status wait">Aguardando pagamento...</div>
  `;
+
+ // 🔥 SALVA PEDIDO
+ let doc = await db.collection("pedidos").add({
+   cliente:cliente.value,
+   total:final,
+   status:"pendente",
+   criado:new Date()
+ });
+
+ pedidoId = doc.id;
 
  verificar(d.id);
 
  });
 }
 
-// STATUS FINAL CORRIGIDO
+// ================= STATUS =================
 function verificar(id){
 
- let tentativas = 0;
+ let t=setInterval(()=>{
 
- let t = setInterval(()=>{
-
- fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now(),{
-   cache:"no-store"
- })
+ fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now())
  .then(r=>r.json())
- .then(d=>{
+ .then(async d=>{
 
- let statusAtual = String(d.status).toLowerCase();
+ let s=d.status;
 
- console.log("STATUS FRONT:", statusAtual);
+ if(s==="approved"){
 
- if(statusAtual === "approved"){
-   document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
-   document.getElementById("btnWhats").style.display = "block";
-   pago = true;
-   clearInterval(t);
+ document.getElementById("status").innerHTML="✅ Pago";
+ document.getElementById("status").className="status ok";
+
+ btnWhats.disabled=false;
+
+ pago=true;
+ clearInterval(t);
+
+ // 🔥 ATUALIZA FIREBASE
+ if(pedidoId){
+   db.collection("pedidos").doc(pedidoId).update({
+     status:"pago"
+   });
  }
 
- else if(statusAtual === "pending"){
-   document.getElementById("status").innerHTML = "⏳ Aguardando pagamento...";
  }
 
- else if(statusAtual === "in_process"){
-   document.getElementById("status").innerHTML = "⏳ Processando...";
- }
-
- else{
-   document.getElementById("status").innerHTML = "⚠️ " + statusAtual;
- }
-
- })
- .catch(err=>{
-   console.log("ERRO FETCH:", err);
  });
-
- tentativas++;
-
- if(tentativas > 40){
-   clearInterval(t);
- }
 
  },3000);
 }
 
-// WHATS
+// ================= WHATS =================
 function enviarWhats(){
 
- if(!pago){
-   alert("Pagamento não confirmado");
-   return;
- }
+ if(!pago) return alert("Aguardando pagamento");
 
- window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
+ window.open("https://wa.me/5511946447040?text="+encodeURIComponent(resumo.innerText));
+
 }
 
 </script>
