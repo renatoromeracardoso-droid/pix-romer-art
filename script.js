@@ -1,250 +1,161 @@
-const API = "https://pix-romer-art.onrender.com/pix";
+// ================= VARIÁVEIS =================
+let itens = [];
+let pago = false;
 const WHATS = "5511946447040";
 
-let itens = [];
+// ================= VALIDAÇÃO CLIENTE =================
+function validarCliente(){
 
-let tabela = {
-  materiais: [],
-  produtos: [],
-  servicos: []
-};
+ if(!cliente.value) return alert("Nome obrigatório"),false;
+ if(!email.value) return alert("Email obrigatório"),false;
+ if(!cep.value) return alert("CEP obrigatório"),false;
+ if(!numero.value) return alert("Número obrigatório"),false;
 
-// ===== CSV =====
-function csvToJson(csv){
-  let linhas = csv.trim().split("\n");
-  let headers = linhas[0].split(",").map(h => h.trim());
-
-  return linhas.slice(1).map(l => {
-    let valores = l.split(",");
-    let obj = {};
-
-    headers.forEach((h,i)=>{
-      obj[h] = valores[i] ? valores[i].trim() : "";
-    });
-
-    return obj;
-  }).filter(l => Object.values(l).some(v => v));
+ return true;
 }
 
-// ===== LOAD =====
-async function carregarDados(){
-
-  const urls={
-    servicos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv",
-    produtos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv",
-    materiais:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv"
-  };
-
-  for(let key in urls){
-    let r = await fetch(urls[key]);
-    let t = await r.text();
-    tabela[key] = csvToJson(t);
-  }
-
-  montarSelects();
-}
-
-// ===== SELECTS =====
-function montarSelects(){
-
-  servico.innerHTML = '<option value="">Serviço</option>' +
-    tabela.servicos.map(s=>`<option>${s.nome}</option>`).join("");
-
-  material.innerHTML = '<option value="">Material</option>' +
-    tabela.materiais.map(m=>`<option>${m.nome}</option>`).join("");
-
-  atualizarProdutos();
-  atualizarEspessura();
-}
-
-// ===== PRODUTOS =====
-function atualizarProdutos(){
-
-  let serv = servico.value;
-
-  let lista = tabela.produtos.filter(p => {
-    if(serv === "Corte" && p.permite_corte === "não") return false;
-    return true;
-  });
-
-  produto.innerHTML = '<option value="">Produto</option>' +
-    lista.map(p=>`<option>${p.nome}</option>`).join("");
-}
-
-// ===== ESPESSURA DINÂMICA =====
-function atualizarEspessura(){
-
-  let mat = tabela.materiais.find(m => m.nome === material.value);
-
-  if(!mat || !mat.espessura){
-    espessura.innerHTML = '<option>-</option>';
-    return;
-  }
-
-  let lista = mat.espessura.split("|");
-
-  espessura.innerHTML = lista.map(e => `<option>${e}mm</option>`).join("");
-}
-
-servico.onchange = atualizarProdutos;
-material.onchange = atualizarEspessura;
-
-// ===== CEP =====
+// ================= CEP =================
 cep.onblur = async ()=>{
-  let c = cep.value.replace(/\D/g,'');
-  if(c.length !== 8) return;
 
-  let r = await fetch(`https://viacep.com.br/ws/${c}/json/`);
-  let d = await r.json();
+ let c = cep.value.replace(/\D/g,'');
 
-  endereco.value = d.logradouro || "";
-  bairro.value = d.bairro || "";
-  cidade.value = d.localidade || "";
-};
+ if(c.length!==8) return;
 
-// ===== LIMITES =====
-largura.oninput = ()=>{ if(largura.value > 400) largura.value = 400; }
-altura.oninput  = ()=>{ if(altura.value > 400) altura.value = 400; }
+ let r = await fetch("https://viacep.com.br/ws/"+c+"/json/");
+ let d = await r.json();
 
-// ===== CALCULO =====
-function calcularValor(l,a,q){
-
-  let mat = tabela.materiais.find(m => m.nome === material.value);
-  let base = Number(mat?.valor_base || 0);
-
-  let area = (l*a)/100;
-
-  let custo = area*base + (area*0.04) + 1;
-
-  let lucro = custo * 0.5;
-
-  let total = custo + lucro;
-
-  if(servico.value==="Gravação") total*=1.2;
-  if(servico.value==="Corte + Gravação") total*=1.5;
-
-  total*=q;
-
-  if(total < 15*q) total = 15*q;
-
-  return total;
+ endereco.value = d.logradouro||"";
+ bairro.value = d.bairro||"";
+ cidade.value = d.localidade||"";
 }
 
-// ===== ADD =====
+// ================= ADD ITEM =================
 function addItem(){
 
-  if(!nome.value||!email.value||!cep.value||!numero.value){
-    alert("Preencha cliente");
-    return;
-  }
+ if(!validarCliente()) return;
 
-  let l = Number(largura.value);
-  let a = Number(altura.value);
-  let q = Number(qtd.value);
+ let l = +larg.value;
+ let a = +alt.value;
+ let q = +qtd.value;
 
-  if(!l||!a){ alert("Informe medidas"); return; }
-  if(l>400||a>400){ alert("Máx 400mm"); return; }
+ if(!l || !a || !q){
+   alert("Preencha medidas");
+   return;
+ }
 
-  let valor = calcularValor(l,a,q);
+ // 🔥 LIMITE MÁQUINA
+ if(l>400 || a>400){
+   alert("Máximo permitido: 400mm");
+   return;
+ }
 
-  itens.push({
-    servico:servico.value,
-    material:material.value,
-    produto:produto.value,
-    espessura:espessura.value,
-    l,a,q,valor
-  });
+ let valor = ((l*a)/100)*0.1*q + 2;
 
-  render();
+ itens.push({l,a,q,valor});
+
+ render();
 }
 
-// ===== RESUMO COMPLETO =====
+// ================= RESUMO =================
 function render(){
 
-  let total = 0;
+ let total = 0;
 
-  let html = `<b>Pedido #${Date.now().toString().slice(-6)}</b><br><br>
-  <b>Cliente:</b><br>
-  Nome: ${nome.value}<br>
-  Email: ${email.value}<br>
-  Endereço: ${endereco.value}, ${numero.value}<br>
-  ${bairro.value} - ${cidade.value}<br><br>
+ let html = `<b>Resumo do Pedido</b><br><br>
+ Nome: ${cliente.value}<br>
+ Email: ${email.value}<br>
+ Endereço: ${endereco.value}, ${numero.value} - ${bairro.value} - ${cidade.value}<br><br>`;
 
-  <b>Itens:</b><br><br>`;
+ itens.forEach((i,x)=>{
+   total += i.valor;
 
-  itens.forEach((i,x)=>{
-    total+=i.valor;
+   html += `${x+1}) ${i.l}x${i.a} Qtd:${i.q}<br>
+   R$ ${i.valor.toFixed(2)}<br><br>`;
+ });
 
-    html+=`${x+1}) ${i.servico}<br>
-    ${i.material} (${i.espessura})<br>
-    Produto: ${i.produto}<br>
-    ${i.l}x${i.a}mm | Qtd:${i.q}<br>
-    R$ ${i.valor.toFixed(2)}<br><br>`;
-  });
+ let desc = total * 0.05;
+ if(desc > total) desc = 0;
 
-  let desconto = total*0.05;
-  let final = total-desconto;
+ let final = total - desc;
 
-  html+=`
-  <b>Resumo financeiro:</b><br>
-  Subtotal: R$ ${total.toFixed(2)}<br>
-  Desconto PIX: -R$ ${desconto.toFixed(2)}<br>
-  <b>Total: R$ ${final.toFixed(2)}</b><br><br>
+ if(final < 15) final = 15;
 
-  Prazo: 2 a 5 dias úteis<br>
-  Produção inicia após pagamento
-  `;
+ html += `Subtotal: R$ ${total.toFixed(2)}<br>`;
+ html += `Desconto PIX: -R$ ${desc.toFixed(2)}<br>`;
+ html += `<b>Total: R$ ${final.toFixed(2)}</b>`;
 
-  resumo.innerHTML = html;
+ resumo.innerHTML = html;
 }
 
-// ===== PIX =====
-async function gerarPix(){
+// ================= PIX =================
+function gerarPix(){
 
-  let total = itens.reduce((s,i)=>s+i.valor,0);
-  let final = total-(total*0.05);
+ if(!validarCliente()) return;
 
-  pix.innerHTML = "⏳ Gerando pagamento...";
+ if(itens.length===0){
+   alert("Adicione item");
+   return;
+ }
 
-  let r = await fetch(API,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({valor:Number(final.toFixed(2))})
-  });
+ let total = itens.reduce((s,i)=>s+i.valor,0);
+ let final = total - total*0.05;
 
-  let d = await r.json();
+ if(final < 15) final = 15;
 
-  pix.innerHTML = `
-  <img src="data:image/png;base64,${d.qr}" width="200"><br>
-  <textarea style="width:100%">${d.copia}</textarea>
-  <p>Aguardando pagamento...</p>
-  `;
+ fetch("https://pix-romer-art.onrender.com/pix",{
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({
+   valor: final,
+   email: email.value
+ })
+ })
+ .then(r=>r.json())
+ .then(d=>{
 
-  statusPix(d.id);
+ resumo.innerHTML += `
+ <br><br>
+ <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
+ <textarea>${d.qr_code}</textarea>
+ <br><b id="status">Aguardando pagamento...</b>
+ `;
+
+ verificar(d.id);
+
+ });
 }
 
-// ===== STATUS =====
-function statusPix(id){
+// ================= STATUS =================
+function verificar(id){
 
-  let i=setInterval(async()=>{
+ let t=setInterval(()=>{
 
-    let r=await fetch(API+"/status/"+id);
-    let d=await r.json();
+ fetch("https://pix-romer-art.onrender.com/status/"+id)
+ .then(r=>r.json())
+ .then(d=>{
 
-    if(d.status==="approved"){
-      clearInterval(i);
+ if(d.status==="approved"){
+   status.innerHTML="✅ Pagamento aprovado";
+   btnWhats.style.display="block";
+   pago=true;
+   clearInterval(t);
+ }
 
-      pix.innerHTML+="<br><b style='color:lightgreen;'>Pagamento aprovado!</b>";
-      btnEnviar.disabled=false;
-    }
+ });
 
-  },3000);
+ },3000);
+
 }
 
-// ===== WHATS =====
+// ================= WHATS =================
 function enviarWhats(){
-  window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
-}
 
-// ===== START =====
-carregarDados();
+ if(!pago){
+   alert("Pagamento não confirmado");
+   return;
+ }
+
+ let txt = resumo.innerText;
+
+ window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(txt));
+}
