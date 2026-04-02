@@ -1,3 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>RomerArt Pedidos</title>
+
+<style>
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;font-weight:bold;}
+.add{background:#f97316;}
+.pix{background:#16a34a;}
+.whats{background:#25d366;display:none;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+</style>
+
+</head>
+<body>
+
+<div class="app">
+
+<div class="card">
+<h3>Cliente</h3>
+<input id="cliente" placeholder="Nome">
+<input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
+<input id="endereco" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
+</div>
+
+<div class="card">
+<h3>Pedido</h3>
+
+<select id="material">
+<option>MDF</option>
+<option>ACRILICO</option>
+</select>
+
+<input id="larg" placeholder="Largura mm">
+<input id="alt" placeholder="Altura mm">
+<input id="qtd" value="1">
+
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button id="btnWhats" class="whats" onclick="enviarWhats()">Enviar Pedido</button>
+
+</div>
+
+<div id="resumo" class="box"></div>
+
+</div>
+
 <script>
 
 // ================== VARIÁVEIS ==================
@@ -36,7 +92,12 @@ function addItem(){
 
  let valor = ((l*a)/100)*0.1*q + 2;
 
- itens.push({ l,a,q,valor });
+ itens.push({
+   l:l,
+   a:a,
+   q:q,
+   valor:valor
+ });
 
  render();
 
@@ -61,13 +122,7 @@ function render(){
  });
 
  let desc = total * 0.05;
-
- if(desc > total) desc = 0;
-
  let final = total - desc;
-
- // 🔥 GARANTE MÍNIMO
- if(final < 15) final = 15;
 
  html += "Subtotal: R$ " + total.toFixed(2) + "<br>";
  html += "Desconto PIX: -R$ " + desc.toFixed(2) + "<br>";
@@ -85,37 +140,27 @@ function gerarPix(){
    return;
  }
 
- let email = document.getElementById("email").value;
-
- if(!email){
-   alert("Informe o email");
-   return;
- }
-
  let total = 0;
 
- itens.forEach(i => total += i.valor);
+ itens.forEach(function(i){
+   total += i.valor;
+ });
 
- let final = total - (total*0.05);
-
- if(final < 15) final = 15;
-
- final = Number(final.toFixed(2));
+ let final = Number((total - total*0.05).toFixed(2));
 
  if(isNaN(final) || final <= 0){
    alert("Erro no valor");
    return;
  }
 
- // 🔥 LIMPA STATUS ANTIGO
- document.getElementById("resumo").innerHTML += "<br><b>Gerando QR Code PIX...</b>";
+ document.getElementById("resumo").innerHTML += "<br>Gerando PIX...";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
    method:"POST",
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({
      valor: final,
-     email: email
+     email: document.getElementById("email").value
    })
  })
  .then(r => r.json())
@@ -134,14 +179,14 @@ function gerarPix(){
    verificar(data.id);
 
  })
- .catch(() => alert("Erro no servidor"));
+ .catch(function(){
+   alert("Erro no servidor");
+ });
 
 }
 
 // ================== STATUS ==================
 function verificar(id){
-
- let tentativas = 0;
 
  let t = setInterval(function(){
 
@@ -157,13 +202,6 @@ function verificar(id){
      }
 
    });
-
-   tentativas++;
-
-   // 🔥 evita loop infinito
-   if(tentativas > 40){
-     clearInterval(t);
-   }
 
  },3000);
 
@@ -184,3 +222,6 @@ function enviarWhats(){
 }
 
 </script>
+
+</body>
+</html>
