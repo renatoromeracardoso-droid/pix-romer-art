@@ -58,18 +58,20 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-// ===== LINKS =====
+// ===== CONFIG =====
+const API="https://pix-romer-art.onrender.com/pix";
+
 const URL_SERVICOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv";
 const URL_PRODUTOS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv";
 const URL_MATERIAIS="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv";
 const URL_CONFIG="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv";
 
-const API="https://pix-romer-art.onrender.com/pix";
+// ===== VARS =====
+let servicos=[],produtos=[],materiais=[],config={},itens=[];
+let pedidoId = Math.floor(Math.random()*900000)+100000;
+let statusPagamento="Aguardando pagamento";
 
-let servicos=[],produtos=[],materiais=[],config={};
-let itens=[];
-
-// ===== CSV =====
+// ===== UTILS =====
 function csvToJson(csv){
  let linhas=csv.trim().split("\n");
  let headers=linhas[0].split(",");
@@ -81,7 +83,6 @@ function csvToJson(csv){
  });
 }
 
-// ===== UTIL =====
 function n(v){
  if(!v) return 0;
  v=v.toString().replace(",",".");
@@ -92,7 +93,7 @@ function norm(t){
  return t?.toString().trim().toLowerCase();
 }
 
-// ===== CARREGAR =====
+// ===== LOAD =====
 async function carregar(){
 
  servicos=csvToJson(await fetch(URL_SERVICOS).then(r=>r.text()));
@@ -116,31 +117,22 @@ async function carregar(){
 
 carregar();
 
-// ===== CONTROLE SERVIÇO =====
+// ===== REGRAS =====
 servico.onchange=()=>{
-
  if(servico.value==="Gravação"){
-
   material.classList.add("hidden");
   espessura.classList.add("hidden");
-
   produto.classList.remove("hidden");
   produto.disabled=false;
-
  }else{
-
   material.classList.remove("hidden");
   espessura.classList.remove("hidden");
-
   produto.classList.add("hidden");
   produto.disabled=true;
-  produto.value=""; // 🔥 limpa seleção
-
+  produto.value="";
  }
-
 };
 
-// ===== LIMITE =====
 largura.oninput=()=>{if(largura.value>400)largura.value=400;}
 altura.oninput=()=>{if(altura.value>400)altura.value=400;}
 
@@ -157,20 +149,19 @@ function calcular(){
 
  let q=n(qtd.value);
 
- // 🔥 produto só se for gravação
  if(servico.value==="Gravação" && produto.value){
   let p=produtos.find(x=>norm(x.nome)==norm(produto.value));
   return n(p?.preco)*q;
  }
 
- let mat = materiais.find(x =>
+ let mat=materiais.find(x=>
   norm(x.nome)==norm(material.value) &&
   String(x.espessura).trim()==String(espessura.value).trim()
  );
 
  let serv=servicos.find(x=>norm(x.nome)==norm(servico.value));
 
- if(!mat || !serv) return 0;
+ if(!mat||!serv) return 0;
 
  let area=(n(largura.value)*n(altura.value))/100;
 
@@ -224,10 +215,24 @@ function render(){
 
  if(final<(config.minimo||0)) final=config.minimo;
 
- html+=`
+ html=`
+ <b>Pedido #${pedidoId}</b><br><br>
+
+ <b>Cliente:</b><br>
+ ${nome.value}<br>
+ ${email.value}<br>
+ ${endereco.value}, ${numero.value}<br>
+ ${bairro.value} - ${cidade.value}<br><br>
+
+ ${html}
+
  Subtotal: R$ ${total.toFixed(2)}<br>
  Desconto PIX: -R$ ${(total*desconto).toFixed(2)}<br>
- <b>Total: R$ ${final.toFixed(2)}</b>`;
+ <b>Total: R$ ${final.toFixed(2)}</b><br><br>
+
+ <b>Status:</b> ${statusPagamento}<br>
+ Prazo: 2 a 5 dias úteis
+ `;
 
  resumo.innerHTML=html;
 }
@@ -240,13 +245,13 @@ async function gerarPix(){
   return;
  }
 
+ let total=itens.reduce((s,i)=>s+i.valor,0);
+ let desconto=(config.desconto_pix||5)/100;
+ let final=total-(total*desconto);
+
+ if(final<(config.minimo||0)) final=config.minimo;
+
  try{
-
-  let total=itens.reduce((s,i)=>s+i.valor,0);
-  let desconto=(config.desconto_pix||5)/100;
-  let final=total-(total*desconto);
-
-  if(final<(config.minimo||0)) final=config.minimo;
 
   let r=await fetch(API,{
    method:"POST",
@@ -256,9 +261,7 @@ async function gerarPix(){
 
   let d=await r.json();
 
-  if(!d || !d.qr){
-   throw "Erro";
-  }
+  if(!d || !d.qr) throw "erro";
 
   pix.innerHTML=`
   <img src="data:image/png;base64,${d.qr}" width="200"><br>
@@ -268,15 +271,21 @@ async function gerarPix(){
   `;
 
  }catch(e){
-  pix.innerHTML="Erro PIX - tente novamente";
+
+  pix.innerHTML=`
+  ⚠️ PIX indisponível no momento<br><br>
+  Valor: R$ ${final.toFixed(2)}<br><br>
+  <button onclick="confirmarPagamento()">Já paguei</button>
+  `;
  }
 
 }
 
 // ===== PAGAMENTO =====
 function confirmarPagamento(){
- alert("Pagamento confirmado!");
+ statusPagamento="Pagamento aprovado ✅";
  btnWhats.disabled=false;
+ render();
 }
 
 // ===== WHATS =====
