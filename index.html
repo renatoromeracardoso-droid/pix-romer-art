@@ -2,127 +2,51 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>RomerArt</title>
+<title>RomerArt Pedidos</title>
 
 <style>
-body{
- background:#0f172a;
- font-family:Arial;
- color:#fff;
- margin:0;
-}
-
-.header{
- background:#020617;
- padding:15px;
- text-align:center;
- font-weight:bold;
- font-size:20px;
-}
-
-.app{
- max-width:420px;
- margin:auto;
- padding:15px;
-}
-
-.card{
- background:#1e293b;
- padding:15px;
- border-radius:14px;
- margin-bottom:12px;
- box-shadow:0 5px 15px rgba(0,0,0,0.3);
-}
-
-input,select{
- width:100%;
- padding:12px;
- margin-top:8px;
- border-radius:10px;
- border:none;
- font-size:14px;
-}
-
-button{
- width:100%;
- padding:14px;
- margin-top:10px;
- border:none;
- border-radius:12px;
- color:#fff;
- font-weight:bold;
- font-size:15px;
- transition:.2s;
-}
-
-button:active{transform:scale(.97);}
-
+body{background:#0f172a;font-family:Arial;color:#fff;}
+.app{max-width:420px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;font-weight:bold;}
 .add{background:#f97316;}
 .pix{background:#16a34a;}
-.whats{background:#22c55e;}
-
-.box{
- background:#1e293b;
- padding:15px;
- border-radius:14px;
- margin-top:10px;
-}
-
-.status{
- padding:10px;
- border-radius:10px;
- font-weight:bold;
- text-align:center;
- margin-top:10px;
-}
-
-.ok{background:#16a34a;}
-.wait{background:#f59e0b;}
+.whats{background:#25d366;display:none;}
+.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
 </style>
-
-<!-- FIREBASE (CORRETO CDN) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
 </head>
 <body>
-
-<div class="header">🚀 RomerArt</div>
 
 <div class="app">
 
 <div class="card">
 <h3>Cliente</h3>
-<input id="cliente" placeholder="Nome *">
-<input id="email" placeholder="Email *">
-<input id="cep" placeholder="CEP *">
+<input id="cliente" placeholder="Nome">
+<input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
 <input id="endereco" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número *">
+<input id="numero" placeholder="Número">
 </div>
 
 <div class="card">
 <h3>Pedido</h3>
-
-<select id="tipo">
-<option value="">Selecione</option>
-<option>Corte</option>
-<option>Gravação</option>
-</select>
 
 <select id="material">
 <option>MDF</option>
 <option>ACRILICO</option>
 </select>
 
-<input id="larg" placeholder="Largura (máx 400)">
-<input id="alt" placeholder="Altura (máx 400)">
+<input id="larg" placeholder="Largura mm">
+<input id="alt" placeholder="Altura mm">
 <input id="qtd" value="1">
 
 <button class="add" onclick="addItem()">Adicionar</button>
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button id="btnWhats" class="whats" onclick="enviarWhats()" disabled>Enviar Pedido</button>
+<button id="btnWhats" class="whats" onclick="enviarWhats()">Enviar Pedido</button>
 
 </div>
 
@@ -132,183 +56,153 @@ button:active{transform:scale(.97);}
 
 <script>
 
-// 🔥 FIREBASE CONFIG (SEU)
-var firebaseConfig = {
- apiKey: "AIzaSyCLvB0Eydzka9KU09w9lTou9CIF-oGiVHo",
- authDomain: "firestore-database-9b92d.firebaseapp.com",
- projectId: "firestore-database-9b92d"
-};
+let itens = [];
+let pago = false;
+const WHATS = "5511946447040";
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// ================== CEP ==================
+document.getElementById("cep").addEventListener("blur", function() {
 
-// ================= VARS =================
-let itens=[];
-let pago=false;
-let pedidoId=null;
+  let c = this.value.replace(/\D/g,'');
 
-// ================= CEP =================
-cep.onblur=async()=>{
- let c=cep.value.replace(/\D/g,'');
- if(c.length!==8)return;
+  if(c.length !== 8) return;
 
- let d=await (await fetch("https://viacep.com.br/ws/"+c+"/json/")).json();
+  fetch("https://viacep.com.br/ws/" + c + "/json/")
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById("endereco").value = d.logradouro || "";
+    document.getElementById("bairro").value = d.bairro || "";
+    document.getElementById("cidade").value = d.localidade || "";
+  });
 
- endereco.value=d.logradouro||"";
- bairro.value=d.bairro||"";
- cidade.value=d.localidade||"";
-}
+});
 
-// ================= LIMITES =================
-larg.oninput=()=>{if(larg.value>400)larg.value=400;}
-alt.oninput=()=>{if(alt.value>400)alt.value=400;}
+// ================== LIMITES ==================
+document.getElementById("larg").addEventListener("input", function(){
+  if(this.value > 400) this.value = 400;
+});
 
-// ================= ADD =================
+document.getElementById("alt").addEventListener("input", function(){
+  if(this.value > 400) this.value = 400;
+});
+
+// ================== ADD ITEM ==================
 function addItem(){
 
- let l=Number(larg.value);
- let a=Number(alt.value);
- let q=Number(qtd.value);
+ let l = Number(document.getElementById("larg").value);
+ let a = Number(document.getElementById("alt").value);
+ let q = Number(document.getElementById("qtd").value);
 
  if(!l || !a || !q){
    alert("Preencha corretamente");
    return;
  }
 
- let valor=((l*a)/100)*0.1*q+2;
+ let valor = ((l*a)/100)*0.1*q + 2;
 
- itens.push({l,a,q,valor});
- render();
-}
-
-// ================= RENDER =================
-function render(){
-
- let total=0;
- let html=`<b>📦 Pedido ${Date.now()}</b><br><br>`;
-
- html+=`
- <b>Cliente</b><br>
- ${cliente.value}<br>
- ${email.value}<br>
- ${endereco.value}, ${numero.value}<br>
- ${bairro.value} - ${cidade.value}<br><br>
- `;
-
- itens.forEach((i,x)=>{
- total+=i.valor;
-
- html+=`
- ${x+1}) ${i.l}x${i.a} mm | Qtd:${i.q}<br>
- R$ ${i.valor.toFixed(2)}<br><br>
- `;
+ itens.push({
+   l:l,
+   a:a,
+   q:q,
+   valor:valor
  });
 
- let desc=total*0.05;
- let final=total-desc;
+ render();
 
- html+=`
- <b>Subtotal:</b> R$ ${total.toFixed(2)}<br>
- <b>Desconto PIX:</b> -R$ ${desc.toFixed(2)}<br>
- <b>Total:</b> R$ ${final.toFixed(2)}
- `;
-
- resumo.innerHTML=html;
 }
 
-// ================= PIX =================
+// ================== RENDER ==================
+function render(){
+
+ let total = 0;
+ let html = "Resumo:<br><br>";
+
+ itens.forEach(function(i,x){
+
+   total += i.valor;
+
+   html += (x+1) + ") "
+        + i.l + "x" + i.a
+        + " - Qtd:" + i.q
+        + "<br>R$ " + i.valor.toFixed(2)
+        + "<br><br>";
+
+ });
+
+ let desc = total * 0.05;
+ let final = total - desc;
+
+ html += "Subtotal: R$ " + total.toFixed(2) + "<br>";
+ html += "Desconto PIX: -R$ " + desc.toFixed(2) + "<br>";
+ html += "<b>Total: R$ " + final.toFixed(2) + "</b><br><br>";
+
+ document.getElementById("resumo").innerHTML = html;
+
+}
+
+// ================== GERAR PIX ==================
 function gerarPix(){
 
- if(itens.length===0){
+ if(itens.length === 0){
    alert("Adicione item");
    return;
  }
 
- pago=false;
- btnWhats.disabled=true;
+ let total = 0;
 
- let total=itens.reduce((s,i)=>s+i.valor,0);
- let final=Number((total-total*0.05).toFixed(2));
+ itens.forEach(function(i){
+   total += i.valor;
+ });
 
- resumo.innerHTML += "<br><br>Gerando PIX...";
+ let final = Number((total - total*0.05).toFixed(2));
+
+ document.getElementById("resumo").innerHTML += "<br>Gerando PIX...";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
- method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({
-   valor: final,
-   email: email.value
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+     valor: final,
+     email: document.getElementById("email").value
+   })
  })
- })
- .then(r=>r.json())
- .then(async d=>{
+ .then(r => r.json())
+ .then(data => {
 
- if(!d.qr_code){
-   alert("Erro ao gerar PIX");
-   return;
- }
+   document.getElementById("resumo").innerHTML +=
+   "<br><img src='data:image/png;base64,"+data.qr_code_base64+"' width='200'><br>" +
+   "<textarea style='width:100%'>"+data.qr_code+"</textarea><br>" +
+   "<b id='status'>Aguardando pagamento...</b>";
 
- resumo.innerHTML += `
- <br><br>
- <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
- <textarea style="width:100%">${d.qr_code}</textarea>
- <div id="status" class="status wait">Aguardando pagamento...</div>
- `;
+   verificar(data.id);
 
- // 🔥 SALVA PEDIDO
- let doc = await db.collection("pedidos").add({
-   cliente:cliente.value,
-   email:email.value,
-   total:final,
-   status:"pendente",
-   criado:new Date()
  });
 
- pedidoId = doc.id;
-
- verificar(d.id);
-
- });
 }
 
-// ================= STATUS =================
+// ================== STATUS ==================
 function verificar(id){
 
- let t=setInterval(()=>{
+ let t = setInterval(function(){
 
- fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now(),{
-   cache:"no-store"
- })
- .then(r=>r.json())
- .then(async d=>{
+   fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now())
+   .then(r => r.json())
+   .then(d => {
 
- let s=String(d.status).toLowerCase();
+     if(d.status === "approved"){
+       document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
+       document.getElementById("btnWhats").style.display = "block";
+       pago = true;
+       clearInterval(t);
+     }
 
- if(s==="approved"){
-
- document.getElementById("status").innerHTML="✅ PAGAMENTO APROVADO";
- document.getElementById("status").className="status ok";
-
- btnWhats.disabled=false;
-
- pago=true;
- clearInterval(t);
-
- // 🔥 ATUALIZA FIREBASE
- if(pedidoId){
-   db.collection("pedidos").doc(pedidoId).update({
-     status:"pago"
    });
- }
-
- }
-
- });
 
  },3000);
+
 }
 
-// ================= WHATS =================
+// ================== WHATS ==================
 function enviarWhats(){
 
  if(!pago){
@@ -316,7 +210,10 @@ function enviarWhats(){
    return;
  }
 
- window.open("https://wa.me/5511946447040?text="+encodeURIComponent(resumo.innerText));
+ let txt = document.getElementById("resumo").innerText;
+
+ window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(txt));
+
 }
 
 </script>
