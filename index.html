@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>RomerArt</title>
+<title>RomerArt Pedidos</title>
 
 <style>
 body{background:#0f172a;font-family:Arial;color:#fff;}
@@ -15,9 +15,10 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 .whats{background:#25d366;display:none;}
 .box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
 </style>
-</head>
 
+</head>
 <body>
+
 <div class="app">
 
 <div class="card">
@@ -59,6 +60,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
+// ================= CONFIG =================
 const WHATS="5511946447040";
 
 const materiais={
@@ -74,21 +76,23 @@ const produtos={
 let itens=[];
 let pago=false;
 
-// CEP
+// ================= CEP =================
 cep.onblur=async()=>{
  let c=cep.value.replace(/\D/g,'');
  if(c.length!==8)return;
+
  let d=await (await fetch("https://viacep.com.br/ws/"+c+"/json/")).json();
+
  endereco.value=d.logradouro||"";
  bairro.value=d.bairro||"";
  cidade.value=d.localidade||"";
 }
 
-// LIMITES
+// ================= LIMITES =================
 larg.oninput=()=>{if(larg.value>400)larg.value=400;}
 alt.oninput=()=>{if(alt.value>400)alt.value=400;}
 
-// CARREGAR ITENS
+// ================= CARREGAR ITENS =================
 tipo.onchange=()=>{
  item.innerHTML="<option>Selecione</option>";
  esp.innerHTML="";
@@ -103,7 +107,7 @@ tipo.onchange=()=>{
  }
 }
 
-// ESPESSURA
+// ================= ESPESSURA =================
 item.onchange=()=>{
  if(materiais[item.value]){
    esp.style.display="block";
@@ -114,7 +118,7 @@ item.onchange=()=>{
  }
 }
 
-// VALIDAR
+// ================= VALIDAÇÃO =================
 function validar(){
  if(!cliente.value||!email.value||!cep.value||!numero.value){
    alert("Preencha os dados obrigatórios");
@@ -123,7 +127,7 @@ function validar(){
  return true;
 }
 
-// ADD
+// ================= ADD ITEM =================
 function addItem(){
 
  if(!validar())return;
@@ -145,7 +149,7 @@ function addItem(){
  render();
 }
 
-// RESUMO
+// ================= RESUMO =================
 function render(){
 
  let total=0;
@@ -157,7 +161,10 @@ function render(){
  itens.forEach((i,x)=>{
  total+=i.valor;
 
- html+=`${x+1}) ${i.tipo}<br>${i.item} | Esp:${i.esp}<br>${i.l}x${i.a} Qtd:${i.q}<br>R$ ${i.valor.toFixed(2)}<br><br>`;
+ html+=`${x+1}) ${i.tipo}<br>
+ ${i.item} | Esp:${i.esp}<br>
+ ${i.l}x${i.a} Qtd:${i.q}<br>
+ R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
  let frete=cep.value.startsWith("03822")?0:15;
@@ -174,11 +181,15 @@ function render(){
  resumo.innerHTML=html;
 }
 
-// PIX
+// ================= PIX =================
 function gerarPix(){
+
+ if(itens.length===0)return alert("Adicione item");
 
  let total=itens.reduce((s,i)=>s+i.valor,0);
  let final=Number((total-total*0.05).toFixed(2));
+
+ resumo.innerHTML+="<br>Gerando PIX...";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
  method:"POST",
@@ -188,8 +199,11 @@ function gerarPix(){
  .then(r=>r.json())
  .then(d=>{
 
- resumo.innerHTML+=`<br><img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
- <textarea>${d.qr_code}</textarea><br>
+ if(!d.qr_code)return alert("Erro PIX");
+
+ resumo.innerHTML+=`<br><br>
+ <img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
+ <textarea style="width:100%">${d.qr_code}</textarea><br>
  <b id="status">Aguardando pagamento...</b>`;
 
  verificar(d.id);
@@ -197,7 +211,7 @@ function gerarPix(){
  });
 }
 
-// STATUS
+// ================= STATUS =================
 function verificar(id){
 
  let t=setInterval(()=>{
@@ -206,10 +220,25 @@ function verificar(id){
  .then(r=>r.json())
  .then(d=>{
 
+ console.log("STATUS:",d.status);
+
  if(d.status==="approved"){
    status.innerHTML="✅ PAGAMENTO APROVADO";
    btnWhats.style.display="block";
    pago=true;
+   clearInterval(t);
+ }
+
+ else if(d.status==="pending"){
+   status.innerHTML="⏳ Aguardando pagamento...";
+ }
+
+ else if(d.status==="in_process"){
+   status.innerHTML="⏳ Processando...";
+ }
+
+ else if(d.status==="rejected"){
+   status.innerHTML="❌ Pagamento rejeitado";
    clearInterval(t);
  }
 
@@ -218,12 +247,18 @@ function verificar(id){
  },3000);
 }
 
-// WHATS
+// ================= WHATS =================
 function enviarWhats(){
- if(!pago)return alert("Pagamento não confirmado");
+
+ if(!pago){
+   alert("Pagamento não confirmado");
+   return;
+ }
+
  window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
 }
 
 </script>
+
 </body>
 </html>
