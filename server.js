@@ -15,70 +15,55 @@ app.use((req,res,next)=>{
 // TOKEN
 mercadopago.configurations.setAccessToken(process.env.MP_TOKEN);
 
-// MEMÓRIA
-let pagamentos = {};
-
-// PIX
+// ================= PIX =================
 app.post("/pix", async (req,res)=>{
 
  try{
 
  let {valor,email} = req.body;
 
- const p = await mercadopago.payment.create({
-   transaction_amount: valor,
+ const pagamento = await mercadopago.payment.create({
+   transaction_amount: Number(valor),
    description: "Pedido RomerArt",
    payment_method_id: "pix",
-   payer:{email:email}
+   payer:{email: email || "teste@email.com"}
  });
 
- pagamentos[p.body.id] = "pending";
-
  res.json({
-   id: p.body.id,
-   qr_code: p.body.point_of_interaction.transaction_data.qr_code,
-   qr_code_base64: p.body.point_of_interaction.transaction_data.qr_code_base64
+   id: pagamento.body.id,
+   qr_code: pagamento.body.point_of_interaction.transaction_data.qr_code,
+   qr_code_base64: pagamento.body.point_of_interaction.transaction_data.qr_code_base64
  });
 
  }catch(e){
    console.log("ERRO PIX:", e);
-   res.status(500).json({erro:"PIX erro"});
+   res.status(500).json({erro:"Erro ao gerar PIX"});
  }
 
 });
 
-// STATUS
-app.get("/status/:id",(req,res)=>{
- res.json({status:pagamentos[req.params.id] || "pending"});
-});
-
-// WEBHOOK CORRIGIDO
-app.post("/webhook", async (req,res)=>{
+// ================= STATUS DIRETO MP =================
+app.get("/status/:id", async (req,res)=>{
 
  try{
 
- const body = req.body;
+ const pagamento = await mercadopago.payment.get(req.params.id);
 
- if(body.type === "payment"){
-
-   const id = body.data.id;
-
-   const pagamento = await mercadopago.payment.get(id);
-
-   pagamentos[id] = pagamento.body.status;
-
-   console.log("STATUS ATUALIZADO:", id, pagamento.body.status);
- }
-
- res.sendStatus(200);
+ res.json({
+   status: pagamento.body.status
+ });
 
  }catch(e){
-   console.log("ERRO WEBHOOK:", e);
-   res.sendStatus(500);
+   console.log("ERRO STATUS:", e);
+   res.status(500).json({status:"erro"});
  }
 
 });
 
-app.get("/",(req,res)=>res.send("OK"));
+// ROOT
+app.get("/",(req,res)=>res.send("Servidor OK 🚀"));
 
-app.listen(process.env.PORT||10000,()=>console.log("Servidor ON 🚀"));
+// START
+app.listen(process.env.PORT || 10000, ()=>{
+ console.log("Servidor rodando 🚀");
+});
