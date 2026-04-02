@@ -35,7 +35,13 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <div class="card">
 <h3>Serviço</h3>
 
-<select id="tipo"></select>
+<select id="tipo">
+<option value="">Selecione</option>
+<option>Corte</option>
+<option>Gravação</option>
+<option>Corte + Gravação</option>
+</select>
+
 <select id="item"></select>
 <select id="esp"></select>
 
@@ -58,102 +64,98 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 // ================= CONFIG =================
 const WHATS = "5511946447040";
 
-const URLS = {
- config:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=170544498&output=csv",
- servicos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=51228853&output=csv",
- produtos:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=189072882&output=csv",
- materiais:"https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=0&output=csv"
+const materiais = {
+ MDF:{preco:0.1, esp:[3,6]},
+ ACRILICO:{preco:0.15, esp:[2,3,5]},
+ COMPENSADO:{preco:0.08, esp:[3,4]},
+ MADEIRA:{preco:0.12, esp:[3,5]}
 };
 
-let DB = {servicos:[],produtos:[],materiais:[]};
-let itens = [];
-let pago = false;
+const produtos = {
+ COPO:8, TACA:10, GARRAFA:15,
+ CHAVEIRO:3, CANETA:2, LAPIS:1
+};
 
-// ================= CSV =================
-function csvToJson(csv){
- let linhas = csv.split("\n").filter(l=>l.trim());
- let headers = linhas[0].split(",");
- return linhas.slice(1).map(l=>{
-   let obj={};
-   l.split(",").forEach((v,i)=> obj[headers[i].trim()] = v.trim());
-   return obj;
- });
-}
+let itens=[];
+let pago=false;
 
-// ================= CARREGAR PLANILHA =================
-async function carregarDB(){
-
- DB.servicos = csvToJson(await (await fetch(URLS.servicos)).text());
- DB.produtos = csvToJson(await (await fetch(URLS.produtos)).text());
- DB.materiais = csvToJson(await (await fetch(URLS.materiais)).text());
-
- tipo.innerHTML = "<option value=''>Selecione</option>";
- DB.servicos.forEach(s=> tipo.innerHTML += `<option>${s.nome}</option>`);
-}
-
-// ================= TROCA SERVIÇO =================
-tipo.onchange = ()=>{
-
- item.innerHTML="<option value=''>Selecione</option>";
-
- if(tipo.value==="Corte"){
-   DB.materiais.forEach(m=> item.innerHTML+=`<option>${m.nome}</option>`);
- }
-
- if(tipo.value==="Gravação"){
-   DB.produtos.forEach(p=> item.innerHTML+=`<option>${p.nome}</option>`);
- }
-
- if(tipo.value==="Corte + Gravação"){
-   [...DB.materiais,...DB.produtos].forEach(x=> item.innerHTML+=`<option>${x.nome}</option>`);
- }
-}
-
-// ================= ESPESSURA =================
-item.onchange = ()=>{
-
- esp.innerHTML="";
- esp.style.display="none";
-
- let mat = DB.materiais.find(m=>m.nome===item.value);
-
- if(mat && tipo.value !== "Gravação"){
-   esp.style.display="block";
-   mat.espessuras.split("|").forEach(e=>{
-     esp.innerHTML+=`<option>${e}mm</option>`;
-   });
- }
-}
+// ================= LIMITES =================
+larg.oninput=()=>{if(larg.value>400)larg.value=400;}
+alt.oninput=()=>{if(alt.value>400)alt.value=400;}
 
 // ================= CEP =================
-cep.onblur = async ()=>{
- let c = cep.value.replace(/\D/g,'');
+cep.onblur=async()=>{
+ let c=cep.value.replace(/\D/g,'');
  if(c.length!==8)return;
- let d = await (await fetch("https://viacep.com.br/ws/"+c+"/json/")).json();
+ let d=await (await fetch("https://viacep.com.br/ws/"+c+"/json/")).json();
  endereco.value=d.logradouro||"";
  bairro.value=d.bairro||"";
  cidade.value=d.localidade||"";
 }
 
-// ================= LIMITES =================
-larg.oninput=()=>{ if(larg.value>400) larg.value=400; }
-alt.oninput=()=>{ if(alt.value>400) alt.value=400; }
+// ================= CARREGAR ITENS =================
+tipo.onchange=()=>{
+
+ item.innerHTML="<option value=''>Selecione</option>";
+ esp.style.display="none";
+
+ if(tipo.value==="Corte"){
+   Object.keys(materiais).forEach(i=>item.innerHTML+=`<option>${i}</option>`);
+ }
+
+ if(tipo.value==="Gravação"){
+   Object.keys(produtos).forEach(i=>item.innerHTML+=`<option>${i}</option>`);
+ }
+
+ if(tipo.value==="Corte + Gravação"){
+   [...Object.keys(materiais),...Object.keys(produtos)]
+   .forEach(i=>item.innerHTML+=`<option>${i}</option>`);
+ }
+}
+
+// ================= ESPESSURA =================
+item.onchange=()=>{
+
+ esp.innerHTML="";
+ esp.style.display="none";
+
+ if(materiais[item.value] && tipo.value!=="Gravação"){
+   esp.style.display="block";
+   materiais[item.value].esp.forEach(e=>{
+     esp.innerHTML+=`<option>${e}mm</option>`;
+   });
+ }
+}
+
+// ================= VALIDAÇÃO =================
+function validar(){
+ if(!cliente.value) return alert("Nome obrigatório");
+ if(!email.value) return alert("Email obrigatório");
+ if(!cep.value) return alert("CEP obrigatório");
+ if(!numero.value) return alert("Número obrigatório");
+ if(!tipo.value) return alert("Selecione serviço");
+ if(!item.value) return alert("Selecione item");
+ return true;
+}
 
 // ================= ADD =================
 function addItem(){
 
+ if(!validar()) return;
+
  let l=+larg.value,a=+alt.value,q=+qtd.value;
 
- if(!l||!a||!q)return alert("Preencha medidas");
+ if(!l||!a||!q) return alert("Informe medidas");
 
- let valor = ((l*a)/100)*0.1*q + 2;
+ let valor;
 
- itens.push({
-   tipo:tipo.value,
-   item:item.value,
-   esp:esp.value||"-",
-   l,a,q,valor
- });
+ if(produtos[item.value]){
+   valor = produtos[item.value]*q;
+ }else{
+   valor=((l*a)/100)*materiais[item.value].preco*q;
+ }
+
+ itens.push({tipo:tipo.value,item:item.value,esp:esp.value||"-",l,a,q,valor});
 
  render();
 }
@@ -167,18 +169,24 @@ function render(){
  html+=`${cliente.value}<br>${email.value}<br>${endereco.value}, ${numero.value}<br>${bairro.value} - ${cidade.value}<br><br>`;
 
  itens.forEach((i,x)=>{
-   total+=i.valor;
-   html+=`${x+1}) ${i.tipo}<br>${i.item} | Esp:${i.esp}<br>${i.l}x${i.a} Qtd:${i.q}<br>R$ ${i.valor.toFixed(2)}<br><br>`;
+ total+=i.valor;
+
+ html+=`${x+1}) ${i.tipo}<br>
+ ${i.item} | Esp:${i.esp}<br>
+ ${i.l}x${i.a} Qtd:${i.q}<br>
+ R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
- let frete = cep.value.startsWith("03822")?0:15;
-
+ let frete=cep.value.startsWith("03822")?0:15;
  total+=frete;
 
  let desc=total*0.05;
  let final=total-desc;
 
- html+=`Frete:${frete===0?"Grátis":"R$"+frete}<br>Subtotal:R$${total.toFixed(2)}<br>Desconto:-R$${desc.toFixed(2)}<br><b>Total:R$${final.toFixed(2)}</b>`;
+ html+=`Frete:${frete===0?"Grátis":"R$"+frete}<br>
+ Subtotal:R$${total.toFixed(2)}<br>
+ Desconto:-R$${desc.toFixed(2)}<br>
+ <b>Total:R$${final.toFixed(2)}</b>`;
 
  resumo.innerHTML=html;
 }
@@ -186,8 +194,12 @@ function render(){
 // ================= PIX =================
 function gerarPix(){
 
+ if(itens.length===0) return alert("Adicione item");
+
  let total=itens.reduce((s,i)=>s+i.valor,0);
  let final=Number((total-total*0.05).toFixed(2));
+
+ if(final<=0) return alert("Erro valor");
 
  fetch("https://pix-romer-art.onrender.com/pix",{
  method:"POST",
@@ -197,7 +209,11 @@ function gerarPix(){
  .then(r=>r.json())
  .then(d=>{
 
- resumo.innerHTML+=`<br><img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br><textarea>${d.qr_code}</textarea><br><b id="status">Aguardando...</b>`;
+ if(!d.qr_code) return alert("Erro PIX");
+
+ resumo.innerHTML+=`<br><img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
+ <textarea>${d.qr_code}</textarea><br>
+ <b id="status">Aguardando...</b>`;
 
  verificar(d.id);
 
@@ -227,14 +243,9 @@ function verificar(id){
 
 // ================= WHATS =================
 function enviarWhats(){
-
- if(!pago)return alert("Pague primeiro");
-
+ if(!pago) return alert("Pague primeiro");
  window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
 }
-
-// ================= START =================
-carregarDB();
 
 </script>
 
