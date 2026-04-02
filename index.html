@@ -81,14 +81,13 @@ function csvToJson(csv){
  });
 }
 
-// ===== NUMERO =====
+// ===== UTIL =====
 function n(v){
  if(!v) return 0;
  v=v.toString().replace(",",".");
  return isNaN(parseFloat(v))?0:parseFloat(v);
 }
 
-// ===== NORMALIZAR =====
 function norm(t){
  return t?.toString().trim().toLowerCase();
 }
@@ -117,17 +116,28 @@ async function carregar(){
 
 carregar();
 
-// ===== CONTROLE =====
+// ===== CONTROLE SERVIÇO =====
 servico.onchange=()=>{
+
  if(servico.value==="Gravação"){
+
   material.classList.add("hidden");
   espessura.classList.add("hidden");
+
   produto.classList.remove("hidden");
+  produto.disabled=false;
+
  }else{
+
   material.classList.remove("hidden");
   espessura.classList.remove("hidden");
+
   produto.classList.add("hidden");
+  produto.disabled=true;
+  produto.value=""; // 🔥 limpa seleção
+
  }
+
 };
 
 // ===== LIMITE =====
@@ -147,7 +157,8 @@ function calcular(){
 
  let q=n(qtd.value);
 
- if(produto.value){
+ // 🔥 produto só se for gravação
+ if(servico.value==="Gravação" && produto.value){
   let p=produtos.find(x=>norm(x.nome)==norm(produto.value));
   return n(p?.preco)*q;
  }
@@ -159,7 +170,7 @@ function calcular(){
 
  let serv=servicos.find(x=>norm(x.nome)==norm(servico.value));
 
- if(!mat||!serv) return 0;
+ if(!mat || !serv) return 0;
 
  let area=(n(largura.value)*n(altura.value))/100;
 
@@ -225,38 +236,44 @@ function render(){
 async function gerarPix(){
 
  if(itens.length==0){
-  alert("Adicione um item primeiro");
+  alert("Adicione item primeiro");
   return;
  }
 
- let total=itens.reduce((s,i)=>s+i.valor,0);
- let desconto=(config.desconto_pix||5)/100;
- let final=total-(total*desconto);
+ try{
 
- if(final<(config.minimo||0)) final=config.minimo;
+  let total=itens.reduce((s,i)=>s+i.valor,0);
+  let desconto=(config.desconto_pix||5)/100;
+  let final=total-(total*desconto);
 
- let r=await fetch(API,{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({valor:Number(final.toFixed(2))})
- });
+  if(final<(config.minimo||0)) final=config.minimo;
 
- let d=await r.json();
+  let r=await fetch(API,{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({valor:Number(final.toFixed(2))})
+  });
 
- if(!d || !d.qr){
-  pix.innerHTML="Erro PIX";
-  return;
+  let d=await r.json();
+
+  if(!d || !d.qr){
+   throw "Erro";
+  }
+
+  pix.innerHTML=`
+  <img src="data:image/png;base64,${d.qr}" width="200"><br>
+  <textarea>${d.copia}</textarea>
+  <br><br>
+  <button onclick="confirmarPagamento()">Já paguei</button>
+  `;
+
+ }catch(e){
+  pix.innerHTML="Erro PIX - tente novamente";
  }
 
- pix.innerHTML=`
- <img src="data:image/png;base64,${d.qr}" width="200"><br>
- <textarea>${d.copia}</textarea>
- <br><br>
- <button onclick="confirmarPagamento()">Já paguei</button>
- `;
 }
 
-// ===== CONFIRMAR PAGAMENTO =====
+// ===== PAGAMENTO =====
 function confirmarPagamento(){
  alert("Pagamento confirmado!");
  btnWhats.disabled=false;
