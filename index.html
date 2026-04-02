@@ -54,13 +54,28 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 </div>
 
-<script>
+<!-- 🔥 FIREBASE -->
+<script type="module">
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, addDoc, collection, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCLvB0Eydzka9KU09w9lTou9CIF-oGiVHo",
+  authDomain: "firestore-database-9b92d.firebaseapp.com",
+  projectId: "firestore-database-9b92d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ================= VARIÁVEIS =================
 let itens = [];
 let pago = false;
+let pedidoId = null;
 const WHATS = "5511946447040";
 
-// ================== CEP ==================
+// ================= CEP =================
 document.getElementById("cep").addEventListener("blur", function() {
 
   let c = this.value.replace(/\D/g,'');
@@ -77,7 +92,7 @@ document.getElementById("cep").addEventListener("blur", function() {
 
 });
 
-// ================== LIMITES ==================
+// ================= LIMITES =================
 document.getElementById("larg").addEventListener("input", function(){
   if(this.value > 400) this.value = 400;
 });
@@ -86,22 +101,22 @@ document.getElementById("alt").addEventListener("input", function(){
   if(this.value > 400) this.value = 400;
 });
 
-// ================== ADD ITEM ==================
-function addItem(){
+// ================= ADD ITEM =================
+window.addItem = function(){
 
- let nome = document.getElementById("cliente").value;
- let email = document.getElementById("email").value;
- let cep = document.getElementById("cep").value;
- let numero = document.getElementById("numero").value;
+ let nome = cliente.value;
+ let emailVal = email.value;
+ let cepVal = cep.value;
+ let numeroVal = numero.value;
 
- if(!nome || !email || !cep || !numero){
+ if(!nome || !emailVal || !cepVal || !numeroVal){
    alert("Preencha todos os dados do cliente");
    return;
  }
 
- let l = Number(document.getElementById("larg").value);
- let a = Number(document.getElementById("alt").value);
- let q = Number(document.getElementById("qtd").value);
+ let l = Number(larg.value);
+ let a = Number(alt.value);
+ let q = Number(qtd.value);
 
  if(!l || !a || !q){
    alert("Preencha corretamente");
@@ -110,18 +125,13 @@ function addItem(){
 
  let valor = ((l*a)/100)*0.1*q + 2;
 
- itens.push({
-   l:l,
-   a:a,
-   q:q,
-   valor:valor
- });
+ itens.push({l,a,q,valor});
 
  render();
 
 }
 
-// ================== RENDER ==================
+// ================= RENDER =================
 function render(){
 
  let total = 0;
@@ -159,15 +169,8 @@ function render(){
 
 }
 
-// ================== GERAR PIX ==================
-function gerarPix(){
-
- let nome = document.getElementById("cliente").value;
-
- if(!nome){
-   alert("Preencha os dados do cliente");
-   return;
- }
+// ================= GERAR PIX =================
+window.gerarPix = async function(){
 
  if(itens.length === 0){
    alert("Adicione item");
@@ -176,11 +179,24 @@ function gerarPix(){
 
  let total = 0;
 
- itens.forEach(function(i){
-   total += i.valor;
- });
+ itens.forEach(i => total += i.valor);
 
  let final = Number((total - total*0.05).toFixed(2));
+
+ // 🔥 SALVA PEDIDO
+ const docRef = await addDoc(collection(db, "pedidos"), {
+   cliente: cliente.value,
+   email: email.value,
+   endereco: endereco.value,
+   numero: numero.value,
+   cidade: cidade.value,
+   itens: itens,
+   total: final,
+   status: "pendente",
+   data: new Date()
+ });
+
+ pedidoId = docRef.id;
 
  document.getElementById("resumo").innerHTML += "<br>Gerando PIX...";
 
@@ -189,7 +205,7 @@ function gerarPix(){
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({
      valor: final,
-     email: document.getElementById("email").value
+     email: email.value
    })
  })
  .then(r => r.json())
@@ -206,30 +222,35 @@ function gerarPix(){
 
 }
 
-// ================== STATUS ==================
-function verificar(id){
+// ================= STATUS =================
+async function verificar(id){
 
- let t = setInterval(function(){
+ let t = setInterval(async function(){
 
-   fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now())
-   .then(r => r.json())
-   .then(d => {
+   let r = await fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now());
+   let d = await r.json();
 
-     if(d.status === "approved"){
-       document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
-       document.getElementById("btnWhats").style.display = "block";
-       pago = true;
-       clearInterval(t);
+   if(d.status === "approved"){
+
+     document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
+     document.getElementById("btnWhats").style.display = "block";
+     pago = true;
+
+     if(pedidoId){
+       await updateDoc(doc(db, "pedidos", pedidoId), {
+         status: "pago"
+       });
      }
 
-   });
+     clearInterval(t);
+   }
 
  },3000);
 
 }
 
-// ================== WHATS ==================
-function enviarWhats(){
+// ================= WHATS =================
+window.enviarWhats = function(){
 
  if(!pago){
    alert("Pagamento não confirmado");
