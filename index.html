@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>RomerArt Pedidos</title>
+<title>RomerArt</title>
 
 <style>
 body{background:#0f172a;font-family:Arial;color:#fff;}
@@ -15,10 +15,9 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 .whats{background:#25d366;display:none;}
 .box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
 </style>
-
 </head>
-<body>
 
+<body>
 <div class="app">
 
 <div class="card">
@@ -39,7 +38,6 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <option value="">Selecione</option>
 <option>Corte</option>
 <option>Gravação</option>
-<option>Corte + Gravação</option>
 </select>
 
 <select id="item"></select>
@@ -61,29 +59,22 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
-// ================= CONFIG =================
-const WHATS = "5511946447040";
+const WHATS="5511946447040";
 
-const materiais = {
- MDF:{preco:0.1, esp:[3,6]},
- ACRILICO:{preco:0.15, esp:[2,3,5]},
- COMPENSADO:{preco:0.08, esp:[3,4]},
- MADEIRA:{preco:0.12, esp:[3,5]}
+const materiais={
+ MDF:{preco:0.1,esp:[3,6]},
+ COMPENSADO:{preco:0.08,esp:[3,4]}
 };
 
-const produtos = {
- COPO:8, TACA:10, GARRAFA:15,
- CHAVEIRO:3, CANETA:2, LAPIS:1
+const produtos={
+ COPO:10,
+ TACA:12
 };
 
 let itens=[];
 let pago=false;
 
-// ================= LIMITES =================
-larg.oninput=()=>{if(larg.value>400)larg.value=400;}
-alt.oninput=()=>{if(alt.value>400)alt.value=400;}
-
-// ================= CEP =================
+// CEP
 cep.onblur=async()=>{
  let c=cep.value.replace(/\D/g,'');
  if(c.length!==8)return;
@@ -93,10 +84,14 @@ cep.onblur=async()=>{
  cidade.value=d.localidade||"";
 }
 
-// ================= CARREGAR ITENS =================
-tipo.onchange=()=>{
+// LIMITES
+larg.oninput=()=>{if(larg.value>400)larg.value=400;}
+alt.oninput=()=>{if(alt.value>400)alt.value=400;}
 
- item.innerHTML="<option value=''>Selecione</option>";
+// CARREGAR ITENS
+tipo.onchange=()=>{
+ item.innerHTML="<option>Selecione</option>";
+ esp.innerHTML="";
  esp.style.display="none";
 
  if(tipo.value==="Corte"){
@@ -106,51 +101,41 @@ tipo.onchange=()=>{
  if(tipo.value==="Gravação"){
    Object.keys(produtos).forEach(i=>item.innerHTML+=`<option>${i}</option>`);
  }
-
- if(tipo.value==="Corte + Gravação"){
-   [...Object.keys(materiais),...Object.keys(produtos)]
-   .forEach(i=>item.innerHTML+=`<option>${i}</option>`);
- }
 }
 
-// ================= ESPESSURA =================
+// ESPESSURA
 item.onchange=()=>{
-
- esp.innerHTML="";
- esp.style.display="none";
-
- if(materiais[item.value] && tipo.value!=="Gravação"){
+ if(materiais[item.value]){
    esp.style.display="block";
+   esp.innerHTML="";
    materiais[item.value].esp.forEach(e=>{
      esp.innerHTML+=`<option>${e}mm</option>`;
    });
  }
 }
 
-// ================= VALIDAÇÃO =================
+// VALIDAR
 function validar(){
- if(!cliente.value) return alert("Nome obrigatório");
- if(!email.value) return alert("Email obrigatório");
- if(!cep.value) return alert("CEP obrigatório");
- if(!numero.value) return alert("Número obrigatório");
- if(!tipo.value) return alert("Selecione serviço");
- if(!item.value) return alert("Selecione item");
+ if(!cliente.value||!email.value||!cep.value||!numero.value){
+   alert("Preencha os dados obrigatórios");
+   return false;
+ }
  return true;
 }
 
-// ================= ADD =================
+// ADD
 function addItem(){
 
- if(!validar()) return;
+ if(!validar())return;
 
  let l=+larg.value,a=+alt.value,q=+qtd.value;
 
- if(!l||!a||!q) return alert("Informe medidas");
+ if(!l||!a||!q)return alert("Preencha medidas");
 
  let valor;
 
  if(produtos[item.value]){
-   valor = produtos[item.value]*q;
+   valor=produtos[item.value]*q;
  }else{
    valor=((l*a)/100)*materiais[item.value].preco*q;
  }
@@ -160,10 +145,11 @@ function addItem(){
  render();
 }
 
-// ================= RESUMO =================
+// RESUMO
 function render(){
 
  let total=0;
+
  let html=`<b>Pedido ${Date.now()}</b><br><br>`;
 
  html+=`${cliente.value}<br>${email.value}<br>${endereco.value}, ${numero.value}<br>${bairro.value} - ${cidade.value}<br><br>`;
@@ -171,10 +157,7 @@ function render(){
  itens.forEach((i,x)=>{
  total+=i.valor;
 
- html+=`${x+1}) ${i.tipo}<br>
- ${i.item} | Esp:${i.esp}<br>
- ${i.l}x${i.a} Qtd:${i.q}<br>
- R$ ${i.valor.toFixed(2)}<br><br>`;
+ html+=`${x+1}) ${i.tipo}<br>${i.item} | Esp:${i.esp}<br>${i.l}x${i.a} Qtd:${i.q}<br>R$ ${i.valor.toFixed(2)}<br><br>`;
  });
 
  let frete=cep.value.startsWith("03822")?0:15;
@@ -191,15 +174,11 @@ function render(){
  resumo.innerHTML=html;
 }
 
-// ================= PIX =================
+// PIX
 function gerarPix(){
-
- if(itens.length===0) return alert("Adicione item");
 
  let total=itens.reduce((s,i)=>s+i.valor,0);
  let final=Number((total-total*0.05).toFixed(2));
-
- if(final<=0) return alert("Erro valor");
 
  fetch("https://pix-romer-art.onrender.com/pix",{
  method:"POST",
@@ -209,18 +188,16 @@ function gerarPix(){
  .then(r=>r.json())
  .then(d=>{
 
- if(!d.qr_code) return alert("Erro PIX");
-
  resumo.innerHTML+=`<br><img src="data:image/png;base64,${d.qr_code_base64}" width="200"><br>
  <textarea>${d.qr_code}</textarea><br>
- <b id="status">Aguardando...</b>`;
+ <b id="status">Aguardando pagamento...</b>`;
 
  verificar(d.id);
 
  });
 }
 
-// ================= STATUS =================
+// STATUS
 function verificar(id){
 
  let t=setInterval(()=>{
@@ -230,7 +207,7 @@ function verificar(id){
  .then(d=>{
 
  if(d.status==="approved"){
-   status.innerHTML="✅ Pago";
+   status.innerHTML="✅ PAGAMENTO APROVADO";
    btnWhats.style.display="block";
    pago=true;
    clearInterval(t);
@@ -241,13 +218,12 @@ function verificar(id){
  },3000);
 }
 
-// ================= WHATS =================
+// WHATS
 function enviarWhats(){
- if(!pago) return alert("Pague primeiro");
+ if(!pago)return alert("Pagamento não confirmado");
  window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
 }
 
 </script>
-
 </body>
 </html>
