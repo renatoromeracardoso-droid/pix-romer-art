@@ -23,13 +23,13 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <div class="card">
 <h3>Cliente</h3>
-<input id="cliente" placeholder="Nome">
-<input id="email" placeholder="Email">
-<input id="cep" placeholder="CEP">
+<input id="cliente" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
 <input id="endereco" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número">
+<input id="numero" placeholder="Número *">
 </div>
 
 <div class="card">
@@ -40,8 +40,8 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <option>ACRILICO</option>
 </select>
 
-<input id="larg" placeholder="Largura mm">
-<input id="alt" placeholder="Altura mm">
+<input id="larg" placeholder="Largura mm (máx 400)">
+<input id="alt" placeholder="Altura mm (máx 400)">
 <input id="qtd" value="1">
 
 <button class="add" onclick="addItem()">Adicionar</button>
@@ -89,6 +89,16 @@ document.getElementById("alt").addEventListener("input", function(){
 // ================== ADD ITEM ==================
 function addItem(){
 
+ let nome = document.getElementById("cliente").value;
+ let email = document.getElementById("email").value;
+ let cep = document.getElementById("cep").value;
+ let numero = document.getElementById("numero").value;
+
+ if(!nome || !email || !cep || !numero){
+   alert("Preencha todos os dados do cliente");
+   return;
+ }
+
  let l = Number(document.getElementById("larg").value);
  let a = Number(document.getElementById("alt").value);
  let q = Number(document.getElementById("qtd").value);
@@ -115,15 +125,24 @@ function addItem(){
 function render(){
 
  let total = 0;
- let html = "Resumo:<br><br>";
+
+ let html = "<b>📦 Pedido</b><br><br>";
+
+ html += `
+ <b>Cliente:</b><br>
+ ${cliente.value}<br>
+ ${email.value}<br>
+ ${endereco.value}, ${numero.value}<br>
+ ${bairro.value} - ${cidade.value}<br><br>
+ `;
 
  itens.forEach(function(i,x){
 
    total += i.valor;
 
    html += (x+1) + ") "
-        + i.l + "x" + i.a
-        + " - Qtd:" + i.q
+        + i.l + "x" + i.a + " mm"
+        + " | Qtd:" + i.q
         + "<br>R$ " + i.valor.toFixed(2)
         + "<br><br>";
 
@@ -132,9 +151,9 @@ function render(){
  let desc = total * 0.05;
  let final = total - desc;
 
- html += "Subtotal: R$ " + total.toFixed(2) + "<br>";
- html += "Desconto PIX: -R$ " + desc.toFixed(2) + "<br>";
- html += "<b>Total: R$ " + final.toFixed(2) + "</b><br><br>";
+ html += "<b>Subtotal:</b> R$ " + total.toFixed(2) + "<br>";
+ html += "<b>Desconto PIX:</b> -R$ " + desc.toFixed(2) + "<br>";
+ html += "<b>Total:</b> R$ " + final.toFixed(2) + "<br><br>";
 
  document.getElementById("resumo").innerHTML = html;
 
@@ -142,6 +161,13 @@ function render(){
 
 // ================== GERAR PIX ==================
 function gerarPix(){
+
+ let nome = document.getElementById("cliente").value;
+
+ if(!nome){
+   alert("Preencha os dados do cliente");
+   return;
+ }
 
  if(itens.length === 0){
    alert("Adicione item");
