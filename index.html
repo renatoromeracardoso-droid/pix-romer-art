@@ -92,12 +92,7 @@ function addItem(){
 
  let valor = ((l*a)/100)*0.1*q + 2;
 
- itens.push({
-   l:l,
-   a:a,
-   q:q,
-   valor:valor
- });
+ itens.push({ l,a,q,valor });
 
  render();
 
@@ -122,7 +117,13 @@ function render(){
  });
 
  let desc = total * 0.05;
+
+ if(desc > total) desc = 0;
+
  let final = total - desc;
+
+ // 🔥 mínimo
+ if(final < 15) final = 15;
 
  html += "Subtotal: R$ " + total.toFixed(2) + "<br>";
  html += "Desconto PIX: -R$ " + desc.toFixed(2) + "<br>";
@@ -140,27 +141,36 @@ function gerarPix(){
    return;
  }
 
+ let email = document.getElementById("email").value;
+
+ if(!email){
+   alert("Informe o email");
+   return;
+ }
+
  let total = 0;
 
- itens.forEach(function(i){
-   total += i.valor;
- });
+ itens.forEach(i => total += i.valor);
 
- let final = Number((total - total*0.05).toFixed(2));
+ let final = total - (total*0.05);
+
+ if(final < 15) final = 15;
+
+ final = Number(final.toFixed(2));
 
  if(isNaN(final) || final <= 0){
    alert("Erro no valor");
    return;
  }
 
- document.getElementById("resumo").innerHTML += "<br>Gerando PIX...";
+ document.getElementById("resumo").innerHTML += "<br><b>Gerando QR Code PIX...</b>";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
    method:"POST",
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({
      valor: final,
-     email: document.getElementById("email").value
+     email: email
    })
  })
  .then(r => r.json())
@@ -179,14 +189,14 @@ function gerarPix(){
    verificar(data.id);
 
  })
- .catch(function(){
-   alert("Erro no servidor");
- });
+ .catch(() => alert("Erro no servidor"));
 
 }
 
 // ================== STATUS ==================
 function verificar(id){
+
+ let tentativas = 0;
 
  let t = setInterval(function(){
 
@@ -202,6 +212,12 @@ function verificar(id){
      }
 
    });
+
+   tentativas++;
+
+   if(tentativas > 40){
+     clearInterval(t);
+   }
 
  },3000);
 
