@@ -8,7 +8,7 @@ app.use(cors())
 
 const TOKEN = process.env.MP_TOKEN
 
-// ------------------ PIX ------------------
+// ---------------- PIX ----------------
 app.post("/pix", async (req, res) => {
   try {
 
@@ -25,21 +25,21 @@ app.post("/pix", async (req, res) => {
         description: "Pedido RomerArt",
         payment_method_id: "pix",
         payer: {
-          email: "comprador@email.com"
+          email: "teste@email.com"
         }
       })
     })
 
     const data = await response.json()
 
-    console.log("PIX GERADO:", data)
+    console.log("PIX RESPONSE:", data)
 
-    if (!data.id) {
-      return res.status(500).json({ erro: "Erro ao gerar PIX" })
+    if (data.error) {
+      return res.status(500).json({ erro: data.message || "Erro MP" })
     }
 
     res.json({
-      id: data.id, // 🔥 ID CORRETO
+      id: data.id,
       status: data.status,
       copiaecola: data.point_of_interaction.transaction_data.qr_code,
       qr_code_base64: data.point_of_interaction.transaction_data.qr_code_base64
@@ -52,14 +52,13 @@ app.post("/pix", async (req, res) => {
 })
 
 
-// ------------------ STATUS ------------------
+// ---------------- STATUS ----------------
 app.get("/status/:id", async (req, res) => {
   try {
 
     const { id } = req.params
 
     const response = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
-      method: "GET",
       headers: {
         "Authorization": `Bearer ${TOKEN}`
       }
@@ -67,14 +66,14 @@ app.get("/status/:id", async (req, res) => {
 
     const data = await response.json()
 
-    console.log("STATUS:", data)
+    console.log("STATUS RESPONSE:", data)
 
-    if (!data || !data.status) {
+    if (data.error) {
       return res.json({ status: "erro_api" })
     }
 
     res.json({
-      status: data.status // pending | approved
+      status: data.status
     })
 
   } catch (error) {
@@ -84,13 +83,11 @@ app.get("/status/:id", async (req, res) => {
 })
 
 
-// ------------------ TESTE ------------------
+// ---------------- SERVER ----------------
 app.get("/", (req, res) => {
   res.send("API funcionando 🚀")
 })
 
-
-// ------------------ SERVER ------------------
 app.listen(process.env.PORT || 10000, () => {
   console.log("Servidor rodando 🚀")
 })
