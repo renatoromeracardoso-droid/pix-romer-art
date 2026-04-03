@@ -1,84 +1,98 @@
 import express from "express"
-import cors from "cors"
 import fetch from "node-fetch"
-import crypto from "crypto"
+import cors from "cors"
 
 const app = express()
-app.use(express.json())
 app.use(cors())
+app.use(express.json())
 
-const TOKEN = process.env.MP_TOKEN
+const MP_TOKEN = process.env.MP_TOKEN
 
-// ---------------- PIX ----------------
+// 🔥 ROTA TESTE
+app.get("/", (req, res) => {
+  res.send("Servidor PIX rodando 🚀")
+})
+
+
+// 🔥 GERAR PIX
 app.post("/pix", async (req, res) => {
   try {
+
     const { valor } = req.body
 
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${TOKEN}`,
+        Authorization: `Bearer ${MP_TOKEN}`,
         "Content-Type": "application/json",
-        "X-Idempotency-Key": crypto.randomUUID()
+        "X-Idempotency-Key": Date.now().toString()
       },
       body: JSON.stringify({
         transaction_amount: Number(valor),
         description: "Pedido RomerArt",
         payment_method_id: "pix",
         payer: {
-          email: "teste@email.com"
+          email: "cliente@romerart.com"
         }
       })
     })
 
     const data = await response.json()
 
-    console.log("PIX:", data)
+    console.log("PIX RESPONSE:", data)
+
+    const qr =
+      data.point_of_interaction?.transaction_data?.qr_code_base64
+
+    const copia =
+      data.point_of_interaction?.transaction_data?.qr_code
 
     res.json({
       id: data.id,
-      status: data.status,
-      copiaecola: data.point_of_interaction.transaction_data.qr_code,
-      qr_code_base64: data.point_of_interaction.transaction_data.qr_code_base64
+      qr_code_base64: qr,
+      copiaecola: copia
     })
 
-  } catch (err) {
-    console.log(err)
+  } catch (error) {
+    console.log(error)
     res.status(500).json({ erro: "Erro ao gerar PIX" })
   }
 })
 
 
-// ---------------- STATUS ----------------
+// 🔥 STATUS PIX
 app.get("/status/:id", async (req, res) => {
   try {
-    const { id } = req.params
 
-    const response = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
-      headers: {
-        "Authorization": `Bearer ${TOKEN}`
+    const id = req.params.id
+
+    const response = await fetch(
+      `https://api.mercadopago.com/v1/payments/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${MP_TOKEN}`
+        }
       }
-    })
+    )
 
     const data = await response.json()
 
-    console.log("STATUS:", data)
+    console.log("STATUS:", data.status)
 
     res.json({
       status: data.status
     })
 
-  } catch (err) {
-    res.json({ status: "erro" })
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ status: "erro" })
   }
 })
 
 
-// ---------------- SERVER ----------------
-app.get("/", (req, res) => {
-  res.send("API funcionando 🚀")
-})
+// 🔥 PORTA
+const PORT = process.env.PORT || 10000
 
-app.listen(process.env.PORT || 10000, () => {
-  console.log("Servidor rodando 🚀")
+app.listen(PORT, () => {
+  console.log("Servidor rodando 🚀 na porta", PORT)
 })
