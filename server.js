@@ -1,72 +1,40 @@
-const express = require("express");
-const mercadopago = require("mercadopago");
+// 🔥 MEMÓRIA DE PEDIDOS
+let pedidos = {};
 
-const app = express();
-
-app.use(express.json());
-
-// 🔥 CORS LIBERADO
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  next();
+// 🔥 SALVAR PEDIDO
+app.post("/pedido", (req,res)=>{
+  const id = Date.now();
+  pedidos[id] = {
+    ...req.body,
+    status: "pendente",
+    id
+  };
+  res.json({ id });
 });
 
-// 🔐 TOKEN
-mercadopago.configurations.setAccessToken(process.env.MP_TOKEN);
-
-// ================= PIX =================
-app.post("/pix", async (req, res) => {
-  try {
-
-    const pagamento = await mercadopago.payment.create({
-      transaction_amount: Number(req.body.valor),
-      description: "Pedido RomerArt",
-      payment_method_id: "pix",
-      payer: {
-        email: req.body.email || "teste@email.com"
-      }
-    });
-
-    res.json({
-      id: pagamento.body.id,
-      qr_code: pagamento.body.point_of_interaction.transaction_data.qr_code,
-      qr_code_base64: pagamento.body.point_of_interaction.transaction_data.qr_code_base64
-    });
-
-  } catch (erro) {
-    console.log("ERRO PIX:", erro);
-    res.status(500).json({ erro: "Erro ao gerar PIX" });
-  }
+// 🔥 LISTAR PEDIDOS
+app.get("/pedidos", (req,res)=>{
+  res.json(Object.values(pedidos));
 });
 
-// ================= STATUS DIRETO (🔥 CORRETO) =================
+// 🔥 ATUALIZA STATUS AUTOMATICO
 app.get("/status/:id", async (req, res) => {
   try {
 
     const pagamento = await mercadopago.payment.get(req.params.id);
 
-    console.log("STATUS MP:", pagamento.body.status);
+    let status = pagamento.body.status;
 
-    res.json({
-      status: pagamento.body.status
+    // 🔥 atualiza no "banco"
+    Object.values(pedidos).forEach(p=>{
+      if(p.mpId == req.params.id){
+        p.status = status;
+      }
     });
 
+    res.json({ status });
+
   } catch (erro) {
-    console.log("ERRO STATUS:", erro);
     res.status(500).json({ status: "erro" });
   }
-});
-
-// ================= TESTE =================
-app.get("/", (req, res) => {
-  res.send("Servidor PIX rodando 🚀");
-});
-
-// ================= START =================
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, () => {
-  console.log("Servidor rodando na porta " + PORT);
 });
