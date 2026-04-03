@@ -34,17 +34,13 @@ button{
   border:none;
   border-radius:5px;
   font-weight:bold;
-  cursor:pointer;
 }
 
 .btn-add{ background:orange }
 .btn-pix{ background:green; color:white }
 .btn-send{ background:#22c55e }
 
-#qrcode{
-  width:200px;
-  margin-top:10px;
-}
+#qrcode{ width:200px; margin-top:10px }
 </style>
 </head>
 
@@ -108,31 +104,27 @@ let total = 0
 let statusPagamento = "pending"
 let pedidoId = null
 
-// 🧮 CALCULO SIMPLES
 function calcularPreco(qtd){
   return qtd * 0.20
 }
 
-// ➕ ADD ITEM
 function addItem(){
 
-  const largura = Number(document.getElementById("largura").value)
-  const altura = Number(document.getElementById("altura").value)
-  const qtd = Number(document.getElementById("quantidade").value)
+  const largura = Number(larguraEl.value)
+  const altura = Number(alturaEl.value)
+  const qtd = Number(quantidadeEl.value)
 
   const preco = calcularPreco(qtd)
 
-  itens.push({
-    largura,
-    altura,
-    qtd,
-    preco
-  })
+  itens.push({ largura, altura, qtd, preco })
 
   atualizarResumo()
 }
 
-// 🔄 ATUALIZA RESUMO
+const larguraEl = document.getElementById("largura")
+const alturaEl = document.getElementById("altura")
+const quantidadeEl = document.getElementById("quantidade")
+
 function atualizarResumo(){
 
   const div = document.getElementById("resumo")
@@ -145,15 +137,14 @@ function atualizarResumo(){
     total += i.preco
 
     div.innerHTML += `
-      ${index+1}) ${i.largura}x${i.altura}mm | Qtd:${i.qtd} <br>
-      R$ ${i.preco.toFixed(2)} <br><br>
+      ${index+1}) ${i.largura}x${i.altura}mm | Qtd:${i.qtd}<br>
+      R$ ${i.preco.toFixed(2)}<br><br>
     `
   })
 
   totalDiv.innerHTML = `<b>Total: R$ ${total.toFixed(2)}</b>`
 }
 
-// ⚡ GERAR PIX
 async function gerarPix(){
 
   if(itens.length === 0){
@@ -166,10 +157,7 @@ async function gerarPix(){
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      valor: total,
-      pedidoId
-    })
+    body: JSON.stringify({ valor: total, pedidoId })
   })
 
   const data = await res.json()
@@ -183,7 +171,6 @@ async function gerarPix(){
   verificarPagamento()
 }
 
-// 🔎 VERIFICA PAGAMENTO
 function verificarPagamento(){
 
   const intervalo = setInterval(async ()=>{
@@ -200,7 +187,6 @@ function verificarPagamento(){
   },3000)
 }
 
-// 🎯 STATUS
 function atualizarStatus(){
 
   const div = document.getElementById("statusPagamento")
@@ -217,18 +203,37 @@ function atualizarStatus(){
   }
 }
 
-// 🚀 ENVIAR
-function enviarPedido(){
+async function enviarPedido(){
 
   if(statusPagamento !== "approved"){
     alert("Aguardando pagamento")
     return
   }
 
+  const pedido = {
+    cliente:{
+      nome: nome.value,
+      email: email.value,
+      cep: cep.value,
+      rua: rua.value,
+      bairro: bairro.value,
+      cidade: cidade.value,
+      numero: numero.value
+    },
+    itens,
+    total,
+    data: new Date()
+  }
+
+  await fetch("https://pix-romer-art.onrender.com/pedido",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(pedido)
+  })
+
   alert("Pedido enviado 🚀")
 }
 
-// 📦 CEP AUTO
 document.getElementById("cep").addEventListener("blur", async ()=>{
 
   const cep = document.getElementById("cep").value
@@ -236,9 +241,9 @@ document.getElementById("cep").addEventListener("blur", async ()=>{
   const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
   const data = await res.json()
 
-  document.getElementById("rua").value = data.logradouro
-  document.getElementById("bairro").value = data.bairro
-  document.getElementById("cidade").value = data.localidade
+  rua.value = data.logradouro
+  bairro.value = data.bairro
+  cidade.value = data.localidade
 
 })
 
