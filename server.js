@@ -1,6 +1,7 @@
 import express from "express"
 import cors from "cors"
 import axios from "axios"
+import admin from "firebase-admin"
 
 const app = express()
 app.use(cors())
@@ -8,30 +9,34 @@ app.use(express.json())
 
 const MP_TOKEN = process.env.MP_TOKEN
 
+// 🔥 FIREBASE
+const serviceAccount = JSON.parse(process.env.FIREBASE_KEY)
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+})
+
+const db = admin.firestore()
+
 let pagamentos = {}
-let pedidos = []
 
-// 🔥 GERAR PIX
+// 🔥 PIX
 app.post("/pix", async (req,res)=>{
-
  try{
 
   const { valor, pedidoId } = req.body
 
-  const valorFormatado = Number(parseFloat(valor).toFixed(2))
-
   const response = await axios.post(
    "https://api.mercadopago.com/v1/payments",
    {
-    transaction_amount: valorFormatado,
+    transaction_amount: Number(valor),
     description: "Pedido Romer Art",
     payment_method_id: "pix",
-    payer: { email: "teste@teste.com" }
+    payer:{ email:"teste@teste.com" }
    },
    {
     headers:{
-     Authorization: `Bearer ${MP_TOKEN}`,
-     "Content-Type":"application/json",
+     Authorization:`Bearer ${MP_TOKEN}`,
      "X-Idempotency-Key": pedidoId
     }
    }
@@ -40,107 +45,87 @@ app.post("/pix", async (req,res)=>{
   const data = response.data
 
   pagamentos[pedidoId] = {
-   status: data.status,
-   mpId: data.id
+    mpId: data.id,
+    status: data.status
   }
 
   res.json({
-   qr: data.point_of_interaction.transaction_data.qr_code_base64,
-   copia: data.point_of_interaction.transaction_data.qr_code
+    qr: data.point_of_interaction.transaction_data.qr_code_base64,
+    copia: data.point_of_interaction.transaction_data.qr_code
   })
 
  }catch(e){
-  console.log("ERRO PIX:", e.response?.data || e.message)
+  console.log(e.response?.data || e.message)
   res.status(500).json({erro:true})
  }
-
 })
 
 
 // 🔎 STATUS
 app.get("/status/:id", async (req,res)=>{
 
- try{
+ const pedido = pagamentos[req.params.id]
 
-  const pedido = pagamentos[req.params.id]
+ if(!pedido) return res.json({status:"pending"})
 
-  if(!pedido){
-    return res.json({status:"pending"})
-  }
+ const response = await axios.get(
+  `https://api.mercadopago.com/v1/payments/${pedido.mpId}`,
+  { headers:{ Authorization:`Bearer ${MP_TOKEN}` } }
+ )
 
-  const response = await axios.get(
-   `https://api.mercadopago.com/v1/payments/${pedido.mpId}`,
-   {
-    headers:{ Authorization: `Bearer ${MP_TOKEN}` }
-   }
-  )
+ const status = response.data.status
 
-  const status = response.data.status
+ pagamentos[req.params.id].status = status
 
-  pagamentos[req.params.id].status = status
-
-  res.json({status})
-
- }catch(e){
-  console.log("Erro status:", e.message)
-  res.json({status:"pending"})
- }
-
+ res.json({status})
 })
 
 
 // 🔔 WEBHOOK
 app.post("/webhook", async (req,res)=>{
 
- try{
+ if(req.body.type === "payment"){
 
-  if(req.body.type === "payment"){
+  const paymentId = req.body.data.id
 
-    const paymentId = req.body.data.id
+  const response = await axios.get(
+   `https://api.mercadopago.com/v1/payments/${paymentId}`,
+   { headers:{ Authorization:`Bearer ${MP_TOKEN}` } }
+  )
 
-    const response = await axios.get(
-      `https://api.mercadopago.com/v1/payments/${paymentId}`,
-      {
-        headers:{ Authorization: `Bearer ${MP_TOKEN}` }
-      }
-    )
+  const status = response.data.status
 
-    const status = response.data.status
+  Object.keys(pagamentos).forEach(async key=>{
+    if(pagamentos[key].mpId == paymentId){
 
-    Object.keys(pagamentos).forEach(key=>{
-      if(pagamentos[key].mpId == paymentId){
-        pagamentos[key].status = status
-      }
-    })
+      pagamentos[key].status = status
 
-  }
+      // 🔥 ATUALIZA FIREBASE
+      await db.collection("pedidos").doc(key).update({
+        pagamento: status
+      })
 
-  res.sendStatus(200)
-
- }catch(e){
-  console.log("Erro webhook:", e.message)
-  res.sendStatus(500)
+    }
+  })
  }
 
+ res.sendStatus(200)
 })
 
 
-// 🚀 RECEBER PEDIDO
-app.post("/pedido",(req,res)=>{
+// 🚀 SALVAR PEDIDO
+app.post("/pedido", async (req,res)=>{
 
-  const pedido = req.body
+ const pedido = req.body
 
-  pedidos.push(pedido)
+ await db.collection("pedidos").doc(pedido.id).set({
+  ...pedido,
+  status: "novo",
+  pagamento: "pending",
+  criadoEm: new Date()
+ })
 
-  console.log("NOVO PEDIDO:", pedido)
-
-  res.json({ok:true})
-})
-
-
-// 🔥 TESTE
-app.get("/", (req,res)=>{
- res.send("Servidor rodando 🚀")
+ res.json({ok:true})
 })
 
 app.listen(10000,()=>console.log("Servidor rodando 🚀"))
