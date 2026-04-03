@@ -8,7 +8,6 @@ app.use(express.json())
 
 const pagamentos = {}
 
-// 🔑 TOKEN
 const MP_TOKEN = process.env.MP_TOKEN
 
 // 🚀 GERAR PIX
@@ -18,10 +17,13 @@ app.post("/pix", async (req,res)=>{
 
   const { valor, pedidoId } = req.body
 
+  // 🔥 CORREÇÃO DO VALOR
+  const valorFormatado = Number(parseFloat(valor).toFixed(2))
+
   const response = await axios.post(
    "https://api.mercadopago.com/v1/payments",
    {
-    transaction_amount: Number(valor),
+    transaction_amount: valorFormatado,
     description: "Pedido Romer Art",
     payment_method_id: "pix",
     payer: {
@@ -31,7 +33,8 @@ app.post("/pix", async (req,res)=>{
    {
     headers:{
      Authorization: `Bearer ${MP_TOKEN}`,
-     "Content-Type":"application/json"
+     "Content-Type":"application/json",
+     "X-Idempotency-Key": `${pedidoId}` // 🔥 ESSENCIAL
     }
    }
   )
