@@ -1,67 +1,60 @@
 import express from "express"
-import cors from "cors"
 import mercadopago from "mercadopago"
+import cors from "cors"
 
 const app = express()
-app.use(cors())
 app.use(express.json())
+app.use(cors())
 
-// 🔑 TOKEN
+// 🔑 TOKEN CORRETO (mp_token como você pediu)
 mercadopago.configure({
   access_token: process.env.MP_TOKEN
 })
 
-// 🚀 PIX
+// ROTA PIX
 app.post("/pix", async (req, res) => {
-
   try {
 
     const { valor } = req.body
 
-    const pagamento = await mercadopago.payment.create({
+    const payment = await mercadopago.payment.create({
       transaction_amount: Number(valor),
       description: "Pedido RomerArt",
       payment_method_id: "pix",
       payer: {
-        email: "cliente@email.com"
+        email: "teste@teste.com"
       }
     })
 
-    const data = pagamento.response.point_of_interaction.transaction_data
+    const dados = payment.body
 
     res.json({
-      id: pagamento.response.id,
-      qr_code_base64: data.qr_code_base64,
-      copiaecola: data.qr_code
+      id: dados.id,
+      qr_code_base64: dados.point_of_interaction.transaction_data.qr_code_base64,
+      copiaecola: dados.point_of_interaction.transaction_data.qr_code
     })
 
-  } catch (error) {
-    console.error("ERRO PIX:", error)
+  } catch (erro) {
+    console.log("ERRO PIX:", erro)
     res.status(500).json({ erro: "Erro ao gerar PIX" })
   }
-
 })
 
-// 🔎 STATUS
+// STATUS
 app.get("/status/:id", async (req, res) => {
-
   try {
 
     const pagamento = await mercadopago.payment.findById(req.params.id)
 
     res.json({
-      status: pagamento.response.status
+      status: pagamento.body.status
     })
 
-  } catch (error) {
-    console.error("ERRO STATUS:", error)
-    res.status(500).json({ erro: "Erro ao consultar status" })
+  } catch (erro) {
+    res.status(500).json({ erro: "Erro status" })
   }
-
 })
 
-const PORT = process.env.PORT || 3000
-
-app.listen(PORT, () => {
-  console.log("🚀 Rodando na porta", PORT)
+app.listen(10000, () => {
+  console.log("🚀 Servidor rodando")
 })
