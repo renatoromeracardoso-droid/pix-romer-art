@@ -6,27 +6,35 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-// 🔑 TOKEN CORRETO (mp_token como você pediu)
 mercadopago.configure({
   access_token: process.env.MP_TOKEN
 })
 
-// ROTA PIX
+// 🔥 GERAR PIX
 app.post("/pix", async (req, res) => {
   try {
 
-    const { valor } = req.body
+    let { valor } = req.body
 
-    const payment = await mercadopago.payment.create({
-      transaction_amount: Number(valor),
+    valor = Number(valor)
+
+    // 🔥 evita erro do Mercado Pago
+    if (!valor || valor < 5) {
+      valor = 5.00
+    }
+
+    console.log("VALOR FINAL ENVIADO:", valor)
+
+    const pagamento = await mercadopago.payment.create({
+      transaction_amount: valor,
       description: "Pedido RomerArt",
       payment_method_id: "pix",
       payer: {
-        email: "teste@teste.com"
+        email: "cliente@romerart.com"
       }
     })
 
-    const dados = payment.body
+    const dados = pagamento.body
 
     res.json({
       id: dados.id,
@@ -36,11 +44,11 @@ app.post("/pix", async (req, res) => {
 
   } catch (erro) {
     console.log("ERRO PIX:", erro)
-    res.status(500).json({ erro: "Erro ao gerar PIX" })
+    res.status(500).json({ erro: erro.message })
   }
 })
 
-// STATUS
+// 🔥 STATUS PIX
 app.get("/status/:id", async (req, res) => {
   try {
 
@@ -56,5 +64,5 @@ app.get("/status/:id", async (req, res) => {
 })
 
 app.listen(10000, () => {
-  console.log("🚀 Servidor rodando")
+  console.log("🚀 Servidor rodando na porta 10000")
 })
