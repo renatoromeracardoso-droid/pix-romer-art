@@ -1,88 +1,103 @@
 import express from "express";
-import cors from "cors";
 import fetch from "node-fetch";
+import admin from "firebase-admin";
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 10000;
+// 🔥 CONFIG FIREBASE ADMIN
+const serviceAccount = {
+  "type": "service_account",
+  "project_id": "firestore-database-9b92d",
+  "private_key_id": "COLOQUE_AQUI",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nCOLOQUE_AQUI\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk@firestore-database-9b92d.iam.gserviceaccount.com",
+};
 
-// 🔐 TOKEN CERTO
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+
+// 🔑 TOKEN MERCADO PAGO
 const MP_TOKEN = process.env.MP_TOKEN;
 
-// ================= PIX =================
+// 🚀 CRIAR PIX
 app.post("/pix", async (req, res) => {
+
   try {
-    const { valor, email } = req.body;
+
+    const { valor, pedidoId } = req.body;
 
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${MP_TOKEN}`
+        "Authorization": `Bearer ${MP_TOKEN}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         transaction_amount: Number(valor),
-        description: "Pedido RomerArt",
         payment_method_id: "pix",
+        description: `Pedido ${pedidoId}`,
+        notification_url: "https://pix-romer-art.onrender.com/webhook",
         payer: {
-          email: email || "teste@teste.com"
+          email: "cliente@email.com"
         }
       })
     });
 
     const data = await response.json();
 
-    // 🔍 DEBUG (pode ver no Render)
-    console.log("PIX GERADO:", data.id);
-
     res.json({
-      id: data.id,
-      qr_code: data.point_of_interaction.transaction_data.qr_code,
-      qr_code_base64: data.point_of_interaction.transaction_data.qr_code_base64
+      qr: data.point_of_interaction.transaction_data.qr_code_base64,
+      copia: data.point_of_interaction.transaction_data.qr_code
     });
 
-  } catch (err) {
-    console.log("ERRO PIX:", err);
-    res.status(500).json({ error: "Erro ao gerar PIX" });
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
   }
+
 });
 
-// ================= WEBHOOK =================
+
+// 🚨 WEBHOOK MERCADO PAGO
 app.post("/webhook", async (req, res) => {
-  console.log("WEBHOOK RECEBIDO:", req.body);
-  res.sendStatus(200);
-});
 
-// ================= STATUS (CONSULTA DIRETA MP) =================
-app.get("/status/:id", async (req, res) => {
   try {
-    const id = req.params.id;
 
-    console.log("CONSULTANDO STATUS:", id);
+    const paymentId = req.query["data.id"];
 
-    const response = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
+    if (!paymentId) return res.sendStatus(200);
+
+    const pagamento = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: {
-        "Authorization": `Bearer ${MP_TOKEN}`
+        Authorization: `Bearer ${MP_TOKEN}`
       }
     });
 
-    const data = await response.json();
+    const data = await pagamento.json();
 
-    console.log("STATUS MP:", data.status);
+    const status = data.status;
+    const descricao = data.description;
 
-    res.json({
-      status: data.status || "pending"
-    });
+    console.log("WEBHOOK:", descricao, status);
 
-  } catch (err) {
-    console.log("ERRO STATUS:", err);
-    res.json({ status: "pending" });
+    // 🔥 PEGA ID DO PEDIDO
+    const pedidoId = descricao.replace("Pedido ", "");
+
+    // 🔥 ATUALIZA FIREBASE
+    await db.collection("pedidos").doc(pedidoId).set({
+      status: status === "approved" ? "approved" : "pending"
+    }, { merge: true });
+
+    res.sendStatus(200);
+
+  } catch (e) {
+    console.log("Erro webhook:", e);
+    res.sendStatus(500);
   }
+
 });
 
-// ================= START =================
-app.listen(PORT, () => {
-  console.log("Servidor rodando 🚀");
-});
+app.listen(10000, () => console.log("Servidor rodando 🚀"));
