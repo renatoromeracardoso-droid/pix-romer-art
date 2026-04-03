@@ -12,10 +12,7 @@ body {
   padding: 20px;
 }
 
-.container {
-  max-width: 500px;
-  margin: auto;
-}
+.container { max-width: 500px; margin: auto; }
 
 input, select, button {
   width: 100%;
@@ -25,24 +22,17 @@ input, select, button {
   border: none;
 }
 
-button {
-  font-weight: bold;
-  cursor: pointer;
-}
-
 .btn-add { background: orange; }
 .btn-pix { background: green; color: white; }
 .btn-send { background: #22c55e; color: white; }
 
 .resumo {
-  margin-top: 20px;
   background: #1e293b;
   padding: 15px;
   border-radius: 10px;
-  font-size: 14px;
+  margin-top: 15px;
 }
 </style>
-
 </head>
 
 <body>
@@ -63,24 +53,24 @@ button {
 <h3>Pedido</h3>
 
 <select id="servico">
-  <option value="Corte">Corte</option>
-  <option value="Gravação">Gravação</option>
+<option>Corte</option>
+<option>Gravação</option>
 </select>
 
 <select id="material">
-  <option value="MDF">MDF</option>
-  <option value="Acrílico">Acrílico</option>
+<option>MDF</option>
+<option>Acrílico</option>
 </select>
 
-<input id="largura" type="number" placeholder="Largura (mm)">
-<input id="altura" type="number" placeholder="Altura (mm)">
+<input id="largura" type="number" placeholder="Largura (máx 400mm)">
+<input id="altura" type="number" placeholder="Altura (máx 400mm)">
 <input id="qtd" type="number" placeholder="Quantidade">
 
 <button class="btn-add" onclick="addItem()">Adicionar</button>
 <button id="btnPix" class="btn-pix" onclick="gerarPix()" disabled>Gerar PIX</button>
 <button id="btnEnviar" class="btn-send" onclick="enviarPedido()" disabled>Enviar Pedido</button>
 
-<div class="resumo" id="resumo"></div>
+<div id="resumo" class="resumo"></div>
 
 </div>
 
@@ -88,24 +78,48 @@ button {
 
 let itens = []
 let total = 0
+let frete = 0
 let pagamentoId = null
+let pedidoNumero = "PED-" + Date.now()
 
 // CEP automático
-cep.addEventListener("blur", async () => {
+cep.onblur = async () => {
   if (!cep.value) return
-  const res = await fetch(`https://viacep.com.br/ws/${cep.value}/json/`)
-  const data = await res.json()
 
-  rua.value = data.logradouro || ""
-  bairro.value = data.bairro || ""
-  cidade.value = data.localidade || ""
-})
+  const res = await fetch(`https://viacep.com.br/ws/${cep.value}/json/`)
+  const d = await res.json()
+
+  rua.value = d.logradouro || ""
+  bairro.value = d.bairro || ""
+  cidade.value = d.localidade || ""
+
+  calcularFrete()
+}
+
+// FRETE (simples com regra 10km grátis)
+function calcularFrete() {
+
+  // simulação simples
+  const cepCliente = cep.value
+
+  if (cepCliente.startsWith("03822")) {
+    frete = 0
+  } else {
+    frete = 15
+  }
+
+}
 
 // adicionar item
 function addItem() {
 
+  if (largura.value > 400 || altura.value > 400) {
+    alert("Limite máximo 400mm")
+    return
+  }
+
   if (!largura.value || !altura.value || !qtd.value) {
-    alert("Preencha largura, altura e quantidade")
+    alert("Preencha tudo")
     return
   }
 
@@ -127,52 +141,42 @@ function addItem() {
   btnPix.disabled = false
 }
 
-// resumo completo
+// resumo
 function atualizarResumo() {
 
-  let html = `<b>📋 RESUMO DO PEDIDO</b><br><br>`
+  let html = `<b>Pedido: ${pedidoNumero}</b><br><br>`
 
-  html += `<b>👤 Cliente:</b> ${nome.value || "-"}<br>`
-  html += `<b>📧 Email:</b> ${email.value || "-"}<br>`
-  html += `<b>📍 Endereço:</b><br>`
-  html += `${rua.value || ""}, ${numero.value || ""}<br>`
-  html += `${bairro.value || ""} - ${cidade.value || ""}<br>`
-  html += `CEP: ${cep.value || ""}<br><br>`
+  html += `<b>Cliente:</b> ${nome.value}<br>`
+  html += `<b>Email:</b> ${email.value}<br>`
+  html += `<b>Endereço:</b><br>${rua.value}, ${numero.value}<br>${bairro.value} - ${cidade.value}<br><br>`
 
-  html += `<b>📦 Itens:</b><br><br>`
+  html += `<b>Itens:</b><br><br>`
 
   itens.forEach((i, index) => {
-    html += `
-    ${index + 1}) ${i.servico}<br>
-    Material: ${i.material}<br>
-    Tamanho: ${i.largura}x${i.altura} mm<br>
-    Quantidade: ${i.qtd}<br>
-    Subtotal: R$ ${i.preco.toFixed(2)}<br><br>
-    `
+    html += `${index+1}) ${i.servico} - ${i.material}<br>`
+    html += `${i.largura}x${i.altura} mm | Qtd: ${i.qtd}<br>`
+    html += `R$ ${i.preco.toFixed(2)}<br><br>`
   })
 
-  html += `<b>💰 TOTAL: R$ ${total.toFixed(2)}</b><br>`
+  html += `<b>Subtotal: R$ ${total.toFixed(2)}</b><br>`
+  html += `<b>Frete: ${frete === 0 ? "Grátis" : "R$ " + frete}</b><br>`
+
+  const totalFinal = total + frete
+
+  html += `<b>Total Final: R$ ${totalFinal.toFixed(2)}</b><br>`
 
   resumo.innerHTML = html
-}
-
-// validação
-function validarFormulario() {
-  return nome.value && email.value && cep.value && rua.value && cidade.value && itens.length > 0
 }
 
 // gerar PIX
 async function gerarPix() {
 
-  if (!validarFormulario()) {
-    alert("Preencha tudo antes")
-    return
-  }
+  const totalFinal = total + frete
 
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ valor: total })
+    body: JSON.stringify({ valor: totalFinal })
   })
 
   const data = await res.json()
@@ -180,8 +184,7 @@ async function gerarPix() {
   pagamentoId = data.id
 
   resumo.innerHTML += `
-  <br><br>
-  <img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
+  <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
   <small>${data.copiaecola}</small>
   <br id="statusPix">⏳ Aguardando pagamento...
   `
@@ -189,7 +192,7 @@ async function gerarPix() {
   verificarPagamento()
 }
 
-// verificar pagamento
+// STATUS CORRIGIDO
 function verificarPagamento() {
 
   const interval = setInterval(async () => {
@@ -197,61 +200,53 @@ function verificarPagamento() {
     const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
     const data = await res.json()
 
+    console.log("STATUS:", data.status)
+
     if (data.status === "approved") {
+
       clearInterval(interval)
 
-      document.getElementById("statusPix").innerHTML = "✅ Pagamento aprovado"
+      document.getElementById("statusPix").innerHTML = "✅ Pago"
 
       btnEnviar.disabled = false
     }
 
-  }, 3000)
+  }, 5000)
 }
 
-// enviar pedido + WhatsApp
+// enviar pedido
 async function enviarPedido() {
 
+  const totalFinal = total + frete
+
   const pedido = {
-    id: Date.now(),
+    id: pedidoNumero,
     cliente: {
       nome: nome.value,
       email: email.value,
       cidade: cidade.value
     },
-    total,
+    total: totalFinal,
     itens
   }
 
-  // salvar na planilha
   await fetch("https://script.google.com/macros/s/AKfycbwor6wiV4noo8eysSyl4_nsdN2O897SiaErtuy00RlMVU6zBIHYIpqhsLakagnvjbls/exec", {
     method: "POST",
     body: JSON.stringify(pedido)
   })
 
-  // mensagem completa WhatsApp
-  let msg = `🧾 *NOVO PEDIDO - ROMERART*\n\n`
+  let msg = `🧾 Pedido ${pedidoNumero}\n\n`
+  msg += `${nome.value}\n${cidade.value}\n\n`
 
-  msg += `👤 Cliente: ${nome.value}\n`
-  msg += `📧 Email: ${email.value}\n`
-  msg += `📍 Endereço:\n${rua.value}, ${numero.value}\n${bairro.value} - ${cidade.value}\nCEP: ${cep.value}\n\n`
-
-  msg += `📦 *ITENS:*\n\n`
-
-  itens.forEach((i, index) => {
-    msg += `${index + 1}) ${i.servico}\n`
-    msg += `Material: ${i.material}\n`
-    msg += `Tamanho: ${i.largura}x${i.altura} mm\n`
-    msg += `Qtd: ${i.qtd}\n`
-    msg += `Subtotal: R$ ${i.preco.toFixed(2)}\n\n`
+  itens.forEach(i => {
+    msg += `${i.servico} - ${i.material}\n${i.largura}x${i.altura} | ${i.qtd}\n\n`
   })
 
-  msg += `💰 *TOTAL: R$ ${total.toFixed(2)}*`
+  msg += `💰 Total: R$ ${totalFinal.toFixed(2)}`
 
-  const numero = "5511946447040"
+  window.open(`https://wa.me/5511946447040?text=${encodeURIComponent(msg)}`)
 
-  window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`)
-
-  alert("Pedido enviado com sucesso 🚀")
+  alert("Pedido enviado 🚀")
 }
 
 </script>
