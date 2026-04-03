@@ -8,14 +8,14 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-// 🔥 CONFIG NOVA
+// 🔥 CONFIG CORRETA
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_TOKEN
 })
 
 const payment = new Payment(client)
 
-// ---------------- PIX ----------------
+// ------------------ PIX ------------------
 app.post("/pix", async (req, res) => {
   try {
 
@@ -27,32 +27,33 @@ app.post("/pix", async (req, res) => {
         description: "Pedido RomerArt",
         payment_method_id: "pix",
         payer: {
-          email: "teste@teste.com"
+          email: "comprador@email.com"
         }
       }
     })
 
-    const dados = response.point_of_interaction.transaction_data
-
     res.json({
       id: response.id,
-      qr_code_base64: dados.qr_code_base64,
-      copiaecola: dados.qr_code
+      status: response.status,
+      qr_code: response.point_of_interaction.transaction_data.qr_code,
+      qr_code_base64: response.point_of_interaction.transaction_data.qr_code_base64
     })
 
   } catch (error) {
-    console.log("ERRO PIX:", error)
-    res.status(500).json({ erro: true })
+    console.log(error)
+    res.status(500).json({ erro: "Erro ao gerar PIX" })
   }
 })
 
-// ---------------- STATUS ----------------
+// ------------------ STATUS (🔥 CORRIGIDO) ------------------
 app.get("/status/:id", async (req, res) => {
   try {
 
-    const id = req.params.id
+    const { id } = req.params
 
     const response = await payment.get({ id })
+
+    console.log("STATUS REAL:", response.status)
 
     res.json({
       status: response.status
@@ -60,17 +61,15 @@ app.get("/status/:id", async (req, res) => {
 
   } catch (error) {
     console.log("ERRO STATUS:", error)
-    res.status(500).json({ status: "error" })
+    res.status(500).json({ erro: "Erro ao consultar status" })
   }
 })
 
-// ---------------- TESTE ----------------
+// ------------------ SERVER ------------------
 app.get("/", (req, res) => {
   res.send("API funcionando 🚀")
 })
 
-const PORT = process.env.PORT || 10000
-
-app.listen(PORT, () => {
+app.listen(process.env.PORT || 10000, () => {
   console.log("Servidor rodando 🚀")
 })
