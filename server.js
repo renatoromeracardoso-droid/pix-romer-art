@@ -6,9 +6,10 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-const pagamentos = {}
-
 const MP_TOKEN = process.env.MP_TOKEN
+
+let pagamentos = {}
+let pedidos = []
 
 // 🔥 GERAR PIX
 app.post("/pix", async (req,res)=>{
@@ -25,15 +26,13 @@ app.post("/pix", async (req,res)=>{
     transaction_amount: valorFormatado,
     description: "Pedido Romer Art",
     payment_method_id: "pix",
-    payer: {
-      email: "teste@teste.com"
-    }
+    payer: { email: "teste@teste.com" }
    },
    {
     headers:{
      Authorization: `Bearer ${MP_TOKEN}`,
      "Content-Type":"application/json",
-     "X-Idempotency-Key": `${pedidoId}`
+     "X-Idempotency-Key": pedidoId
     }
    }
   )
@@ -41,7 +40,7 @@ app.post("/pix", async (req,res)=>{
   const data = response.data
 
   pagamentos[pedidoId] = {
-   status: data.status, // pending
+   status: data.status,
    mpId: data.id
   }
 
@@ -58,7 +57,7 @@ app.post("/pix", async (req,res)=>{
 })
 
 
-// 🔎 STATUS REAL (consulta direto no Mercado Pago)
+// 🔎 STATUS
 app.get("/status/:id", async (req,res)=>{
 
  try{
@@ -72,9 +71,7 @@ app.get("/status/:id", async (req,res)=>{
   const response = await axios.get(
    `https://api.mercadopago.com/v1/payments/${pedido.mpId}`,
    {
-    headers:{
-     Authorization: `Bearer ${MP_TOKEN}`
-    }
+    headers:{ Authorization: `Bearer ${MP_TOKEN}` }
    }
   )
 
@@ -85,53 +82,59 @@ app.get("/status/:id", async (req,res)=>{
   res.json({status})
 
  }catch(e){
-  console.log("Erro status:", e.response?.data || e.message)
+  console.log("Erro status:", e.message)
   res.json({status:"pending"})
  }
 
 })
 
 
-// 🔔 WEBHOOK (ATUALIZA AUTOMATICAMENTE)
+// 🔔 WEBHOOK
 app.post("/webhook", async (req,res)=>{
 
  try{
 
-  const body = req.body
+  if(req.body.type === "payment"){
 
-  if(body.type === "payment"){
+    const paymentId = req.body.data.id
 
-   const paymentId = body.data.id
+    const response = await axios.get(
+      `https://api.mercadopago.com/v1/payments/${paymentId}`,
+      {
+        headers:{ Authorization: `Bearer ${MP_TOKEN}` }
+      }
+    )
 
-   const response = await axios.get(
-    `https://api.mercadopago.com/v1/payments/${paymentId}`,
-    {
-     headers:{
-      Authorization: `Bearer ${MP_TOKEN}`
-     }
-    }
-   )
+    const status = response.data.status
 
-   const status = response.data.status
-
-   console.log("STATUS REAL:", status)
-
-   Object.keys(pagamentos).forEach(key=>{
-    if(pagamentos[key].mpId == paymentId){
-      pagamentos[key].status = status
-      console.log("ATUALIZADO:", key)
-    }
-   })
+    Object.keys(pagamentos).forEach(key=>{
+      if(pagamentos[key].mpId == paymentId){
+        pagamentos[key].status = status
+      }
+    })
 
   }
 
   res.sendStatus(200)
 
  }catch(e){
-  console.log("Erro webhook:", e.response?.data || e.message)
+  console.log("Erro webhook:", e.message)
   res.sendStatus(500)
  }
 
+})
+
+
+// 🚀 RECEBER PEDIDO
+app.post("/pedido",(req,res)=>{
+
+  const pedido = req.body
+
+  pedidos.push(pedido)
+
+  console.log("NOVO PEDIDO:", pedido)
+
+  res.json({ok:true})
 })
 
 
