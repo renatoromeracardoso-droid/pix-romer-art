@@ -1,17 +1,19 @@
-const express = require("express")
-const cors = require("cors")
-const mercadopago = require("mercadopago")
+import express from "express"
+import cors from "cors"
+import mercadopago from "mercadopago"
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
-// 🔑 TOKEN CERTO (mp_token)
-mercadopago.configure({
-  access_token: process.env.MP_TOKEN
+// 🔑 TOKEN (mp_token)
+const client = new mercadopago.MercadoPagoConfig({
+  accessToken: process.env.MP_TOKEN
 })
 
-// 🔥 ROTA PIX
+const payment = new mercadopago.Payment(client)
+
+// 🔥 GERAR PIX
 app.post("/pix", async (req, res) => {
 
   try {
@@ -22,7 +24,7 @@ app.post("/pix", async (req, res) => {
       return res.status(400).json({ erro: "Valor inválido" })
     }
 
-    const pagamento = await mercadopago.payment.create({
+    const response = await payment.create({
       body: {
         transaction_amount: Number(valor),
         description: "Pedido RomerArt",
@@ -33,12 +35,12 @@ app.post("/pix", async (req, res) => {
       }
     })
 
-    const dadosPix = pagamento.body.point_of_interaction.transaction_data
+    const pix = response.point_of_interaction.transaction_data
 
     res.json({
-      id: pagamento.body.id,
-      qr_code_base64: dadosPix.qr_code_base64,
-      copiaecola: dadosPix.qr_code
+      id: response.id,
+      qr_code_base64: pix.qr_code_base64,
+      copiaecola: pix.qr_code
     })
 
   } catch (error) {
@@ -48,17 +50,17 @@ app.post("/pix", async (req, res) => {
 
 })
 
-// 🔍 ROTA STATUS
+// 🔍 STATUS
 app.get("/status/:id", async (req, res) => {
 
   try {
 
-    const id = req.params.id
-
-    const pagamento = await mercadopago.payment.findById(id)
+    const response = await payment.get({
+      id: req.params.id
+    })
 
     res.json({
-      status: pagamento.body.status
+      status: response.status
     })
 
   } catch (error) {
