@@ -2,263 +2,170 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>RomerArt</title>
+<title>Romer Art - Pedido</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
 
 <style>
-body{background:#0f172a;font-family:Arial;color:#fff;}
-.app{max-width:420px;margin:auto;padding:20px;}
-.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
-input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
-button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;font-weight:bold;}
-.add{background:#f97316;}
-.pix{background:#16a34a;}
-.whats{background:#25d366;display:none;}
-.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: #fff;
+  padding: 20px;
+}
+.card {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  border: none;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 5px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+}
+.btn-add { background: orange; }
+.btn-pix { background: green; color:#fff;}
+.btn-send { background: #22c55e; color:#fff;}
 </style>
-
 </head>
-<body>
 
-<div class="app">
+<body>
 
 <div class="card">
 <h3>Cliente</h3>
-<input id="cliente" placeholder="Nome">
-<input id="email" placeholder="Email">
-<input id="cep" placeholder="CEP">
-<input id="endereco" placeholder="Rua">
-<input id="bairro" placeholder="Bairro">
-<input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número">
+<input id="nome" placeholder="Nome" required>
+<input id="email" placeholder="Email" required>
+<input id="cep" placeholder="CEP" required>
+<input id="numero" placeholder="Número" required>
 </div>
 
 <div class="card">
 <h3>Pedido</h3>
 
-<select id="servico" onchange="ajustarCampos()">
+<select id="tipo">
 <option>Corte</option>
 <option>Gravação</option>
-<option>Corte + Gravação</option>
 </select>
 
 <select id="material">
 <option>MDF</option>
-<option>ACRILICO</option>
 </select>
 
-<select id="esp">
+<select id="espessura">
 <option>3mm</option>
-<option>6mm</option>
 </select>
 
-<select id="produto" style="display:none;">
-<option value="">Selecione o produto</option>
-<option>Chaveiro</option>
-<option>Placa</option>
-<option>Quadro</option>
-</select>
+<input id="largura" placeholder="Largura (mm)">
+<input id="altura" placeholder="Altura (mm)">
+<input id="qtd" placeholder="Quantidade">
 
-<input id="larg" placeholder="Largura mm (máx 400)">
-<input id="alt" placeholder="Altura mm (máx 400)">
-<input id="qtd" value="1">
-
-<button class="add" onclick="addItem()">Adicionar</button>
-<button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button id="btnWhats" class="whats" onclick="enviarWhats()">Enviar Pedido</button>
+<button class="btn-add" onclick="addItem()">Adicionar</button>
+<button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
+<button class="btn-send" id="btnEnviar" disabled>Enviar Pedido</button>
 
 </div>
 
-<div id="resumo" class="box"></div>
+<div class="card" id="resumo"></div>
 
-</div>
+<script type="module">
 
-<script>
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-let itens = [];
-let pago = false;
-let mpId = null;
-let intervalo = null;
+const firebaseConfig = {
+  apiKey: "AIzaSyCLvB0Eydzka9KU09w9lTou9CIF-oGiVHo",
+  authDomain: "firestore-database-9b92d.firebaseapp.com",
+  projectId: "firestore-database-9b92d"
+};
 
-const WHATS = "5511946447040";
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-// 🔒 GARANTE BOTÃO ESCONDIDO SEMPRE
-document.getElementById("btnWhats").style.display = "none";
+let pedidoId = null;
+let total = 0;
 
-// ================= CAMPOS =================
-function ajustarCampos(){
- if(servico.value === "Gravação"){
-   produto.style.display = "block";
-   material.style.display = "none";
-   esp.style.display = "none";
- } else {
-   produto.style.display = "none";
-   material.style.display = "block";
-   esp.style.display = "block";
- }
+function validarCampos() {
+  return (
+    nome.value &&
+    email.value &&
+    cep.value &&
+    numero.value
+  );
 }
 
-// ================= CEP =================
-cep.addEventListener("blur", function(){
- let c = this.value.replace(/\D/g,'');
- if(c.length !== 8) return;
+window.addItem = function() {
 
- fetch("https://viacep.com.br/ws/"+c+"/json/")
- .then(r=>r.json())
- .then(d=>{
-   endereco.value = d.logradouro || "";
-   bairro.value = d.bairro || "";
-   cidade.value = d.localidade || "";
- });
-});
+  if (largura.value > 400 || altura.value > 400) {
+    alert("Máximo 400mm");
+    return;
+  }
 
-// ================= ADD =================
-function addItem(){
+  total = (parseFloat(qtd.value) * 0.20).toFixed(2);
 
- let l = Number(larg.value);
- let a = Number(alt.value);
- let q = Number(qtd.value);
-
- if(l > 400 || a > 400){
-   alert("Limite máximo 400mm");
-   return;
- }
-
- let valor = ((l*a)/100)*0.1*q + 2;
-
- let item = {
-   servico: servico.value,
-   l,a,q,valor
- };
-
- if(servico.value === "Gravação"){
-   item.produto = produto.value;
- } else {
-   item.material = material.value;
-   item.esp = esp.value;
- }
-
- itens.push(item);
-
- render();
+  document.getElementById("resumo").innerHTML = `
+  Pedido:
+  ${tipo.value} <br>
+  ${material.value} ${espessura.value}<br>
+  ${largura.value}x${altura.value}mm | Qtd:${qtd.value}<br>
+  Total: R$ ${total}
+  `;
 }
 
-// ================= RENDER =================
-function render(){
+window.gerarPix = async function() {
 
- let total = 0;
- let html = "📦 Pedido "+Date.now()+"<br><br>";
+  if (!validarCampos()) {
+    alert("Preencha os campos obrigatórios");
+    return;
+  }
 
- html += "<b>Cliente:</b><br>"+
- cliente.value+"<br>"+
- email.value+"<br>"+
- endereco.value+", "+numero.value+"<br>"+
- bairro.value+" - "+cidade.value+"<br><br>";
+  pedidoId = Date.now().toString();
 
- itens.forEach((i,x)=>{
-   total += i.valor;
+  await setDoc(doc(db, "pedidos", pedidoId), {
+    status: "pending",
+    total: total
+  });
 
-   html += (x+1)+") "+i.servico+"<br>";
+  document.getElementById("resumo").innerHTML += `
+  <br><br>Gerando PIX...<br>
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=pixfake${pedidoId}">
+  <br>Aguardando pagamento...
+  `;
 
-   if(i.servico === "Gravação"){
-     html += "Produto: "+i.produto+"<br>";
-   } else {
-     html += i.material+" | Esp:"+i.esp+"<br>";
-   }
-
-   html += i.l+"x"+i.a+" mm | Qtd:"+i.q+"<br>";
-   html += "R$ "+i.valor.toFixed(2)+"<br><br>";
- });
-
- let desc = total*0.05;
- let final = total-desc;
-
- html += "Subtotal: R$ "+total.toFixed(2)+"<br>";
- html += "Desconto PIX: -R$ "+desc.toFixed(2)+"<br>";
- html += "<b>Total: R$ "+final.toFixed(2)+"</b><br><br>";
-
- resumo.innerHTML = html;
+  ouvirStatus();
 }
 
-// ================= PIX =================
-function gerarPix(){
+function ouvirStatus() {
 
- if(itens.length === 0){
-   alert("Adicione item");
-   return;
- }
+  const ref = doc(db, "pedidos", pedidoId);
 
- // 🔒 RESET TOTAL
- pago = false;
- mpId = null;
- btnWhats.style.display = "none";
+  onSnapshot(ref, (docSnap) => {
 
- if(intervalo) clearInterval(intervalo);
+    if (docSnap.exists()) {
 
- let total = 0;
- itens.forEach(i=> total += i.valor);
- let final = Number((total-total*0.05).toFixed(2));
+      const dados = docSnap.data();
 
- resumo.innerHTML += "<br>Gerando PIX...";
+      if (dados.status === "approved") {
 
- fetch("https://pix-romer-art.onrender.com/pix",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({
-     valor: final,
-     email: email.value
-   })
- })
- .then(r=>r.json())
- .then(data=>{
+        document.getElementById("resumo").innerHTML += `
+        <br>✅ PAGAMENTO APROVADO
+        `;
 
-   mpId = data.id;
-
-   resumo.innerHTML +=
-   "<br><img src='data:image/png;base64,"+data.qr_code_base64+"' width='200'><br>"+
-   "<textarea>"+data.qr_code+"</textarea><br>"+
-   "<b id='status'>Aguardando pagamento...</b>";
-
-   verificar();
- });
-}
-
-// ================= STATUS =================
-function verificar(){
-
- intervalo = setInterval(()=>{
-
-   fetch("https://pix-romer-art.onrender.com/status/"+mpId)
-   .then(r=>r.json())
-   .then(d=>{
-
-     console.log("STATUS:", d);
-
-     if(d.status === "approved"){
-
-       document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
-
-       pago = true;
-       btnWhats.style.display = "block";
-
-       clearInterval(intervalo);
-     }
-
-   });
-
- },3000);
-}
-
-// ================= WHATS =================
-function enviarWhats(){
-
- if(!pago){
-   alert("⚠️ Pagamento não confirmado");
-   return;
- }
-
- let txt = resumo.innerText;
-
- window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(txt));
+        document.getElementById("btnEnviar").disabled = false;
+      }
+    }
+  });
 }
 
 </script>
