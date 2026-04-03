@@ -144,6 +144,12 @@ function atualizarResumo() {
 
   let html = `<b>Pedido: ${pedidoNumero}</b><br><br>`
 
+  html += `<b>Cliente:</b> ${nome.value}<br>`
+  html += `<b>Email:</b> ${email.value}<br>`
+  html += `<b>Endereço:</b><br>${rua.value}, ${numero.value}<br>${bairro.value} - ${cidade.value}<br><br>`
+
+  html += `<b>Itens:</b><br><br>`
+
   itens.forEach((i, index) => {
     html += `${index+1}) ${i.servico} - ${i.material}<br>`
     html += `${i.largura}x${i.altura} mm | Qtd: ${i.qtd}<br>`
@@ -201,14 +207,41 @@ function verificarPagamento() {
 
       document.getElementById("statusPix").innerHTML = "✅ Pago"
 
-      btnEnviar.disabled = false
+      document.getElementById("btnEnviar").disabled = false
     }
 
-  }, 4000)
+  }, 3000)
 }
 
-// ENVIAR
-function enviarPedido() {
+// ENVIAR PEDIDO
+async function enviarPedido() {
+
+  const resStatus = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
+  const dataStatus = await resStatus.json()
+
+  if (dataStatus.status !== "approved") {
+    alert("Pagamento não confirmado")
+    return
+  }
+
+  const pedido = {
+    id: pedidoNumero,
+    cliente: {
+      nome: nome.value,
+      email: email.value,
+      cidade: cidade.value
+    },
+    total: total + frete - desconto,
+    itens
+  }
+
+  await fetch("https://script.google.com/macros/s/AKfycbwor6wiV4noo8eysSyl4_nsdN2O897SiaErtuy00RlMVU6zBIHYIpqhsLakagnvjbls/exec", {
+    method: "POST",
+    body: JSON.stringify(pedido)
+  })
+
+  window.open(`https://wa.me/5511946447040?text=Pedido%20${pedidoNumero}`)
+
   alert("Pedido enviado com sucesso 🚀")
 }
 
