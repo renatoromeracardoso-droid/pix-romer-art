@@ -1,18 +1,15 @@
 import express from "express";
 import fetch from "node-fetch";
 import admin from "firebase-admin";
+import fs from "fs";
 
 const app = express();
 app.use(express.json());
 
-// 🔥 CONFIG FIREBASE ADMIN
-const serviceAccount = {
-  "type": "service_account",
-  "project_id": "firestore-database-9b92d",
-  "private_key_id": "COLOQUE_AQUI",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nCOLOQUE_AQUI\n-----END PRIVATE KEY-----\n",
-  "client_email": "firebase-adminsdk@firestore-database-9b92d.iam.gserviceaccount.com",
-};
+// 🔥 FIREBASE VIA SECRET FILE
+const serviceAccount = JSON.parse(
+  fs.readFileSync("/etc/secrets/firebase.json", "utf8")
+);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -25,9 +22,7 @@ const MP_TOKEN = process.env.MP_TOKEN;
 
 // 🚀 CRIAR PIX
 app.post("/pix", async (req, res) => {
-
   try {
-
     const { valor, pedidoId } = req.body;
 
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
@@ -55,26 +50,27 @@ app.post("/pix", async (req, res) => {
     });
 
   } catch (e) {
+    console.log("Erro PIX:", e);
     res.status(500).json({ erro: e.message });
   }
-
 });
 
 
-// 🚨 WEBHOOK MERCADO PAGO
+// 🚨 WEBHOOK (ATUALIZA FIREBASE)
 app.post("/webhook", async (req, res) => {
-
   try {
-
     const paymentId = req.query["data.id"];
 
     if (!paymentId) return res.sendStatus(200);
 
-    const pagamento = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: {
-        Authorization: `Bearer ${MP_TOKEN}`
+    const pagamento = await fetch(
+      `https://api.mercadopago.com/v1/payments/${paymentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${MP_TOKEN}`
+        }
       }
-    });
+    );
 
     const data = await pagamento.json();
 
@@ -83,12 +79,12 @@ app.post("/webhook", async (req, res) => {
 
     console.log("WEBHOOK:", descricao, status);
 
-    // 🔥 PEGA ID DO PEDIDO
     const pedidoId = descricao.replace("Pedido ", "");
 
-    // 🔥 ATUALIZA FIREBASE
+    // 🔥 ATUALIZA STATUS NO FIREBASE
     await db.collection("pedidos").doc(pedidoId).set({
-      status: status === "approved" ? "approved" : "pending"
+      status: status === "approved" ? "approved" : "pending",
+      atualizadoEm: new Date()
     }, { merge: true });
 
     res.sendStatus(200);
@@ -97,7 +93,13 @@ app.post("/webhook", async (req, res) => {
     console.log("Erro webhook:", e);
     res.sendStatus(500);
   }
-
 });
+
+
+// 🚀 TESTE (OPCIONAL)
+app.get("/", (req, res) => {
+  res.send("Servidor rodando 🚀");
+});
+
 
 app.listen(10000, () => console.log("Servidor rodando 🚀"));
