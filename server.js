@@ -17,7 +17,6 @@ app.post("/pix", async (req,res)=>{
 
   const { valor, pedidoId } = req.body
 
-  // 🔥 CORREÇÃO DO VALOR
   const valorFormatado = Number(parseFloat(valor).toFixed(2))
 
   const response = await axios.post(
@@ -34,21 +33,21 @@ app.post("/pix", async (req,res)=>{
     headers:{
      Authorization: `Bearer ${MP_TOKEN}`,
      "Content-Type":"application/json",
-     "X-Idempotency-Key": `${pedidoId}` // 🔥 ESSENCIAL
+     "X-Idempotency-Key": `${pedidoId}`
     }
    }
   )
 
-  const pix = response.data.point_of_interaction.transaction_data
+  const data = response.data
 
   pagamentos[pedidoId] = {
-   status: "pending",
-   mpId: response.data.id
+   status: data.status, // 🔥 vem como pending
+   mpId: data.id
   }
 
   res.json({
-   qr: pix.qr_code_base64,
-   copia: pix.qr_code
+   qr: data.point_of_interaction.transaction_data.qr_code_base64,
+   copia: data.point_of_interaction.transaction_data.qr_code
   })
 
  }catch(e){
@@ -59,39 +58,44 @@ app.post("/pix", async (req,res)=>{
 })
 
 
-// 🔎 STATUS
-app.get("/status/:id",(req,res)=>{
- const p = pagamentos[req.params.id]
- res.json({status: p?.status || "pending"})
-})
+// 🔎 STATUS REAL (CONSULTA NO MERCADO PAGO)
+app.get("/status/:id", async (req,res)=>{
 
+ const pedido = pagamentos[req.params.id]
 
-// 🔔 WEBHOOK
-app.post("/webhook",(req,res)=>{
+ if(!pedido){
+  return res.json({status:"pending"})
+ }
 
  try{
 
-  const data = req.body
-
-  if(data.type === "payment"){
-
-   const id = data.data.id
-
-   Object.keys(pagamentos).forEach(key=>{
-    if(pagamentos[key].mpId == id){
-     pagamentos[key].status = "approved"
-     console.log("PAGAMENTO APROVADO:", key)
+  const response = await axios.get(
+   `https://api.mercadopago.com/v1/payments/${pedido.mpId}`,
+   {
+    headers:{
+     Authorization: `Bearer ${MP_TOKEN}`
     }
-   })
-  }
+   }
+  )
 
-  res.sendStatus(200)
+  const status = response.data.status
+
+  pagamentos[req.params.id].status = status
+
+  res.json({status})
 
  }catch(e){
-  console.log("Erro webhook", e)
-  res.sendStatus(500)
+  console.log("Erro status", e.response?.data || e.message)
+  res.json({status:"pending"})
  }
 
+})
+
+
+// 🔔 WEBHOOK (OPCIONAL)
+app.post("/webhook",(req,res)=>{
+ console.log("Webhook recebido")
+ res.sendStatus(200)
 })
 
 app.listen(10000,()=>console.log("Servidor rodando 🚀"))
