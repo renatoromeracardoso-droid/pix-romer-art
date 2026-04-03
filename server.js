@@ -1,134 +1,94 @@
-import express from "express";
-import admin from "firebase-admin";
-import fs from "fs";
+import express from "express"
+import cors from "cors"
+import axios from "axios"
 
-const app = express();
-app.use(express.json());
+const app = express()
+app.use(cors())
+app.use(express.json())
 
-// 🔥 FIREBASE (SECRET FILE)
-const serviceAccount = JSON.parse(
-  fs.readFileSync("/etc/secrets/firebase.json", "utf8")
-);
+const pagamentos = {}
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+// 🔑 TOKEN
+const MP_TOKEN = process.env.MP_TOKEN
 
-const db = admin.firestore();
+// 🚀 GERAR PIX
+app.post("/pix", async (req,res)=>{
 
-// 🔑 TOKEN MERCADO PAGO
-const MP_TOKEN = process.env.MP_TOKEN;
+ try{
 
-// 🚀 CRIAR PIX
-app.post("/pix", async (req, res) => {
-  try {
-    const { valor, pedidoId } = req.body;
+  const { valor, pedidoId } = req.body
 
-    const response = await fetch("https://api.mercadopago.com/v1/payments", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${MP_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        transaction_amount: Number(valor),
-        payment_method_id: "pix",
-        description: `Pedido ${pedidoId}`,
-        notification_url: "https://pix-romer-art.onrender.com/webhook",
-        payer: {
-          email: "cliente@email.com"
-        }
-      })
-    });
-
-    const data = await response.json();
-
-    // 🔥 SALVA PEDIDO NO FIREBASE
-    await db.collection("pedidos").doc(pedidoId.toString()).set({
-      status: "pending",
-      valor: valor,
-      criadoEm: new Date()
-    });
-
-    res.json({
-      qr: data.point_of_interaction.transaction_data.qr_code_base64,
-      copia: data.point_of_interaction.transaction_data.qr_code
-    });
-
-  } catch (e) {
-    console.log("Erro PIX:", e);
-    res.status(500).json({ erro: e.message });
-  }
-});
-
-
-// 🚨 WEBHOOK MERCADO PAGO
-app.post("/webhook", async (req, res) => {
-  try {
-
-    const paymentId = req.query["data.id"];
-
-    if (!paymentId) return res.sendStatus(200);
-
-    const pagamento = await fetch(
-      `https://api.mercadopago.com/v1/payments/${paymentId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${MP_TOKEN}`
-        }
-      }
-    );
-
-    const data = await pagamento.json();
-
-    const status = data.status;
-    const descricao = data.description;
-
-    console.log("WEBHOOK:", descricao, status);
-
-    const pedidoId = descricao.replace("Pedido ", "");
-
-    // 🔥 ATUALIZA FIREBASE
-    await db.collection("pedidos").doc(pedidoId).set({
-      status: status === "approved" ? "approved" : "pending",
-      atualizadoEm: new Date()
-    }, { merge: true });
-
-    res.sendStatus(200);
-
-  } catch (e) {
-    console.log("Erro webhook:", e);
-    res.sendStatus(500);
-  }
-});
-
-
-// 🔎 CONSULTAR STATUS (USADO NO FRONT)
-app.get("/status/:id", async (req, res) => {
-
-  try {
-
-    const id = req.params.id;
-
-    const doc = await db.collection("pedidos").doc(id).get();
-
-    if (!doc.exists) {
-      return res.json({ status: "pending" });
+  const response = await axios.post(
+   "https://api.mercadopago.com/v1/payments",
+   {
+    transaction_amount: Number(valor),
+    description: "Pedido Romer Art",
+    payment_method_id: "pix",
+    payer: {
+      email: "teste@teste.com"
     }
+   },
+   {
+    headers:{
+     Authorization: `Bearer ${MP_TOKEN}`,
+     "Content-Type":"application/json"
+    }
+   }
+  )
 
-    res.json({ status: doc.data().status });
+  const pix = response.data.point_of_interaction.transaction_data
 
-  } catch (e) {
-    res.json({ status: "pending" });
+  pagamentos[pedidoId] = {
+   status: "pending",
+   mpId: response.data.id
   }
 
-});
+  res.json({
+   qr: pix.qr_code_base64,
+   copia: pix.qr_code
+  })
+
+ }catch(e){
+  console.log("ERRO PIX:", e.response?.data || e.message)
+  res.status(500).json({erro:true})
+ }
+
+})
 
 
-// 🟢 TESTE
-app.get("/", (req, res) => {
-  res.send("Servidor rodando 🚀");
-});
+// 🔎 STATUS
+app.get("/status/:id",(req,res)=>{
+ const p = pagamentos[req.params.id]
+ res.json({status: p?.status || "pending"})
+})
 
 
-app.listen(10000, () => console.log("Servidor rodando 🚀"));
+// 🔔 WEBHOOK
+app.post("/webhook",(req,res)=>{
+
+ try{
+
+  const data = req.body
+
+  if(data.type === "payment"){
+
+   const id = data.data.id
+
+   Object.keys(pagamentos).forEach(key=>{
+    if(pagamentos[key].mpId == id){
+     pagamentos[key].status = "approved"
+     console.log("PAGAMENTO APROVADO:", key)
+    }
+   })
+  }
+
+  res.sendStatus(200)
+
+ }catch(e){
+  console.log("Erro webhook", e)
+  res.sendStatus(500)
+ }
+
+})
+
+app.listen(10000,()=>console.log("Servidor rodando 🚀"))
