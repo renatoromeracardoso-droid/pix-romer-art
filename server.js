@@ -6,10 +6,10 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-// 🔑 TOKEN MERCADO PAGO
+// 🔑 TOKEN (vem do Render ENV)
 mercadopago.configurations.setAccessToken(process.env.MP_TOKEN)
 
-// 🚀 GERAR PIX
+// 🚀 ROTA PIX
 app.post("/pix", async (req, res) => {
 
   try {
@@ -17,7 +17,7 @@ app.post("/pix", async (req, res) => {
     const { valor } = req.body
 
     if (!valor) {
-      return res.status(400).json({ erro: "Valor não informado" })
+      return res.status(400).json({ erro: "Valor não enviado" })
     }
 
     const pagamento = await mercadopago.payment.create({
@@ -47,7 +47,7 @@ app.post("/pix", async (req, res) => {
 })
 
 
-// 🔎 CONSULTAR STATUS
+// 🔎 STATUS DO PAGAMENTO
 app.get("/status/:id", async (req, res) => {
 
   try {
@@ -68,7 +68,7 @@ app.get("/status/:id", async (req, res) => {
 })
 
 
-// 🚀 START SERVIDOR
+// 🚀 START
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, () => {
