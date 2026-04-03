@@ -2,42 +2,16 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Romer Art - Pedido</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+<title>Romer Art</title>
 
 <style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: #fff;
-  padding: 20px;
-}
-.card {
-  background: #1e293b;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 15px;
-}
-input, select {
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  border-radius: 5px;
-  border: none;
-}
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 5px;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-}
-.btn-add { background: orange; }
-.btn-pix { background: green; color:#fff;}
-.btn-send { background: #22c55e; color:#fff;}
+body{background:#0f172a;color:#fff;font-family:Arial;padding:15px}
+.card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:10px}
+input,select{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:none}
+button{width:100%;padding:12px;margin-top:5px;border:none;border-radius:6px;font-weight:bold}
+.add{background:orange}
+.pix{background:green;color:#fff}
+.send{background:#22c55e;color:#fff}
 </style>
 </head>
 
@@ -48,6 +22,9 @@ button {
 <input id="nome" placeholder="Nome" required>
 <input id="email" placeholder="Email" required>
 <input id="cep" placeholder="CEP" required>
+<input id="rua" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
 <input id="numero" placeholder="Número" required>
 </div>
 
@@ -63,109 +40,113 @@ button {
 <option>MDF</option>
 </select>
 
-<select id="espessura">
+<select id="esp">
 <option>3mm</option>
 </select>
 
-<input id="largura" placeholder="Largura (mm)">
-<input id="altura" placeholder="Altura (mm)">
+<input id="largura" placeholder="Largura mm">
+<input id="altura" placeholder="Altura mm">
 <input id="qtd" placeholder="Quantidade">
 
-<button class="btn-add" onclick="addItem()">Adicionar</button>
-<button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
-<button class="btn-send" id="btnEnviar" disabled>Enviar Pedido</button>
+<button class="add" onclick="add()">Adicionar</button>
+<button class="pix" onclick="pix()">Gerar PIX</button>
+<button class="send" id="enviar" disabled>Enviar Pedido</button>
 
 </div>
 
 <div class="card" id="resumo"></div>
 
-<script type="module">
+<script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+let itens = []
+let total = 0
+let pedidoId = null
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCLvB0Eydzka9KU09w9lTou9CIF-oGiVHo",
-  authDomain: "firestore-database-9b92d.firebaseapp.com",
-  projectId: "firestore-database-9b92d"
-};
+function add(){
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+ if(largura.value>400 || altura.value>400){
+  alert("Máx 400mm")
+  return
+ }
 
-let pedidoId = null;
-let total = 0;
+ let valor = qtd.value * 0.20
 
-function validarCampos() {
-  return (
-    nome.value &&
-    email.value &&
-    cep.value &&
-    numero.value
-  );
+ itens.push({
+  tipo: tipo.value,
+  material: material.value,
+  esp: esp.value,
+  largura: largura.value,
+  altura: altura.value,
+  qtd: qtd.value,
+  valor: valor
+ })
+
+ atualizar()
 }
 
-window.addItem = function() {
+function atualizar(){
 
-  if (largura.value > 400 || altura.value > 400) {
-    alert("Máximo 400mm");
-    return;
+ total = 0
+ let html = "Pedido:<br><br>"
+
+ itens.forEach((i,index)=>{
+  total += i.valor
+
+  html += `
+  ${index+1}) ${i.tipo}<br>
+  ${i.material} ${i.esp}<br>
+  ${i.largura}x${i.altura}mm | Qtd:${i.qtd}<br>
+  R$ ${i.valor.toFixed(2)}<br><br>
+  `
+ })
+
+ html += `<b>Total: R$ ${total.toFixed(2)}</b>`
+
+ resumo.innerHTML = html
+}
+
+async function pix(){
+
+ if(!nome.value || !email.value || !cep.value || !numero.value){
+  alert("Preencha cliente")
+  return
+ }
+
+ pedidoId = Date.now()
+
+ const res = await fetch("https://pix-romer-art.onrender.com/pix",{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+    valor: total,
+    pedidoId: pedidoId
+  })
+ })
+
+ const data = await res.json()
+
+ resumo.innerHTML += `
+ <br><br>PIX:<br>
+ <img src="data:image/png;base64,${data.qr}">
+ <br>Aguardando pagamento...
+ `
+
+ verificar()
+}
+
+function verificar(){
+
+ setInterval(async()=>{
+
+  const res = await fetch(`https://pix-romer-art.onrender.com/status/${pedidoId}`)
+  const data = await res.json()
+
+  if(data.status=="approved"){
+    resumo.innerHTML += "<br>✅ PAGAMENTO APROVADO"
+    enviar.disabled = false
   }
 
-  total = (parseFloat(qtd.value) * 0.20).toFixed(2);
-
-  document.getElementById("resumo").innerHTML = `
-  Pedido:
-  ${tipo.value} <br>
-  ${material.value} ${espessura.value}<br>
-  ${largura.value}x${altura.value}mm | Qtd:${qtd.value}<br>
-  Total: R$ ${total}
-  `;
-}
-
-window.gerarPix = async function() {
-
-  if (!validarCampos()) {
-    alert("Preencha os campos obrigatórios");
-    return;
-  }
-
-  pedidoId = Date.now().toString();
-
-  await setDoc(doc(db, "pedidos", pedidoId), {
-    status: "pending",
-    total: total
-  });
-
-  document.getElementById("resumo").innerHTML += `
-  <br><br>Gerando PIX...<br>
-  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=pixfake${pedidoId}">
-  <br>Aguardando pagamento...
-  `;
-
-  ouvirStatus();
-}
-
-function ouvirStatus() {
-
-  const ref = doc(db, "pedidos", pedidoId);
-
-  onSnapshot(ref, (docSnap) => {
-
-    if (docSnap.exists()) {
-
-      const dados = docSnap.data();
-
-      if (dados.status === "approved") {
-
-        document.getElementById("resumo").innerHTML += `
-        <br>✅ PAGAMENTO APROVADO
-        `;
-
-        document.getElementById("btnEnviar").disabled = false;
-      }
-    }
-  });
+ },3000)
 }
 
 </script>
