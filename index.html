@@ -7,18 +7,27 @@
 <style>
 body { font-family: Arial; background:#0f172a; color:white; padding:20px }
 .container { max-width:420px; margin:auto }
+
 input, select {
   width:100%; padding:10px; margin:5px 0;
   border-radius:5px; border:none
 }
+
 button {
   width:100%; padding:12px; margin-top:10px;
-  border:none; border-radius:5px; font-weight:bold
+  border:none; border-radius:5px; font-weight:bold; cursor:pointer
 }
+
 .add{background:orange}
 .pix{background:green;color:white}
 .enviar{background:#22c55e;color:white}
-.card{background:#1e293b;padding:15px;margin-top:20px;border-radius:10px}
+
+.card{
+  background:#1e293b;
+  padding:15px;
+  margin-top:20px;
+  border-radius:10px
+}
 </style>
 
 </head>
@@ -30,17 +39,18 @@ button {
 <h2>🚀 RomerArt Pedidos</h2>
 
 <h3>Cliente</h3>
-<input id="nome" placeholder="Nome">
-<input id="email" placeholder="Email">
-<input id="cep" placeholder="CEP">
-<input id="rua" placeholder="Rua">
+<input id="nome" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
+<input id="rua" placeholder="Rua *">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número">
+<input id="numero" placeholder="Número *">
 
 <h3>Pedido</h3>
 <select id="produto"><option>Corte</option></select>
 <select id="material"><option>MDF</option></select>
+
 <input id="largura" placeholder="Largura mm">
 <input id="altura" placeholder="Altura mm">
 <input id="quantidade" placeholder="Quantidade">
@@ -52,8 +62,7 @@ button {
 <div class="card">
 <h3 id="pedidoId"></h3>
 <div id="resumo"></div>
-<h3 id="total">R$ 0.00</h3>
-
+<h3 id="total"></h3>
 <p id="frete"></p>
 
 <img id="qrcode" width="200">
@@ -74,11 +83,35 @@ const CEP_BASE = "03822000"
 
 // 🔥 ID PEDIDO
 const pedidoNumero = "PED-" + Date.now()
-document.getElementById("pedidoId").innerText = "Pedido: " + pedidoNumero
+pedidoId.innerText = "Pedido: " + pedidoNumero
 
-function adicionar() {
+// 🔥 CEP AUTOMÁTICO
+cep.addEventListener("blur", async () => {
+  const c = cep.value.replace("-", "")
 
-  if (largura.value > 400 || altura.value > 400) {
+  if(c.length < 8) return
+
+  const res = await fetch(`https://viacep.com.br/ws/${c}/json/`)
+  const data = await res.json()
+
+  rua.value = data.logradouro || ""
+  bairro.value = data.bairro || ""
+  cidade.value = data.localidade || ""
+})
+
+// 🔥 VALIDAÇÃO
+function validar(){
+  if(!nome.value || !email.value || !cep.value || !rua.value || !numero.value){
+    alert("Preencha todos os campos obrigatórios")
+    return false
+  }
+  return true
+}
+
+// 🔥 ADICIONAR ITEM
+function adicionar(){
+
+  if(largura.value > 400 || altura.value > 400){
     alert("Limite máximo: 400mm")
     return
   }
@@ -96,47 +129,54 @@ function adicionar() {
   atualizarResumo()
 }
 
-function calcularFrete() {
-
-  // 🔥 SIMPLES (mesmo CEP = grátis)
-  if (cep.value.replace("-", "") === CEP_BASE) {
+// 🔥 FRETE
+function calcularFrete(){
+  if(cep.value.replace("-", "") === CEP_BASE){
     return 0
   }
-
   return 10
 }
 
-function atualizarResumo() {
+// 🔥 RESUMO COMPLETO
+function atualizarResumo(){
 
-  let html = ""
+  let html = `<b>Pedido:</b> ${pedidoNumero}<br><br>`
   total = 0
 
-  itens.forEach((i, idx) => {
+  itens.forEach((i, idx)=>{
     html += `
-    <p>${idx+1}) ${i.produto} - ${i.material}<br>
+    ${idx+1}) ${i.produto} - ${i.material}<br>
     ${i.largura}x${i.altura} mm | Qtd: ${i.qtd}<br>
-    R$ ${i.valor.toFixed(2)}</p>`
+    R$ ${i.valor.toFixed(2)}<br><br>`
     total += i.valor
   })
 
   const freteValor = calcularFrete()
   total += freteValor
 
-  document.getElementById("resumo").innerHTML = html
-  document.getElementById("total").innerText = "Total: R$ " + total.toFixed(2)
+  html += `<b>Frete:</b> ${freteValor === 0 ? "Grátis" : "R$ "+freteValor}<br>`
+  html += `<b>Total:</b> R$ ${total.toFixed(2)}<br>`
+  html += `<b>Status:</b> ${status.innerText || "Aguardando pagamento"}`
 
-  document.getElementById("frete").innerText =
-    freteValor === 0 ? "🚚 Frete grátis" : "🚚 Frete: R$ " + freteValor
+  resumo.innerHTML = html
+  totalEl = document.getElementById("total")
+  totalEl.innerText = "Total: R$ " + total.toFixed(2)
+
+  frete.innerText = freteValor === 0 ? "🚚 Frete grátis" : "🚚 Frete: R$ "+freteValor
 }
 
+// 🔥 PIX
+async function gerarPix(){
 
-// PIX
-async function gerarPix() {
+  if(itens.length === 0){
+    alert("Adicione itens primeiro")
+    return
+  }
 
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ valor: total })
+    body: JSON.stringify({valor: total})
   })
 
   const data = await res.json()
@@ -147,26 +187,29 @@ async function gerarPix() {
   pixCopiaCola.innerText = data.copiaecola
   status.innerText = "⏳ Aguardando pagamento..."
 
+  atualizarResumo()
+
   intervalo = setInterval(verificarStatus, 3000)
 }
 
-
-// STATUS
-async function verificarStatus() {
+// 🔥 STATUS
+async function verificarStatus(){
 
   const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
   const data = await res.json()
 
-  if (data.status === "approved") {
+  if(data.status === "approved"){
     clearInterval(intervalo)
     status.innerText = "✅ Pagamento aprovado"
+    atualizarResumo()
     btnEnviar.disabled = false
   }
 }
 
-
-// ENVIAR
+// 🔥 ENVIAR PEDIDO
 btnEnviar.onclick = async () => {
+
+  if(!validar()) return
 
   const dados = {
     pedido: pedidoNumero,
@@ -182,14 +225,17 @@ btnEnviar.onclick = async () => {
     status: "pago"
   }
 
+  // 🔥 SALVAR PLANILHA
   await fetch("https://script.google.com/macros/s/AKfycbyoE1fckemtWTKY6KNkrvnsZWUXkvDsmmjpPe2AKoZK1Vk52YzdDLvdDz6UVpqoYPDr/exec", {
     method:"POST",
+    headers:{ "Content-Type":"application/json" },
     body: JSON.stringify(dados)
   })
 
-  let msg = `📦 *PEDIDO ${pedidoNumero}*\n\n`
+  // 🔥 WHATSAPP
+  let msg = `📦 PEDIDO ${pedidoNumero}\n\n`
   msg += `👤 ${dados.nome}\n📧 ${dados.email}\n`
-  msg += `📍 ${dados.rua}, ${dados.numero} - ${dados.bairro}\n${dados.cidade}\n\n`
+  msg += `📍 ${dados.rua}, ${dados.numero} - ${dados.bairro} - ${dados.cidade}\n\n`
 
   itens.forEach((i, idx)=>{
     msg += `${idx+1}) ${i.produto} ${i.material}\n`
