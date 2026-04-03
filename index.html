@@ -52,6 +52,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 </select>
 
 <select id="produto" style="display:none;">
+<option value="">Selecione o produto</option>
 <option>Chaveiro</option>
 <option>Placa</option>
 <option>Quadro</option>
@@ -79,53 +80,64 @@ let pago = false;
 let mpId = null;
 const WHATS = "5511946447040";
 
-// ================= AJUSTE CAMPOS =================
+// ================= AJUSTAR CAMPOS =================
 function ajustarCampos(){
-
- let s = document.getElementById("servico").value;
+ let s = servico.value;
 
  if(s === "Gravação"){
-   document.getElementById("produto").style.display = "block";
-   document.getElementById("material").style.display = "none";
-   document.getElementById("esp").style.display = "none";
+   produto.style.display = "block";
+   material.style.display = "none";
+   esp.style.display = "none";
  } else {
-   document.getElementById("produto").style.display = "none";
-   document.getElementById("material").style.display = "block";
-   document.getElementById("esp").style.display = "block";
+   produto.style.display = "none";
+   material.style.display = "block";
+   esp.style.display = "block";
  }
-
 }
 
 // ================= CEP =================
-document.getElementById("cep").addEventListener("blur", function() {
+cep.addEventListener("blur", function(){
 
-  let c = this.value.replace(/\D/g,'');
+ let c = this.value.replace(/\D/g,'');
 
-  if(c.length !== 8) return;
+ if(c.length !== 8) return;
 
-  fetch("https://viacep.com.br/ws/" + c + "/json/")
-  .then(r => r.json())
-  .then(d => {
-    document.getElementById("endereco").value = d.logradouro || "";
-    document.getElementById("bairro").value = d.bairro || "";
-    document.getElementById("cidade").value = d.localidade || "";
-  });
+ fetch("https://viacep.com.br/ws/"+c+"/json/")
+ .then(r=>r.json())
+ .then(d=>{
+   endereco.value = d.logradouro || "";
+   bairro.value = d.bairro || "";
+   cidade.value = d.localidade || "";
+ });
 
 });
 
-// ================= ADD =================
+// ================= ADD ITEM =================
 function addItem(){
 
- let l = Number(document.getElementById("larg").value);
- let a = Number(document.getElementById("alt").value);
- let q = Number(document.getElementById("qtd").value);
- let s = document.getElementById("servico").value;
+ let nome = cliente.value;
+ let mail = email.value;
+ let c = cep.value;
+ let num = numero.value;
 
- if(!l || !a || !q){
-   alert("Preencha corretamente");
+ let l = Number(larg.value);
+ let a = Number(alt.value);
+ let q = Number(qtd.value);
+ let s = servico.value;
+
+ // CLIENTE
+ if(!nome || !mail || !c || !num){
+   alert("Preencha os dados do cliente");
    return;
  }
 
+ // MEDIDAS
+ if(!l || !a || !q){
+   alert("Preencha largura, altura e quantidade");
+   return;
+ }
+
+ // LIMITE
  if(l > 400 || a > 400){
    alert("Limite máximo 400mm");
    return;
@@ -133,16 +145,26 @@ function addItem(){
 
  let valor = ((l*a)/100)*0.1*q + 2;
 
- let item = {
-   servico: s,
-   l,a,q,valor
- };
+ let item = { servico:s, l,a,q,valor };
 
  if(s === "Gravação"){
-   item.produto = document.getElementById("produto").value;
+
+   if(!produto.value){
+     alert("Selecione o produto");
+     return;
+   }
+
+   item.produto = produto.value;
+
  } else {
-   item.material = document.getElementById("material").value;
-   item.esp = document.getElementById("esp").value;
+
+   if(!material.value || !esp.value){
+     alert("Selecione material e espessura");
+     return;
+   }
+
+   item.material = material.value;
+   item.esp = esp.value;
  }
 
  itens.push(item);
@@ -155,41 +177,39 @@ function addItem(){
 function render(){
 
  let total = 0;
- let html = "📦 Pedido " + Date.now() + "<br><br>";
+ let html = "📦 Pedido "+Date.now()+"<br><br>";
 
- html += "<b>Cliente:</b><br>" +
- document.getElementById("cliente").value + "<br>" +
- document.getElementById("email").value + "<br>" +
- document.getElementById("endereco").value + ", " +
- document.getElementById("numero").value + "<br>" +
- document.getElementById("bairro").value + " - " +
- document.getElementById("cidade").value + "<br><br>";
+ html += "<b>Cliente:</b><br>"+
+ cliente.value+"<br>"+
+ email.value+"<br>"+
+ endereco.value+", "+numero.value+"<br>"+
+ bairro.value+" - "+cidade.value+"<br><br>";
 
- itens.forEach(function(i,x){
+ itens.forEach((i,x)=>{
 
    total += i.valor;
 
-   html += (x+1) + ") " + i.servico + "<br>";
+   html += (x+1)+") "+i.servico+"<br>";
 
    if(i.servico === "Gravação"){
-     html += "Produto: " + i.produto + "<br>";
+     html += "Produto: "+i.produto+"<br>";
    } else {
-     html += i.material + " | Esp:" + i.esp + "<br>";
+     html += i.material+" | Esp:"+i.esp+"<br>";
    }
 
-   html += i.l + "x" + i.a + " mm | Qtd:" + i.q + "<br>";
-   html += "R$ " + i.valor.toFixed(2) + "<br><br>";
+   html += i.l+"x"+i.a+" mm | Qtd:"+i.q+"<br>";
+   html += "R$ "+i.valor.toFixed(2)+"<br><br>";
 
  });
 
- let desc = total * 0.05;
- let final = total - desc;
+ let desc = total*0.05;
+ let final = total-desc;
 
- html += "Subtotal: R$ " + total.toFixed(2) + "<br>";
- html += "Desconto PIX: -R$ " + desc.toFixed(2) + "<br>";
- html += "<b>Total: R$ " + final.toFixed(2) + "</b><br><br>";
+ html += "Subtotal: R$ "+total.toFixed(2)+"<br>";
+ html += "Desconto PIX: -R$ "+desc.toFixed(2)+"<br>";
+ html += "<b>Total: R$ "+final.toFixed(2)+"</b><br><br>";
 
- document.getElementById("resumo").innerHTML = html;
+ resumo.innerHTML = html;
 
 }
 
@@ -202,28 +222,28 @@ function gerarPix(){
  }
 
  let total = 0;
- itens.forEach(i => total += i.valor);
+ itens.forEach(i=> total += i.valor);
 
- let final = Number((total - total*0.05).toFixed(2));
+ let final = Number((total-total*0.05).toFixed(2));
 
- document.getElementById("resumo").innerHTML += "<br>Gerando PIX...";
+ resumo.innerHTML += "<br>Gerando PIX...";
 
  fetch("https://pix-romer-art.onrender.com/pix",{
    method:"POST",
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({
      valor: final,
-     email: document.getElementById("email").value
+     email: email.value
    })
  })
- .then(r => r.json())
- .then(data => {
+ .then(r=>r.json())
+ .then(data=>{
 
    mpId = data.id;
 
-   document.getElementById("resumo").innerHTML +=
-   "<br><img src='data:image/png;base64,"+data.qr_code_base64+"' width='200'><br>" +
-   "<textarea style='width:100%'>"+data.qr_code+"</textarea><br>" +
+   resumo.innerHTML +=
+   "<br><img src='data:image/png;base64,"+data.qr_code_base64+"' width='200'><br>"+
+   "<textarea>"+data.qr_code+"</textarea><br>"+
    "<b id='status'>Aguardando pagamento...</b>";
 
    verificar();
@@ -235,15 +255,15 @@ function gerarPix(){
 // ================= STATUS =================
 function verificar(){
 
- let t = setInterval(function(){
+ let t = setInterval(()=>{
 
    fetch("https://pix-romer-art.onrender.com/status/"+mpId)
-   .then(r => r.json())
-   .then(d => {
+   .then(r=>r.json())
+   .then(d=>{
 
      if(d.status === "approved"){
-       document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
-       document.getElementById("btnWhats").style.display = "block";
+       status.innerHTML = "✅ PAGAMENTO APROVADO";
+       btnWhats.style.display = "block";
        pago = true;
        clearInterval(t);
      }
@@ -262,7 +282,7 @@ function enviarWhats(){
    return;
  }
 
- let txt = document.getElementById("resumo").innerText;
+ let txt = resumo.innerText;
 
  window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(txt));
 
