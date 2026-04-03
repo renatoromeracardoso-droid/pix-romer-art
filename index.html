@@ -65,16 +65,30 @@ button { width:100%; padding:12px; margin-top:10px; border:none; border-radius:8
 <script>
 
 let itens = []
-let pago = false
 let total = 0
+let pago = false
+let paymentId = null
+
+// CEP automático
+document.getElementById("cep").addEventListener("blur", async () => {
+  const cep = document.getElementById("cep").value.replace("-", "")
+  if (cep.length !== 8) return
+
+  const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+  const data = await res.json()
+
+  document.getElementById("rua").value = data.logradouro || ""
+  document.getElementById("bairro").value = data.bairro || ""
+  document.getElementById("cidade").value = data.localidade || ""
+})
 
 function addItem(){
 
-let tipo = document.getElementById("tipo").value
-let material = document.getElementById("material").value
-let largura = parseFloat(document.getElementById("largura").value)
-let altura = parseFloat(document.getElementById("altura").value)
-let qtd = parseInt(document.getElementById("qtd").value)
+let tipo = tipoEl.value
+let material = materialEl.value
+let largura = parseFloat(larguraEl.value)
+let altura = parseFloat(alturaEl.value)
+let qtd = parseInt(qtdEl.value)
 
 if(!tipo || !material || !largura || !altura || !qtd){
 alert("Preencha todos os campos")
@@ -96,6 +110,12 @@ renderResumo()
 
 }
 
+const tipoEl = document.getElementById("tipo")
+const materialEl = document.getElementById("material")
+const larguraEl = document.getElementById("largura")
+const alturaEl = document.getElementById("altura")
+const qtdEl = document.getElementById("qtd")
+
 function renderResumo(){
 
 let html = ""
@@ -113,25 +133,57 @@ document.getElementById("resumo").innerHTML = html
 
 }
 
-function gerarPix(){
+async function gerarPix(){
 
 if(total <= 0){
 alert("Adicione itens")
 return
 }
 
-document.getElementById("pix").innerHTML = "🔳 PIX gerado (simulado)"
+const res = await fetch("https://pix-romer-art.onrender.com/pix", {
+method:"POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ valor: total })
+})
+
+const data = await res.json()
+
+paymentId = data.id
+
+document.getElementById("pix").innerHTML = `
+<img src="data:image/png;base64,${data.qr_code_base64}" width="200"/>
+<br><small>${data.copiaecola}</small>
+`
+
 document.getElementById("status").innerHTML = "⏳ Aguardando pagamento..."
 
-setTimeout(()=>{
+monitorarPagamento()
+
+}
+
+function monitorarPagamento(){
+
+const interval = setInterval(async ()=>{
+
+if(!paymentId) return
+
+const res = await fetch(`https://pix-romer-art.onrender.com/status/${paymentId}`)
+const data = await res.json()
+
+if(data.status === "approved"){
+clearInterval(interval)
+
 pago = true
+
 document.getElementById("status").innerHTML = "✅ Pagamento aprovado"
 document.getElementById("btnEnviar").disabled = false
+}
+
 },3000)
 
 }
 
-function enviarPedido(){
+async function enviarPedido(){
 
 if(!pago){
 alert("Pagamento não confirmado")
@@ -149,24 +201,15 @@ items: itens,
 total: total
 }
 
-fetch("https://script.google.com/macros/s/AKfycbwor6wiV4noo8eysSyl4_nsdN2O897SiaErtuy00RlMVU6zBIHYIpqhsLakagnvjbls/exec",{
+// envia para Google Sheets
+await fetch("https://script.google.com/macros/s/AKfycbwor6wiV4noo8eysSyl4_nsdN2O897SiaErtuy00RlMVU6zBIHYIpqhsLakagnvjbls/exec",{
 method:"POST",
 body: JSON.stringify(pedido)
 })
-.then(()=>{
 
 alert("Pedido enviado 🚀")
 
-itens=[]
-total=0
-pago=false
-
-renderResumo()
-document.getElementById("status").innerHTML=""
-document.getElementById("pix").innerHTML=""
-document.getElementById("btnEnviar").disabled = true
-
-})
+location.reload()
 
 }
 
