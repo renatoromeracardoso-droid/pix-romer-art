@@ -1,6 +1,7 @@
 import express from "express"
 import cors from "cors"
 import fetch from "node-fetch"
+import crypto from "crypto"
 
 const app = express()
 app.use(express.json())
@@ -14,11 +15,14 @@ app.post("/pix", async (req, res) => {
 
     const { valor } = req.body
 
+    const idempotencyKey = crypto.randomUUID()
+
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${TOKEN}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": idempotencyKey
       },
       body: JSON.stringify({
         transaction_amount: Number(valor),
@@ -35,7 +39,7 @@ app.post("/pix", async (req, res) => {
     console.log("PIX RESPONSE:", data)
 
     if (data.error) {
-      return res.status(500).json({ erro: data.message || "Erro MP" })
+      return res.status(500).json({ erro: data.message })
     }
 
     res.json({
@@ -66,8 +70,6 @@ app.get("/status/:id", async (req, res) => {
 
     const data = await response.json()
 
-    console.log("STATUS RESPONSE:", data)
-
     if (data.error) {
       return res.json({ status: "erro_api" })
     }
@@ -77,7 +79,6 @@ app.get("/status/:id", async (req, res) => {
     })
 
   } catch (error) {
-    console.log("ERRO STATUS:", error)
     res.status(500).json({ erro: "Erro ao consultar status" })
   }
 })
