@@ -5,13 +5,46 @@
 <title>Romer Art</title>
 
 <style>
-body{background:#0f172a;color:#fff;font-family:Arial;padding:15px}
-.card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:10px}
-input,select{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:none}
-button{width:100%;padding:12px;margin-top:5px;border:none;border-radius:6px;font-weight:bold}
-.add{background:orange}
-.pix{background:green;color:#fff}
-.send{background:#22c55e;color:#fff}
+body{
+  font-family: Arial;
+  background:#0f172a;
+  color:white;
+  padding:20px;
+}
+
+.card{
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:15px;
+}
+
+input, select{
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+  border-radius:5px;
+  border:none;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:5px;
+  border:none;
+  border-radius:5px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.btn-add{ background:orange }
+.btn-pix{ background:green; color:white }
+.btn-send{ background:#22c55e }
+
+#qrcode{
+  width:200px;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -19,13 +52,13 @@ button{width:100%;padding:12px;margin-top:5px;border:none;border-radius:6px;font
 
 <div class="card">
 <h3>Cliente</h3>
-<input id="nome" placeholder="Nome" required>
-<input id="email" placeholder="Email" required>
-<input id="cep" placeholder="CEP" required>
+<input id="nome" placeholder="Nome">
+<input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
 <input id="rua" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número" required>
+<input id="numero" placeholder="Número">
 </div>
 
 <div class="card">
@@ -38,173 +71,176 @@ button{width:100%;padding:12px;margin-top:5px;border:none;border-radius:6px;font
 
 <select id="material">
 <option>MDF</option>
+<option>Acrílico</option>
 </select>
 
-<select id="esp">
+<select id="espessura">
 <option>3mm</option>
+<option>6mm</option>
 </select>
 
-<input id="largura" placeholder="Largura mm">
-<input id="altura" placeholder="Altura mm">
-<input id="qtd" placeholder="Quantidade">
+<input id="largura" placeholder="Largura">
+<input id="altura" placeholder="Altura">
+<input id="quantidade" placeholder="Quantidade">
 
-<button class="add" onclick="add()">Adicionar</button>
-<button class="pix" onclick="pix()">Gerar PIX</button>
-<button class="send" id="enviar" disabled>Enviar Pedido</button>
+<button class="btn-add" onclick="addItem()">Adicionar</button>
+<button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
+<button id="btnEnviar" class="btn-send" onclick="enviarPedido()" disabled>Enviar Pedido</button>
 
 </div>
 
-<div class="card" id="resumo"></div>
+<div class="card">
+<h3>Resumo</h3>
+<div id="resumo"></div>
+<div id="total"></div>
+
+<h4>PIX:</h4>
+<img id="qrcode"/>
+<input id="copiaPix"/>
+
+<div id="statusPagamento"></div>
+</div>
 
 <script>
 
 let itens = []
 let total = 0
+let statusPagamento = "pending"
 let pedidoId = null
 
-// 🔥 CEP AUTOMÁTICO
-cep.addEventListener("blur", async () => {
-
- const c = cep.value.replace(/\D/g,'');
-
- if(c.length !== 8) return;
-
- try{
-  const res = await fetch(`https://viacep.com.br/ws/${c}/json/`);
-  const data = await res.json();
-
-  rua.value = data.logradouro || "";
-  bairro.value = data.bairro || "";
-  cidade.value = data.localidade || "";
-
- }catch(e){
-  console.log("Erro CEP", e);
- }
-
-});
-
+// 🧮 CALCULO SIMPLES
+function calcularPreco(qtd){
+  return qtd * 0.20
+}
 
 // ➕ ADD ITEM
-function add(){
+function addItem(){
 
- if(!largura.value || !altura.value || !qtd.value){
-  alert("Preencha largura, altura e quantidade");
-  return;
- }
+  const largura = Number(document.getElementById("largura").value)
+  const altura = Number(document.getElementById("altura").value)
+  const qtd = Number(document.getElementById("quantidade").value)
 
- if(largura.value>400 || altura.value>400){
-  alert("Máx 400mm");
-  return;
- }
+  const preco = calcularPreco(qtd)
 
- let valor = qtd.value * 0.20;
+  itens.push({
+    largura,
+    altura,
+    qtd,
+    preco
+  })
 
- itens.push({
-  tipo: tipo.value,
-  material: material.value,
-  esp: esp.value,
-  largura: largura.value,
-  altura: altura.value,
-  qtd: qtd.value,
-  valor: valor
- });
-
- atualizar();
+  atualizarResumo()
 }
 
+// 🔄 ATUALIZA RESUMO
+function atualizarResumo(){
 
-// 🔄 ATUALIZAR RESUMO
-function atualizar(){
+  const div = document.getElementById("resumo")
+  const totalDiv = document.getElementById("total")
 
- total = 0
- let html = "<b>Pedido:</b><br><br>"
+  div.innerHTML = ""
+  total = 0
 
- itens.forEach((i,index)=>{
-  total += i.valor
+  itens.forEach((i, index)=>{
+    total += i.preco
 
-  html += `
-  ${index+1}) ${i.tipo}<br>
-  ${i.material} ${i.esp}<br>
-  ${i.largura}x${i.altura}mm | Qtd:${i.qtd}<br>
-  R$ ${i.valor.toFixed(2)}<br><br>
-  `
- })
+    div.innerHTML += `
+      ${index+1}) ${i.largura}x${i.altura}mm | Qtd:${i.qtd} <br>
+      R$ ${i.preco.toFixed(2)} <br><br>
+    `
+  })
 
- html += `<b>Total: R$ ${total.toFixed(2)}</b>`
-
- resumo.innerHTML = html
+  totalDiv.innerHTML = `<b>Total: R$ ${total.toFixed(2)}</b>`
 }
 
+// ⚡ GERAR PIX
+async function gerarPix(){
 
-// 💰 GERAR PIX
-async function pix(){
-
- if(!nome.value || !email.value || !cep.value || !numero.value){
-  alert("Preencha os dados do cliente");
-  return;
- }
-
- if(itens.length === 0){
-  alert("Adicione um item");
-  return;
- }
-
- try{
-
-  pedidoId = Date.now();
-
-  const res = await fetch("https://pix-romer-art.onrender.com/pix",{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      valor: total,
-      pedidoId: pedidoId
-    })
-  });
-
-  const data = await res.json();
-
-  if(!data.qr){
-    alert("Erro ao gerar PIX");
-    console.log(data);
-    return;
+  if(itens.length === 0){
+    alert("Adicione itens primeiro")
+    return
   }
 
-  resumo.innerHTML += `
-  <br><br><b>PIX:</b><br>
-  <img src="data:image/png;base64,${data.qr}" style="width:250px"><br><br>
+  pedidoId = "PED_" + Date.now()
 
-  <input value="${data.copia}" style="width:100%;padding:10px" readonly>
-  <br><small>Copia e cola PIX</small>
+  const res = await fetch("https://pix-romer-art.onrender.com/pix", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      valor: total,
+      pedidoId
+    })
+  })
 
-  <br><br>Aguardando pagamento...
-  `;
-
-  verificar();
-
- }catch(e){
-  alert("Erro conexão PIX");
-  console.log(e);
- }
-}
-
-
-// 🔎 VERIFICAR STATUS REAL
-function verificar(){
-
- const intervalo = setInterval(async()=>{
-
-  const res = await fetch(`https://pix-romer-art.onrender.com/status/${pedidoId}`)
   const data = await res.json()
 
-  if(data.status=="approved"){
-    resumo.innerHTML += "<br>✅ PAGAMENTO APROVADO"
-    enviar.disabled = false
-    clearInterval(intervalo)
+  document.getElementById("qrcode").src = "data:image/png;base64," + data.qr
+  document.getElementById("copiaPix").value = data.copia
+
+  statusPagamento = "pending"
+  atualizarStatus()
+
+  verificarPagamento()
+}
+
+// 🔎 VERIFICA PAGAMENTO
+function verificarPagamento(){
+
+  const intervalo = setInterval(async ()=>{
+
+    const res = await fetch(`https://pix-romer-art.onrender.com/status/${pedidoId}`)
+    const data = await res.json()
+
+    if(data.status === "approved"){
+      statusPagamento = "approved"
+      atualizarStatus()
+      clearInterval(intervalo)
+    }
+
+  },3000)
+}
+
+// 🎯 STATUS
+function atualizarStatus(){
+
+  const div = document.getElementById("statusPagamento")
+  const btn = document.getElementById("btnEnviar")
+
+  if(statusPagamento === "pending"){
+    div.innerHTML = "⏳ Aguardando pagamento..."
+    btn.disabled = true
   }
 
- },3000)
+  if(statusPagamento === "approved"){
+    div.innerHTML = "✅ Pagamento aprovado"
+    btn.disabled = false
+  }
 }
+
+// 🚀 ENVIAR
+function enviarPedido(){
+
+  if(statusPagamento !== "approved"){
+    alert("Aguardando pagamento")
+    return
+  }
+
+  alert("Pedido enviado 🚀")
+}
+
+// 📦 CEP AUTO
+document.getElementById("cep").addEventListener("blur", async ()=>{
+
+  const cep = document.getElementById("cep").value
+
+  const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+  const data = await res.json()
+
+  document.getElementById("rua").value = data.logradouro
+  document.getElementById("bairro").value = data.bairro
+  document.getElementById("cidade").value = data.localidade
+
+})
 
 </script>
 
