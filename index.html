@@ -7,7 +7,10 @@
 <style>
 body { font-family: Arial; background:#0f172a; color:white; padding:20px }
 .container { max-width:500px; margin:auto }
-input, select, button { width:100%; padding:10px; margin:5px 0; border-radius:8px; border:none }
+input, select, button {
+  width:100%; padding:10px; margin:5px 0;
+  border-radius:8px; border:none
+}
 button:disabled { opacity:0.5 }
 .btn-add { background:orange }
 .btn-pix { background:green; color:white }
@@ -32,8 +35,15 @@ button:disabled { opacity:0.5 }
 <input id="numero" placeholder="Número">
 
 <h3>Pedido</h3>
-<select id="servico"><option>Corte</option><option>Gravação</option></select>
-<select id="material"><option>MDF</option><option>Acrílico</option></select>
+<select id="servico">
+<option>Corte</option>
+<option>Gravação</option>
+</select>
+
+<select id="material">
+<option>MDF</option>
+<option>Acrílico</option>
+</select>
 
 <input id="largura" type="number" placeholder="Largura (máx 400)">
 <input id="altura" type="number" placeholder="Altura (máx 400)">
@@ -59,9 +69,11 @@ let pedidoNumero = "PED-" + Date.now()
 cep.onblur = async () => {
   const res = await fetch(`https://viacep.com.br/ws/${cep.value}/json/`)
   const d = await res.json()
+
   rua.value = d.logradouro || ""
   bairro.value = d.bairro || ""
   cidade.value = d.localidade || ""
+
   calcularFrete()
 }
 
@@ -76,6 +88,11 @@ function addItem() {
     return
   }
 
+  if (!largura.value || !altura.value || !qtd.value) {
+    alert("Preencha tudo")
+    return
+  }
+
   const item = {
     servico: servico.value,
     material: material.value,
@@ -84,7 +101,7 @@ function addItem() {
     qtd: Number(qtd.value)
   }
 
-  item.preco = ((item.largura * item.altura)/1000) * item.qtd
+  item.preco = ((item.largura * item.altura) / 1000) * item.qtd
 
   itens.push(item)
   total += item.preco
@@ -100,16 +117,22 @@ function atualizarResumo() {
 
   let html = `<b>Pedido: ${pedidoNumero}</b><br><br>`
 
-  itens.forEach((i, idx) => {
-    html += `${idx+1}) ${i.servico} - ${i.material}<br>`
-    html += `${i.largura}x${i.altura} | Qtd:${i.qtd}<br>`
+  html += `<b>Cliente:</b> ${nome.value}<br>`
+  html += `<b>Email:</b> ${email.value}<br>`
+  html += `<b>Endereço:</b><br>${rua.value}, ${numero.value}<br>${bairro.value} - ${cidade.value}<br><br>`
+
+  html += `<b>Itens:</b><br><br>`
+
+  itens.forEach((i, index) => {
+    html += `${index+1}) ${i.servico} - ${i.material}<br>`
+    html += `${i.largura}x${i.altura} mm | Qtd: ${i.qtd}<br>`
     html += `R$ ${i.preco.toFixed(2)}<br><br>`
   })
 
-  html += `Subtotal: R$ ${total.toFixed(2)}<br>`
-  html += `Frete: ${frete === 0 ? "Grátis" : frete}<br>`
-  html += `Desconto: -R$ ${desconto.toFixed(2)}<br>`
-  html += `<b>Total: R$ ${totalFinal.toFixed(2)}</b><br>`
+  html += `<b>Subtotal: R$ ${total.toFixed(2)}</b><br>`
+  html += `<b>Frete: ${frete === 0 ? "Grátis" : "R$ " + frete}</b><br>`
+  html += `<b>Desconto (5%): -R$ ${desconto.toFixed(2)}</b><br>`
+  html += `<b>Total Final: R$ ${(totalFinal).toFixed(2)}</b><br>`
 
   resumo.innerHTML = html
 }
@@ -118,9 +141,14 @@ async function gerarPix() {
 
   const totalFinal = total + frete - desconto
 
+  if (totalFinal < 1) {
+    alert("Valor inválido")
+    return
+  }
+
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ valor: Number(totalFinal.toFixed(2)) })
   })
 
@@ -129,9 +157,9 @@ async function gerarPix() {
   pagamentoId = data.id
 
   resumo.innerHTML += `
-    <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200">
-    <br>${data.copiaecola}
-    <br id="statusPix">⏳ Aguardando pagamento...
+  <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200">
+  <br><small>${data.copiaecola}</small>
+  <br id="statusPix">⏳ Aguardando pagamento...
   `
 
   verificarPagamento()
@@ -141,23 +169,34 @@ function verificarPagamento() {
 
   const interval = setInterval(async () => {
 
-    const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
-    const data = await res.json()
+    try {
 
-    console.log("STATUS:", data)
+      const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
+      const data = await res.json()
 
-    if (data.status === "approved") {
+      console.log("STATUS:", data)
 
-      clearInterval(interval)
+      if (data.status === "approved") {
 
-      document.getElementById("statusPix").innerHTML = "✅ Pago"
-      document.getElementById("btnEnviar").disabled = false
+        clearInterval(interval)
+
+        document.getElementById("statusPix").innerHTML = "✅ Pagamento aprovado"
+        document.getElementById("btnEnviar").disabled = false
+      }
+
+    } catch (e) {
+      console.log("Erro status:", e)
     }
 
   }, 3000)
 }
 
 async function enviarPedido() {
+
+  if (!pagamentoId) {
+    alert("Gere o PIX primeiro")
+    return
+  }
 
   const resStatus = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
   const dataStatus = await resStatus.json()
@@ -178,14 +217,15 @@ async function enviarPedido() {
     itens
   }
 
-  await fetch("COLE_AQUI_URL_DO_APPS_SCRIPT", {
-    method:"POST",
+  // 🔥 SUA URL JÁ AQUI
+  await fetch("https://script.google.com/macros/s/AKfycbyoE1fckemtWTKY6KNkrvnsZWUXkvDsmmjpPe2AKoZK1Vk52YzdDLvdDz6UVpqoYPDr/exec", {
+    method: "POST",
     body: JSON.stringify(pedido)
   })
 
   window.open(`https://wa.me/5511946447040?text=Pedido%20${pedidoNumero}`)
 
-  alert("Pedido enviado 🚀")
+  alert("Pedido enviado com sucesso 🚀")
 }
 
 </script>
