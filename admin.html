@@ -2,12 +2,11 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Painel Admin</title>
+<title>Admin</title>
 
 <style>
 body{font-family:Arial;background:#0f172a;color:white;padding:20px}
 .card{background:#1e293b;padding:15px;margin-bottom:10px;border-radius:10px}
-button{padding:5px;margin-top:5px}
 </style>
 </head>
 
@@ -16,49 +15,44 @@ button{padding:5px;margin-top:5px}
 <h2>Pedidos</h2>
 <div id="lista"></div>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
 
-// 🔥 CONFIG FIREBASE (USA O SEU)
-const firebaseConfig = {
-  apiKey: "SUA_KEY",
-  authDomain: "SEU_DOMINIO",
-  projectId: "firestore-database-9b92d"
+const firebaseConfig={
+ apiKey:"SUA_KEY",
+ authDomain:"firestore-database-9b92d.firebaseapp.com",
+ projectId:"firestore-database-9b92d"
 }
 
 firebase.initializeApp(firebaseConfig)
-const db = firebase.firestore()
+const db=firebase.firestore()
 
-// 🔥 LISTAR PEDIDOS
 db.collection("pedidos").onSnapshot(snapshot=>{
 
- const div = document.getElementById("lista")
- div.innerHTML = ""
+ const div=document.getElementById("lista")
+ div.innerHTML=""
 
  snapshot.forEach(doc=>{
+  const p=doc.data()
 
-  const p = doc.data()
+  div.innerHTML+=`
+  <div class="card">
+   <b>${p.cliente.nome}</b><br>
+   Total: R$ ${p.total}<br>
+   Status: ${p.status}<br>
+   Pagamento: ${p.pagamento}<br>
 
-  div.innerHTML += `
-    <div class="card">
-      <b>${p.cliente.nome}</b><br>
-      Total: R$ ${p.total}<br>
-      Status: ${p.status}<br>
-      Pagamento: ${p.pagamento}<br>
-
-      <button onclick="update('${doc.id}','produzindo')">Produção</button>
-      <button onclick="update('${doc.id}','enviado')">Enviado</button>
-    </div>
-  `
+   <button onclick="update('${doc.id}','produção')">Produção</button>
+   <button onclick="update('${doc.id}','enviado')">Enviado</button>
+  </div>`
  })
 
 })
 
-// 🔄 ATUALIZAR STATUS
 function update(id,status){
-  db.collection("pedidos").doc(id).update({status})
+ db.collection("pedidos").doc(id).update({status})
 }
 
 </script>
