@@ -5,212 +5,207 @@
 <title>RomerArt Pedidos</title>
 
 <style>
-body { font-family: Arial; background:#0f172a; color:#fff; padding:20px }
-input, select { width:100%; padding:10px; margin:5px 0; border-radius:8px; border:none }
-button { width:100%; padding:12px; margin-top:10px; border:none; border-radius:8px; font-weight:bold }
-.btn-add { background:orange }
-.btn-pix { background:green; color:#fff }
-.btn-send { background:#22c55e; color:#fff }
-.card { background:#1e293b; padding:15px; border-radius:12px; margin-bottom:15px }
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
+}
+
+.container {
+  max-width: 500px;
+  margin: auto;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-add { background: orange; }
+.btn-pix { background: green; color: white; }
+.btn-send { background: #22c55e; color: white; }
+
+.resumo {
+  margin-top: 20px;
+  background: #1e293b;
+  padding: 10px;
+  border-radius: 10px;
+}
 </style>
 
 </head>
+
 <body>
+
+<div class="container">
 
 <h2>🚀 RomerArt Pedidos</h2>
 
-<div class="card">
 <h3>Cliente</h3>
-<input id="nome" placeholder="Nome" required>
-<input id="email" placeholder="Email" required>
-<input id="cep" placeholder="CEP" required>
+<input id="nome" placeholder="Nome">
+<input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
 <input id="rua" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
 <input id="numero" placeholder="Número">
-</div>
 
-<div class="card">
 <h3>Pedido</h3>
 
-<select id="tipo">
-<option value="">Tipo</option>
-<option>Corte</option>
-<option>Gravação</option>
+<select id="servico">
+  <option value="Corte">Corte</option>
+  <option value="Gravação">Gravação</option>
 </select>
 
 <select id="material">
-<option value="">Material</option>
-<option>MDF</option>
-<option>Acrílico</option>
+  <option value="MDF">MDF</option>
+  <option value="Acrílico">Acrílico</option>
 </select>
 
-<input id="largura" placeholder="Largura (máx 500)">
-<input id="altura" placeholder="Altura (máx 500)">
-<input id="qtd" placeholder="Quantidade">
+<input id="largura" type="number" placeholder="Largura">
+<input id="altura" type="number" placeholder="Altura">
+<input id="qtd" type="number" placeholder="Quantidade">
 
 <button class="btn-add" onclick="addItem()">Adicionar</button>
 <button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
-<button class="btn-send" id="btnEnviar" disabled onclick="enviarPedido()">Enviar Pedido</button>
+<button id="btnEnviar" class="btn-send" disabled onclick="enviarPedido()">Enviar Pedido</button>
 
-</div>
+<div class="resumo" id="resumo"></div>
 
-<div class="card">
-<h3>Resumo</h3>
-<div id="resumo"></div>
-<div id="pix"></div>
-<div id="status"></div>
 </div>
 
 <script>
 
 let itens = []
 let total = 0
-let pago = false
-let paymentId = null
+let pagamentoId = null
 
 // CEP automático
 document.getElementById("cep").addEventListener("blur", async () => {
-  const cep = document.getElementById("cep").value.replace("-", "")
-  if (cep.length !== 8) return
+  const cep = document.getElementById("cep").value
 
   const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
   const data = await res.json()
 
-  document.getElementById("rua").value = data.logradouro || ""
-  document.getElementById("bairro").value = data.bairro || ""
-  document.getElementById("cidade").value = data.localidade || ""
+  document.getElementById("rua").value = data.logradouro
+  document.getElementById("bairro").value = data.bairro
+  document.getElementById("cidade").value = data.localidade
 })
 
-function addItem(){
+// adicionar item
+function addItem() {
 
-let tipo = tipoEl.value
-let material = materialEl.value
-let largura = parseFloat(larguraEl.value)
-let altura = parseFloat(alturaEl.value)
-let qtd = parseInt(qtdEl.value)
+  const servico = document.getElementById("servico").value
+  const material = document.getElementById("material").value
+  const largura = Number(document.getElementById("largura").value)
+  const altura = Number(document.getElementById("altura").value)
+  const qtd = Number(document.getElementById("qtd").value)
 
-if(!tipo || !material || !largura || !altura || !qtd){
-alert("Preencha todos os campos")
-return
+  const preco = ((largura * altura) / 1000) * qtd
+
+  itens.push({ servico, material, largura, altura, qtd, preco })
+
+  total += preco
+
+  atualizarResumo()
 }
 
-if(largura > 500 || altura > 500){
-alert("Limite máximo 500mm")
-return
+// resumo
+function atualizarResumo() {
+
+  let html = ""
+
+  itens.forEach((i, index) => {
+    html += `
+    ${index + 1}) ${i.servico}<br>
+    Material: ${i.material}<br>
+    ${i.largura}x${i.altura} | Qtd: ${i.qtd}<br>
+    R$ ${i.preco.toFixed(2)}<br><br>
+    `
+  })
+
+  html += `<b>Total: R$ ${total.toFixed(2)}</b><br>`
+
+  document.getElementById("resumo").innerHTML = html
 }
 
-let preco = (largura * altura * 0.002) * qtd
+// gerar PIX
+async function gerarPix() {
 
-itens.push({ tipo, material, largura, altura, qtd, preco })
+  const res = await fetch("https://pix-romer-art.onrender.com/pix", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ valor: total })
+  })
 
-total += preco
+  const data = await res.json()
 
-renderResumo()
+  pagamentoId = data.id
 
+  document.getElementById("resumo").innerHTML += `
+    <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
+    <small>${data.copiaecola}</small>
+    <br>⏳ Aguardando pagamento...
+  `
+
+  verificarPagamento()
 }
 
-const tipoEl = document.getElementById("tipo")
-const materialEl = document.getElementById("material")
-const larguraEl = document.getElementById("largura")
-const alturaEl = document.getElementById("altura")
-const qtdEl = document.getElementById("qtd")
+// verificar pagamento
+function verificarPagamento() {
 
-function renderResumo(){
+  const interval = setInterval(async () => {
 
-let html = ""
+    const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
+    const data = await res.json()
 
-itens.forEach((i, index)=>{
-html += `${index+1}) ${i.tipo}<br>
-Material: ${i.material}<br>
-${i.largura}x${i.altura} | Qtd:${i.qtd}<br>
-R$ ${i.preco.toFixed(2)}<br><br>`
-})
+    if (data.status === "approved") {
+      clearInterval(interval)
 
-html += `<b>Total: R$ ${total.toFixed(2)}</b>`
+      document.getElementById("resumo").innerHTML += "<br>✅ Pagamento aprovado"
 
-document.getElementById("resumo").innerHTML = html
+      liberarEnvio()
+    }
 
+  }, 3000)
 }
 
-async function gerarPix(){
-
-if(total <= 0){
-alert("Adicione itens")
-return
+// liberar botão
+function liberarEnvio() {
+  const btn = document.getElementById("btnEnviar")
+  btn.disabled = false
+  btn.style.opacity = "1"
 }
 
-const res = await fetch("https://pix-romer-art.onrender.com/pix", {
-method:"POST",
-headers: { "Content-Type": "application/json" },
-body: JSON.stringify({ valor: total })
-})
+// enviar pedido (Google Sheets)
+async function enviarPedido() {
 
-const data = await res.json()
+  const pedido = {
+    id: Date.now(),
+    cliente: {
+      nome: nome.value,
+      email: email.value,
+      cidade: cidade.value
+    },
+    total,
+    itens
+  }
 
-paymentId = data.id
+  await fetch("https://script.google.com/macros/s/AKfycbwor6wiV4noo8eysSyl4_nsdN2O897SiaErtuy00RlMVU6zBIHYIpqhsLakagnvjbls/exec", {
+    method: "POST",
+    body: JSON.stringify(pedido)
+  })
 
-document.getElementById("pix").innerHTML = `
-<img src="data:image/png;base64,${data.qr_code_base64}" width="200"/>
-<br><small>${data.copiaecola}</small>
-`
-
-document.getElementById("status").innerHTML = "⏳ Aguardando pagamento..."
-
-monitorarPagamento()
-
-}
-
-function monitorarPagamento(){
-
-const interval = setInterval(async ()=>{
-
-if(!paymentId) return
-
-const res = await fetch(`https://pix-romer-art.onrender.com/status/${paymentId}`)
-const data = await res.json()
-
-if(data.status === "approved"){
-clearInterval(interval)
-
-pago = true
-
-document.getElementById("status").innerHTML = "✅ Pagamento aprovado"
-document.getElementById("btnEnviar").disabled = false
-}
-
-},3000)
-
-}
-
-async function enviarPedido(){
-
-if(!pago){
-alert("Pagamento não confirmado")
-return
-}
-
-const pedido = {
-id: "PED_" + Date.now(),
-cliente:{
-nome: nome.value,
-email: email.value,
-cidade: cidade.value
-},
-items: itens,
-total: total
-}
-
-// envia para Google Sheets
-await fetch("https://script.google.com/macros/s/AKfycbwor6wiV4noo8eysSyl4_nsdN2O897SiaErtuy00RlMVU6zBIHYIpqhsLakagnvjbls/exec",{
-method:"POST",
-body: JSON.stringify(pedido)
-})
-
-alert("Pedido enviado 🚀")
-
-location.reload()
-
+  alert("Pedido enviado com sucesso 🚀")
 }
 
 </script>
