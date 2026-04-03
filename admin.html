@@ -1,242 +1,64 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>RomerArt Pedidos</title>
+<title>Painel Admin</title>
 
 <style>
-body{background:#0f172a;font-family:Arial;color:#fff;}
-.app{max-width:420px;margin:auto;padding:20px;}
-.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
-input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
-button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;font-weight:bold;}
-.add{background:#f97316;}
-.pix{background:#16a34a;}
-.whats{background:#25d366;display:none;}
-.box{background:#1e293b;padding:15px;border-radius:12px;margin-top:10px;}
+body{font-family:Arial;background:#0f172a;color:white;padding:20px}
+.card{background:#1e293b;padding:15px;margin-bottom:10px;border-radius:10px}
+button{padding:5px;margin-top:5px}
 </style>
-
 </head>
+
 <body>
 
-<div class="app">
+<h2>Pedidos</h2>
+<div id="lista"></div>
 
-<div class="card">
-<h3>Cliente</h3>
-<input id="cliente" placeholder="Nome *">
-<input id="email" placeholder="Email *">
-<input id="cep" placeholder="CEP *">
-<input id="endereco" placeholder="Rua">
-<input id="bairro" placeholder="Bairro">
-<input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número *">
-</div>
-
-<div class="card">
-<h3>Pedido</h3>
-
-<select id="servico">
-<option>Corte</option>
-<option>Gravação</option>
-</select>
-
-<select id="material">
-<option>MDF</option>
-<option>ACRILICO</option>
-</select>
-
-<select id="esp">
-<option>3mm</option>
-<option>6mm</option>
-</select>
-
-<input id="larg" placeholder="Largura mm (máx 400)">
-<input id="alt" placeholder="Altura mm (máx 400)">
-<input id="qtd" value="1">
-
-<button class="add" onclick="addItem()">Adicionar</button>
-<button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button id="btnWhats" class="whats" onclick="enviarWhats()">Enviar Pedido</button>
-
-</div>
-
-<div id="resumo" class="box"></div>
-
-</div>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
 
 <script>
 
-let itens = [];
-let pago = false;
-let pedidoNumero = Date.now();
-const WHATS = "5511946447040";
-
-// ================= CEP =================
-document.getElementById("cep").addEventListener("blur", function(){
-
- let c = this.value.replace(/\D/g,'');
-
- if(c.length !== 8) return;
-
- fetch("https://viacep.com.br/ws/"+c+"/json/")
- .then(r=>r.json())
- .then(d=>{
-   document.getElementById("endereco").value = d.logradouro || "";
-   document.getElementById("bairro").value = d.bairro || "";
-   document.getElementById("cidade").value = d.localidade || "";
- });
-
-});
-
-// ================= LIMITES =================
-document.getElementById("larg").addEventListener("input", function(){
- if(this.value > 400) this.value = 400;
-});
-
-document.getElementById("alt").addEventListener("input", function(){
- if(this.value > 400) this.value = 400;
-});
-
-// ================= ADD ITEM =================
-function addItem(){
-
- if(!cliente.value || !email.value || !cep.value || !numero.value){
-   alert("Preencha os dados do cliente");
-   return;
- }
-
- let l = Number(larg.value);
- let a = Number(alt.value);
- let q = Number(qtd.value);
-
- if(!l || !a || !q){
-   alert("Preencha corretamente");
-   return;
- }
-
- let valor = ((l*a)/100)*0.1*q + 2;
-
- itens.push({
-   servico: servico.value,
-   material: material.value,
-   esp: esp.value,
-   l,a,q,valor
- });
-
- render();
+// 🔥 CONFIG FIREBASE (USA O SEU)
+const firebaseConfig = {
+  apiKey: "SUA_KEY",
+  authDomain: "SEU_DOMINIO",
+  projectId: "firestore-database-9b92d"
 }
 
-// ================= RENDER =================
-function render(){
+firebase.initializeApp(firebaseConfig)
+const db = firebase.firestore()
 
- let total = 0;
+// 🔥 LISTAR PEDIDOS
+db.collection("pedidos").onSnapshot(snapshot=>{
 
- let html = `📦 Pedido ${pedidoNumero}<br><br>
+ const div = document.getElementById("lista")
+ div.innerHTML = ""
 
-<b>Cliente:</b><br>
-${cliente.value}<br>
-${email.value}<br>
-${endereco.value}, ${numero.value}<br>
-${bairro.value} - ${cidade.value}<br><br>
-`;
+ snapshot.forEach(doc=>{
 
- itens.forEach((i,x)=>{
-   total += i.valor;
+  const p = doc.data()
 
-   html += `${x+1}) ${i.servico}<br>
-${i.material} | Esp:${i.esp}<br>
-${i.l}x${i.a} mm | Qtd:${i.q}<br>
-R$ ${i.valor.toFixed(2)}<br><br>`;
- });
+  div.innerHTML += `
+    <div class="card">
+      <b>${p.cliente.nome}</b><br>
+      Total: R$ ${p.total}<br>
+      Status: ${p.status}<br>
+      Pagamento: ${p.pagamento}<br>
 
- let desc = total * 0.05;
- let final = total - desc;
-
- html += `Subtotal: R$ ${total.toFixed(2)}<br>
-Desconto PIX: -R$ ${desc.toFixed(2)}<br>
-<b>Total: R$ ${final.toFixed(2)}</b><br><br>`;
-
- document.getElementById("resumo").innerHTML = html;
-}
-
-// ================= GERAR PIX =================
-function gerarPix(){
-
- if(itens.length === 0){
-   alert("Adicione item");
-   return;
- }
-
- let total = itens.reduce((s,i)=>s+i.valor,0);
- let final = Number((total - total*0.05).toFixed(2));
-
- document.getElementById("resumo").innerHTML += "<br>Gerando PIX...";
-
- fetch("https://pix-romer-art.onrender.com/pix",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({
-     valor: final,
-     email: email.value
-   })
+      <button onclick="update('${doc.id}','produzindo')">Produção</button>
+      <button onclick="update('${doc.id}','enviado')">Enviado</button>
+    </div>
+  `
  })
- .then(r=>r.json())
- .then(data=>{
 
-   document.getElementById("resumo").innerHTML += `
-   <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
-   <textarea style="width:100%">${data.qr_code}</textarea><br>
-   <b id="status">Aguardando pagamento...</b>
-   `;
+})
 
-   // 🔥 SALVAR PEDIDO NO SERVIDOR (PASSO 2)
-   fetch("https://pix-romer-art.onrender.com/pedido",{
-     method:"POST",
-     headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({
-       cliente: cliente.value,
-       total: final,
-       itens: itens,
-       mpId: data.id
-     })
-   });
-
-   verificar(data.id);
- });
-}
-
-// ================= STATUS =================
-function verificar(id){
-
- let t = setInterval(()=>{
-
-   fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now())
-   .then(r=>r.json())
-   .then(d=>{
-
-     if(d.status === "approved"){
-
-       document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
-       document.getElementById("btnWhats").style.display = "block";
-       pago = true;
-
-       clearInterval(t);
-     }
-
-   });
-
- },3000);
-}
-
-// ================= WHATS =================
-function enviarWhats(){
-
- if(!pago){
-   alert("Pagamento não confirmado");
-   return;
- }
-
- window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
+// 🔄 ATUALIZAR STATUS
+function update(id,status){
+  db.collection("pedidos").doc(id).update({status})
 }
 
 </script>
