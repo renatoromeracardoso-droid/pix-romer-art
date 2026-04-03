@@ -10,7 +10,7 @@ const pagamentos = {}
 
 const MP_TOKEN = process.env.MP_TOKEN
 
-// 🚀 GERAR PIX
+// 🔥 GERAR PIX
 app.post("/pix", async (req,res)=>{
 
  try{
@@ -41,7 +41,7 @@ app.post("/pix", async (req,res)=>{
   const data = response.data
 
   pagamentos[pedidoId] = {
-   status: data.status, // 🔥 vem como pending
+   status: data.status, // pending
    mpId: data.id
   }
 
@@ -58,16 +58,16 @@ app.post("/pix", async (req,res)=>{
 })
 
 
-// 🔎 STATUS REAL (CONSULTA NO MERCADO PAGO)
+// 🔎 STATUS REAL (consulta direto no Mercado Pago)
 app.get("/status/:id", async (req,res)=>{
 
- const pedido = pagamentos[req.params.id]
-
- if(!pedido){
-  return res.json({status:"pending"})
- }
-
  try{
+
+  const pedido = pagamentos[req.params.id]
+
+  if(!pedido){
+    return res.json({status:"pending"})
+  }
 
   const response = await axios.get(
    `https://api.mercadopago.com/v1/payments/${pedido.mpId}`,
@@ -85,17 +85,59 @@ app.get("/status/:id", async (req,res)=>{
   res.json({status})
 
  }catch(e){
-  console.log("Erro status", e.response?.data || e.message)
+  console.log("Erro status:", e.response?.data || e.message)
   res.json({status:"pending"})
  }
 
 })
 
 
-// 🔔 WEBHOOK (OPCIONAL)
-app.post("/webhook",(req,res)=>{
- console.log("Webhook recebido")
- res.sendStatus(200)
+// 🔔 WEBHOOK (ATUALIZA AUTOMATICAMENTE)
+app.post("/webhook", async (req,res)=>{
+
+ try{
+
+  const body = req.body
+
+  if(body.type === "payment"){
+
+   const paymentId = body.data.id
+
+   const response = await axios.get(
+    `https://api.mercadopago.com/v1/payments/${paymentId}`,
+    {
+     headers:{
+      Authorization: `Bearer ${MP_TOKEN}`
+     }
+    }
+   )
+
+   const status = response.data.status
+
+   console.log("STATUS REAL:", status)
+
+   Object.keys(pagamentos).forEach(key=>{
+    if(pagamentos[key].mpId == paymentId){
+      pagamentos[key].status = status
+      console.log("ATUALIZADO:", key)
+    }
+   })
+
+  }
+
+  res.sendStatus(200)
+
+ }catch(e){
+  console.log("Erro webhook:", e.response?.data || e.message)
+  res.sendStatus(500)
+ }
+
+})
+
+
+// 🔥 TESTE
+app.get("/", (req,res)=>{
+ res.send("Servidor rodando 🚀")
 })
 
 app.listen(10000,()=>console.log("Servidor rodando 🚀"))
