@@ -6,50 +6,49 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
+// 🔥 SEU ACCESS TOKEN
 mercadopago.configure({
-  access_token: process.env.MP_TOKEN
+  access_token: "SEU_ACCESS_TOKEN_AQUI"
 })
 
-// 🔥 GERAR PIX
+// GERAR PIX
 app.post("/pix", async (req, res) => {
+
   try {
 
-    let { valor } = req.body
+    let valor = Number(req.body.valor)
 
-    valor = Number(valor)
-
-    // 🔥 evita erro do Mercado Pago
-    if (!valor || valor < 5) {
-      valor = 5.00
+    if (!valor || valor <= 0) {
+      return res.status(400).json({ erro: "Valor inválido" })
     }
 
-    console.log("VALOR FINAL ENVIADO:", valor)
+    console.log("VALOR RECEBIDO:", valor)
 
     const pagamento = await mercadopago.payment.create({
-      transaction_amount: valor,
+      transaction_amount: Number(valor),
       description: "Pedido RomerArt",
       payment_method_id: "pix",
       payer: {
-        email: "cliente@romerart.com"
+        email: "teste@teste.com"
       }
     })
 
-    const dados = pagamento.body
-
     res.json({
-      id: dados.id,
-      qr_code_base64: dados.point_of_interaction.transaction_data.qr_code_base64,
-      copiaecola: dados.point_of_interaction.transaction_data.qr_code
+      id: pagamento.body.id,
+      qr_code_base64: pagamento.body.point_of_interaction.transaction_data.qr_code_base64,
+      copiaecola: pagamento.body.point_of_interaction.transaction_data.qr_code
     })
 
   } catch (erro) {
     console.log("ERRO PIX:", erro)
     res.status(500).json({ erro: erro.message })
   }
+
 })
 
-// 🔥 STATUS PIX
+// STATUS PIX
 app.get("/status/:id", async (req, res) => {
+
   try {
 
     const pagamento = await mercadopago.payment.findById(req.params.id)
@@ -59,10 +58,9 @@ app.get("/status/:id", async (req, res) => {
     })
 
   } catch (erro) {
-    res.status(500).json({ erro: "Erro status" })
+    res.status(500).json({ erro: erro.message })
   }
+
 })
 
-app.listen(10000, () => {
-  console.log("🚀 Servidor rodando na porta 10000")
-})
+app.listen(10000, () => console.log("🚀 Servidor rodando"))
