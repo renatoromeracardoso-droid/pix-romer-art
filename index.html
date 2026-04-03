@@ -2,252 +2,216 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RomerArt Pedidos</title>
 
 <style>
-body { font-family: Arial; background:#0f172a; color:white; padding:20px }
-.container { max-width:420px; margin:auto }
-
-input, select {
-  width:100%; padding:10px; margin:5px 0;
-  border-radius:5px; border:none
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
 }
-
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+  border: none;
+}
 button {
-  width:100%; padding:12px; margin-top:10px;
-  border:none; border-radius:5px; font-weight:bold; cursor:pointer
+  font-weight: bold;
 }
-
-.add{background:orange}
-.pix{background:green;color:white}
-.enviar{background:#22c55e;color:white}
-
-.card{
-  background:#1e293b;
-  padding:15px;
-  margin-top:20px;
-  border-radius:10px
+.add { background: orange }
+.pix { background: green; color: white }
+.enviar { background: #22c55e; color: white }
+.card {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 15px;
 }
 </style>
-
 </head>
 
 <body>
 
-<div class="container">
-
 <h2>🚀 RomerArt Pedidos</h2>
 
 <h3>Cliente</h3>
-<input id="nome" placeholder="Nome *">
-<input id="email" placeholder="Email *">
-<input id="cep" placeholder="CEP *">
-<input id="rua" placeholder="Rua *">
+<input id="nome" placeholder="Nome">
+<input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
+<input id="rua" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número *">
+<input id="numero" placeholder="Número">
 
 <h3>Pedido</h3>
-<select id="produto"><option>Corte</option></select>
-<select id="material"><option>MDF</option></select>
+<select id="tipo">
+  <option>Corte</option>
+</select>
 
-<input id="largura" placeholder="Largura mm">
-<input id="altura" placeholder="Altura mm">
-<input id="quantidade" placeholder="Quantidade">
+<select id="material">
+  <option>MDF</option>
+</select>
 
-<button class="add" onclick="adicionar()">Adicionar</button>
+<input id="largura" placeholder="Largura (mm)">
+<input id="altura" placeholder="Altura (mm)">
+<input id="qtd" placeholder="Quantidade">
+
+<button class="add" onclick="addItem()">Adicionar</button>
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button id="btnEnviar" class="enviar" disabled>Enviar Pedido</button>
+<button class="enviar" onclick="enviarPedido()">Enviar Pedido</button>
 
-<div class="card">
-<h3 id="pedidoId"></h3>
-<div id="resumo"></div>
-<h3 id="total"></h3>
-<p id="frete"></p>
-
-<img id="qrcode" width="200">
-<p id="pixCopiaCola"></p>
-<p id="status"></p>
-</div>
-
-</div>
+<div class="card" id="resumo"></div>
 
 <script>
 
 let itens = []
-let total = 0
-let pagamentoId = null
-let intervalo = null
-
-const CEP_BASE = "03822000"
-
-// 🔥 ID PEDIDO
-const pedidoNumero = "PED-" + Date.now()
-pedidoId.innerText = "Pedido: " + pedidoNumero
+let pixId = null
 
 // 🔥 CEP AUTOMÁTICO
-cep.addEventListener("blur", async () => {
-  const c = cep.value.replace("-", "")
+document.getElementById("cep").addEventListener("blur", async () => {
+  const cep = document.getElementById("cep").value.replace(/\D/g, "")
+  if (cep.length !== 8) return
 
-  if(c.length < 8) return
-
-  const res = await fetch(`https://viacep.com.br/ws/${c}/json/`)
+  const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
   const data = await res.json()
 
-  rua.value = data.logradouro || ""
-  bairro.value = data.bairro || ""
-  cidade.value = data.localidade || ""
+  document.getElementById("rua").value = data.logradouro
+  document.getElementById("bairro").value = data.bairro
+  document.getElementById("cidade").value = data.localidade
 })
 
-// 🔥 VALIDAÇÃO
-function validar(){
-  if(!nome.value || !email.value || !cep.value || !rua.value || !numero.value){
-    alert("Preencha todos os campos obrigatórios")
-    return false
-  }
-  return true
-}
+// 🔥 ADD ITEM
+function addItem() {
 
-// 🔥 ADICIONAR ITEM
-function adicionar(){
+  const largura = Number(document.getElementById("largura").value)
+  const altura = Number(document.getElementById("altura").value)
+  const qtd = Number(document.getElementById("qtd").value)
 
-  if(largura.value > 400 || altura.value > 400){
-    alert("Limite máximo: 400mm")
+  if (!largura || !altura || !qtd) {
+    alert("Preencha tudo")
     return
   }
 
-  const item = {
-    produto: produto.value,
-    material: material.value,
-    largura: Number(largura.value),
-    altura: Number(altura.value),
-    qtd: Number(quantidade.value),
-    valor: Number(quantidade.value) * 0.10
+  if (largura > 400 || altura > 400) {
+    alert("Limite máximo 400mm")
+    return
   }
 
-  itens.push(item)
+  const valor = (largura * altura * qtd) / 10000
+
+  itens.push({
+    largura, altura, qtd, valor
+  })
+
   atualizarResumo()
 }
 
-// 🔥 FRETE
-function calcularFrete(){
-  if(cep.value.replace("-", "") === CEP_BASE){
-    return 0
-  }
-  return 10
+// 🔥 TOTAL
+function calcularTotal() {
+  return itens.reduce((s, i) => s + i.valor, 0)
 }
 
-// 🔥 RESUMO COMPLETO
-function atualizarResumo(){
+// 🔥 RESUMO
+function atualizarResumo(status = "Aguardando pagamento") {
 
-  let html = `<b>Pedido:</b> ${pedidoNumero}<br><br>`
-  total = 0
+  const nome = document.getElementById("nome").value
+  const email = document.getElementById("email").value
+  const rua = document.getElementById("rua").value
+  const numero = document.getElementById("numero").value
+  const bairro = document.getElementById("bairro").value
+  const cidade = document.getElementById("cidade").value
 
-  itens.forEach((i, idx)=>{
-    html += `
-    ${idx+1}) ${i.produto} - ${i.material}<br>
-    ${i.largura}x${i.altura} mm | Qtd: ${i.qtd}<br>
-    R$ ${i.valor.toFixed(2)}<br><br>`
-    total += i.valor
+  let html = `<b>Cliente:</b> ${nome}<br>${email}<br>
+  <b>Endereço:</b> ${rua}, ${numero} - ${bairro} - ${cidade}<br><br>`
+
+  itens.forEach((i, index) => {
+    html += `${index+1}) ${i.largura}x${i.altura} | Qtd: ${i.qtd} | R$ ${i.valor.toFixed(2)}<br>`
   })
 
-  const freteValor = calcularFrete()
-  total += freteValor
+  const total = calcularTotal()
 
-  html += `<b>Frete:</b> ${freteValor === 0 ? "Grátis" : "R$ "+freteValor}<br>`
-  html += `<b>Total:</b> R$ ${total.toFixed(2)}<br>`
-  html += `<b>Status:</b> ${status.innerText || "Aguardando pagamento"}`
+  html += `<br><b>Total: R$ ${total.toFixed(2)}</b><br>`
+  html += `<b>Status:</b> ${status}<br>`
 
-  resumo.innerHTML = html
-  totalEl = document.getElementById("total")
-  totalEl.innerText = "Total: R$ " + total.toFixed(2)
+  html += `<img id="qrcode" width="200"><br>`
+  html += `<p id="pixCopia"></p>`
 
-  frete.innerText = freteValor === 0 ? "🚚 Frete grátis" : "🚚 Frete: R$ "+freteValor
+  document.getElementById("resumo").innerHTML = html
 }
 
-// 🔥 PIX
-async function gerarPix(){
+// 🔥 GERAR PIX
+async function gerarPix() {
 
-  if(itens.length === 0){
-    alert("Adicione itens primeiro")
-    return
-  }
+  const total = calcularTotal()
 
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({valor: total})
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ valor: total })
   })
 
   const data = await res.json()
 
-  pagamentoId = data.id
-
-  qrcode.src = "data:image/png;base64," + data.qr_code_base64
-  pixCopiaCola.innerText = data.copiaecola
-  status.innerText = "⏳ Aguardando pagamento..."
+  pixId = data.id
 
   atualizarResumo()
 
-  intervalo = setInterval(verificarStatus, 3000)
+  document.getElementById("qrcode").src =
+    "data:image/png;base64," + data.qr_code_base64
+
+  document.getElementById("pixCopia").innerText =
+    data.copiaecola
+
+  verificarPagamento()
 }
 
-// 🔥 STATUS
-async function verificarStatus(){
+// 🔥 VERIFICAR STATUS
+function verificarPagamento() {
 
-  const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
-  const data = await res.json()
+  const interval = setInterval(async () => {
 
-  if(data.status === "approved"){
-    clearInterval(intervalo)
-    status.innerText = "✅ Pagamento aprovado"
-    atualizarResumo()
-    btnEnviar.disabled = false
-  }
+    const res = await fetch(`https://pix-romer-art.onrender.com/status/${pixId}`)
+    const data = await res.json()
+
+    if (data.status === "approved") {
+      atualizarResumo("Pagamento aprovado ✅")
+      clearInterval(interval)
+    }
+
+  }, 5000)
 }
 
 // 🔥 ENVIAR PEDIDO
-btnEnviar.onclick = async () => {
-
-  if(!validar()) return
+async function enviarPedido() {
 
   const dados = {
-    pedido: pedidoNumero,
-    nome: nome.value,
-    email: email.value,
-    cep: cep.value,
-    rua: rua.value,
-    bairro: bairro.value,
-    cidade: cidade.value,
-    numero: numero.value,
-    total,
-    itens,
-    status: "pago"
+    nome: document.getElementById("nome").value,
+    email: document.getElementById("email").value,
+    cep: document.getElementById("cep").value,
+    rua: document.getElementById("rua").value,
+    bairro: document.getElementById("bairro").value,
+    cidade: document.getElementById("cidade").value,
+    numero: document.getElementById("numero").value,
+    total: calcularTotal(),
+    itens: itens,
+    status: "Pedido enviado"
   }
 
-  // 🔥 SALVAR PLANILHA
   await fetch("https://script.google.com/macros/s/AKfycbyoE1fckemtWTKY6KNkrvnsZWUXkvDsmmjpPe2AKoZK1Vk52YzdDLvdDz6UVpqoYPDr/exec", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
+    method: "POST",
     body: JSON.stringify(dados)
   })
 
   // 🔥 WHATSAPP
-  let msg = `📦 PEDIDO ${pedidoNumero}\n\n`
-  msg += `👤 ${dados.nome}\n📧 ${dados.email}\n`
-  msg += `📍 ${dados.rua}, ${dados.numero} - ${dados.bairro} - ${dados.cidade}\n\n`
+  const texto = encodeURIComponent(
+    `Pedido RomerArt\nCliente: ${dados.nome}\nTotal: R$ ${dados.total}`
+  )
 
-  itens.forEach((i, idx)=>{
-    msg += `${idx+1}) ${i.produto} ${i.material}\n`
-    msg += `${i.largura}x${i.altura} mm | Qtd ${i.qtd}\n`
-    msg += `R$ ${i.valor.toFixed(2)}\n\n`
-  })
-
-  msg += `💰 Total: R$ ${total.toFixed(2)}\n`
-  msg += `🚚 ${calcularFrete() === 0 ? "Frete grátis" : "Frete pago"}\n`
-  msg += `✅ Pago`
-
-  window.open(`https://wa.me/5511946447040?text=${encodeURIComponent(msg)}`)
+  window.open(`https://wa.me/5511946447040?text=${texto}`)
 
   alert("Pedido enviado 🚀")
 }
