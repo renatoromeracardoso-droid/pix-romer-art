@@ -1,12 +1,11 @@
 import express from "express";
-import fetch from "node-fetch";
 import admin from "firebase-admin";
 import fs from "fs";
 
 const app = express();
 app.use(express.json());
 
-// 🔥 FIREBASE VIA SECRET FILE
+// 🔥 FIREBASE (SECRET FILE)
 const serviceAccount = JSON.parse(
   fs.readFileSync("/etc/secrets/firebase.json", "utf8")
 );
@@ -44,6 +43,13 @@ app.post("/pix", async (req, res) => {
 
     const data = await response.json();
 
+    // 🔥 SALVA PEDIDO NO FIREBASE
+    await db.collection("pedidos").doc(pedidoId.toString()).set({
+      status: "pending",
+      valor: valor,
+      criadoEm: new Date()
+    });
+
     res.json({
       qr: data.point_of_interaction.transaction_data.qr_code_base64,
       copia: data.point_of_interaction.transaction_data.qr_code
@@ -56,9 +62,10 @@ app.post("/pix", async (req, res) => {
 });
 
 
-// 🚨 WEBHOOK (ATUALIZA FIREBASE)
+// 🚨 WEBHOOK MERCADO PAGO
 app.post("/webhook", async (req, res) => {
   try {
+
     const paymentId = req.query["data.id"];
 
     if (!paymentId) return res.sendStatus(200);
@@ -81,7 +88,7 @@ app.post("/webhook", async (req, res) => {
 
     const pedidoId = descricao.replace("Pedido ", "");
 
-    // 🔥 ATUALIZA STATUS NO FIREBASE
+    // 🔥 ATUALIZA FIREBASE
     await db.collection("pedidos").doc(pedidoId).set({
       status: status === "approved" ? "approved" : "pending",
       atualizadoEm: new Date()
@@ -96,7 +103,29 @@ app.post("/webhook", async (req, res) => {
 });
 
 
-// 🚀 TESTE (OPCIONAL)
+// 🔎 CONSULTAR STATUS (USADO NO FRONT)
+app.get("/status/:id", async (req, res) => {
+
+  try {
+
+    const id = req.params.id;
+
+    const doc = await db.collection("pedidos").doc(id).get();
+
+    if (!doc.exists) {
+      return res.json({ status: "pending" });
+    }
+
+    res.json({ status: doc.data().status });
+
+  } catch (e) {
+    res.json({ status: "pending" });
+  }
+
+});
+
+
+// 🟢 TESTE
 app.get("/", (req, res) => {
   res.send("Servidor rodando 🚀");
 });
