@@ -50,13 +50,13 @@ button{
 <div class="card">
 <h3>Cliente</h3>
 
-<input id="nome" placeholder="Nome" required>
-<input id="email" placeholder="Email" required>
-<input id="cep" placeholder="CEP" required>
+<input id="nome" placeholder="Nome">
+<input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
 <input id="rua" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número" required>
+<input id="numero" placeholder="Número">
 
 </div>
 
@@ -76,9 +76,9 @@ button{
 <option value="Acrílico">Acrílico</option>
 </select>
 
-<input id="largura" type="number" placeholder="Largura (mm)" min="1">
-<input id="altura" type="number" placeholder="Altura (mm)" min="1">
-<input id="quantidade" type="number" placeholder="Quantidade" min="1">
+<input id="largura" type="number" placeholder="Largura (mm)">
+<input id="altura" type="number" placeholder="Altura (mm)">
+<input id="quantidade" type="number" placeholder="Quantidade">
 
 <button class="btn-add" onclick="addItem()">Adicionar</button>
 <button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
@@ -105,10 +105,13 @@ button{
 
 let itens = []
 let total = 0
-let statusPagamento = "pending"
+let statusPagamentoAtual = "idle"
 let pedidoId = null
 
-// 🔥 VALIDAÇÃO
+const LIMITE_LARGURA = 300
+const LIMITE_ALTURA = 300
+
+// VALIDAÇÃO
 function validarCampos(){
 
   if(!nome.value || !email.value || !cep.value || !numero.value){
@@ -121,10 +124,20 @@ function validarCampos(){
     return false
   }
 
+  if(Number(largura.value) > LIMITE_LARGURA){
+    alert(`Máx largura: ${LIMITE_LARGURA}mm`)
+    return false
+  }
+
+  if(Number(altura.value) > LIMITE_ALTURA){
+    alert(`Máx altura: ${LIMITE_ALTURA}mm`)
+    return false
+  }
+
   return true
 }
 
-// ➕ ADD ITEM
+// ADD ITEM
 function addItem(){
 
   if(!validarCampos()) return
@@ -139,11 +152,10 @@ function addItem(){
   }
 
   itens.push(item)
-
   atualizarResumo()
 }
 
-// 🔄 RESUMO BONITO
+// RESUMO
 function atualizarResumo(){
 
   const div = document.getElementById("resumo")
@@ -165,9 +177,11 @@ function atualizarResumo(){
   })
 
   totalDiv.innerHTML = `<b>Total: R$ ${total.toFixed(2)}</b>`
+
+  atualizarStatusUI()
 }
 
-// ⚡ PIX
+// PIX
 async function gerarPix(){
 
   if(itens.length === 0){
@@ -188,12 +202,13 @@ async function gerarPix(){
   qrcode.src = "data:image/png;base64," + data.qr
   copiaPix.value = data.copia
 
-  statusPagamento = "pending"
-  atualizarStatus()
+  statusPagamentoAtual = "pending"
+  atualizarStatusUI()
+
   verificarPagamento()
 }
 
-// 🔎 STATUS
+// VERIFICAR PAGAMENTO
 function verificarPagamento(){
 
   const intervalo = setInterval(async()=>{
@@ -202,33 +217,41 @@ function verificarPagamento(){
     const data = await res.json()
 
     if(data.status === "approved"){
-      statusPagamento = "approved"
-      atualizarStatus()
+      statusPagamentoAtual = "approved"
+      atualizarStatusUI()
       clearInterval(intervalo)
     }
 
   },3000)
 }
 
-// 🎯 STATUS UI
-function atualizarStatus(){
+// STATUS UI
+function atualizarStatusUI(){
 
-  if(statusPagamento === "pending"){
-    statusPagamento.innerHTML = "⏳ Aguardando pagamento..."
+  const statusDiv = document.getElementById("statusPagamento")
+  const btnEnviar = document.getElementById("btnEnviar")
+
+  if(statusPagamentoAtual === "idle"){
+    statusDiv.innerHTML = ""
     btnEnviar.disabled = true
   }
 
-  if(statusPagamento === "approved"){
-    statusPagamento.innerHTML = "✅ Pagamento aprovado"
+  if(statusPagamentoAtual === "pending"){
+    statusDiv.innerHTML = "⏳ Aguardando pagamento..."
+    btnEnviar.disabled = true
+  }
+
+  if(statusPagamentoAtual === "approved"){
+    statusDiv.innerHTML = "✅ Pagamento aprovado"
     btnEnviar.disabled = false
   }
 }
 
-// 🚀 ENVIAR
+// ENVIAR PEDIDO
 async function enviarPedido(){
 
-  if(statusPagamento !== "approved"){
-    alert("Aguardando pagamento")
+  if(statusPagamentoAtual !== "approved"){
+    alert("Pagamento não confirmado")
     return
   }
 
@@ -256,7 +279,7 @@ async function enviarPedido(){
   alert("Pedido enviado 🚀")
 }
 
-// 📦 CEP AUTOMÁTICO (CORRIGIDO)
+// CEP AUTOMÁTICO
 cep.addEventListener("blur", async ()=>{
 
   if(cep.value.length < 8) return
