@@ -29,7 +29,7 @@ app.post("/pix", async (req,res)=>{
   const response = await axios.post(
    "https://api.mercadopago.com/v1/payments",
    {
-    transaction_amount: Number(valor),
+    transaction_amount: Number(parseFloat(valor).toFixed(2)),
     description: "Pedido Romer Art",
     payment_method_id: "pix",
     payer:{ email:"teste@teste.com" }
@@ -37,6 +37,7 @@ app.post("/pix", async (req,res)=>{
    {
     headers:{
      Authorization:`Bearer ${MP_TOKEN}`,
+     "Content-Type":"application/json",
      "X-Idempotency-Key": pedidoId
     }
    }
@@ -55,7 +56,7 @@ app.post("/pix", async (req,res)=>{
   })
 
  }catch(e){
-  console.log(e.response?.data || e.message)
+  console.log("ERRO PIX:", e.response?.data || e.message)
   res.status(500).json({erro:true})
  }
 })
@@ -64,68 +65,89 @@ app.post("/pix", async (req,res)=>{
 // 🔎 STATUS
 app.get("/status/:id", async (req,res)=>{
 
- const pedido = pagamentos[req.params.id]
+ try{
 
- if(!pedido) return res.json({status:"pending"})
+  const pedido = pagamentos[req.params.id]
 
- const response = await axios.get(
-  `https://api.mercadopago.com/v1/payments/${pedido.mpId}`,
-  { headers:{ Authorization:`Bearer ${MP_TOKEN}` } }
- )
+  if(!pedido) return res.json({status:"pending"})
 
- const status = response.data.status
+  const response = await axios.get(
+    `https://api.mercadopago.com/v1/payments/${pedido.mpId}`,
+    { headers:{ Authorization:`Bearer ${MP_TOKEN}` } }
+  )
 
- pagamentos[req.params.id].status = status
+  const status = response.data.status
 
- res.json({status})
+  pagamentos[req.params.id].status = status
+
+  res.json({status})
+
+ }catch(e){
+  console.log("Erro status:", e.message)
+  res.json({status:"pending"})
+ }
 })
 
 
 // 🔔 WEBHOOK
 app.post("/webhook", async (req,res)=>{
 
- if(req.body.type === "payment"){
+ try{
 
-  const paymentId = req.body.data.id
+  if(req.body.type === "payment"){
 
-  const response = await axios.get(
-   `https://api.mercadopago.com/v1/payments/${paymentId}`,
-   { headers:{ Authorization:`Bearer ${MP_TOKEN}` } }
-  )
+    const paymentId = req.body.data.id
 
-  const status = response.data.status
+    const response = await axios.get(
+      `https://api.mercadopago.com/v1/payments/${paymentId}`,
+      { headers:{ Authorization:`Bearer ${MP_TOKEN}` } }
+    )
 
-  Object.keys(pagamentos).forEach(async key=>{
-    if(pagamentos[key].mpId == paymentId){
+    const status = response.data.status
 
-      pagamentos[key].status = status
+    for(const key in pagamentos){
+      if(pagamentos[key].mpId == paymentId){
 
-      // 🔥 ATUALIZA FIREBASE
-      await db.collection("pedidos").doc(key).update({
-        pagamento: status
-      })
+        pagamentos[key].status = status
 
+        await db.collection("pedidos").doc(key).update({
+          pagamento: status
+        })
+      }
     }
-  })
- }
 
- res.sendStatus(200)
+  }
+
+  res.sendStatus(200)
+
+ }catch(e){
+  console.log("Erro webhook:", e.message)
+  res.sendStatus(500)
+ }
 })
 
 
 // 🚀 SALVAR PEDIDO
 app.post("/pedido", async (req,res)=>{
 
- const pedido = req.body
+ try{
 
- await db.collection("pedidos").doc(pedido.id).set({
-  ...pedido,
-  status: "novo",
-  pagamento: "pending",
-  criadoEm: new Date()
- })
+  const pedido = req.body
 
- res.json({ok:true})
+  await db.collection("pedidos").doc(pedido.id).set({
+    ...pedido,
+    status: "novo",
+    pagamento: "approved",
+    criadoEm: new Date()
+  })
+
+  res.json({ok:true})
+
+ }catch(e){
+  console.log("Erro salvar pedido:", e.message)
+  res.status(500).json({erro:true})
+ }
 })
+
 
 app.listen(10000,()=>console.log("Servidor rodando 🚀"))
