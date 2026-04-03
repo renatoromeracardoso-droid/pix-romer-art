@@ -12,7 +12,10 @@ body {
   padding: 20px;
 }
 
-.container { max-width: 500px; margin: auto; }
+.container {
+  max-width: 500px;
+  margin: auto;
+}
 
 input, select, button {
   width: 100%;
@@ -20,6 +23,10 @@ input, select, button {
   margin: 5px 0;
   border-radius: 8px;
   border: none;
+}
+
+button:disabled {
+  opacity: 0.5;
 }
 
 .btn-add { background: orange; }
@@ -79,6 +86,7 @@ input, select, button {
 let itens = []
 let total = 0
 let frete = 0
+let desconto = 0
 let pagamentoId = null
 let pedidoNumero = "PED-" + Date.now()
 
@@ -96,25 +104,20 @@ cep.onblur = async () => {
   calcularFrete()
 }
 
-// FRETE (simples com regra 10km grátis)
+// FRETE
 function calcularFrete() {
-
-  // simulação simples
-  const cepCliente = cep.value
-
-  if (cepCliente.startsWith("03822")) {
+  if (cep.value.startsWith("03822")) {
     frete = 0
   } else {
     frete = 15
   }
-
 }
 
-// adicionar item
+// ADD ITEM
 function addItem() {
 
   if (largura.value > 400 || altura.value > 400) {
-    alert("Limite máximo 400mm")
+    alert("Máx 400mm")
     return
   }
 
@@ -141,8 +144,11 @@ function addItem() {
   btnPix.disabled = false
 }
 
-// resumo
+// RESUMO
 function atualizarResumo() {
+
+  desconto = (total + frete) * 0.05
+  const totalFinal = total + frete - desconto
 
   let html = `<b>Pedido: ${pedidoNumero}</b><br><br>`
 
@@ -160,22 +166,20 @@ function atualizarResumo() {
 
   html += `<b>Subtotal: R$ ${total.toFixed(2)}</b><br>`
   html += `<b>Frete: ${frete === 0 ? "Grátis" : "R$ " + frete}</b><br>`
-
-  const totalFinal = total + frete
-
+  html += `<b>Desconto (5%): -R$ ${desconto.toFixed(2)}</b><br>`
   html += `<b>Total Final: R$ ${totalFinal.toFixed(2)}</b><br>`
 
   resumo.innerHTML = html
 }
 
-// gerar PIX
+// GERAR PIX
 async function gerarPix() {
 
-  const totalFinal = total + frete
+  const totalFinal = total + frete - desconto
 
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ valor: totalFinal })
   })
 
@@ -184,40 +188,53 @@ async function gerarPix() {
   pagamentoId = data.id
 
   resumo.innerHTML += `
-  <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
-  <small>${data.copiaecola}</small>
+  <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200">
+  <br><small>${data.copiaecola}</small>
   <br id="statusPix">⏳ Aguardando pagamento...
   `
 
   verificarPagamento()
 }
 
-// STATUS CORRIGIDO
+// STATUS PIX (ROBUSTO)
 function verificarPagamento() {
+
+  let tentativas = 0
 
   const interval = setInterval(async () => {
 
-    const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
-    const data = await res.json()
+    tentativas++
 
-    console.log("STATUS:", data.status)
+    try {
+      const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
+      const data = await res.json()
 
-    if (data.status === "approved") {
+      console.log("STATUS:", data.status)
 
-      clearInterval(interval)
+      if (data.status === "approved") {
 
-      document.getElementById("statusPix").innerHTML = "✅ Pago"
+        clearInterval(interval)
 
-      btnEnviar.disabled = false
+        document.getElementById("statusPix").innerHTML = "✅ Pagamento aprovado"
+
+        btnEnviar.disabled = false
+      }
+
+      if (tentativas > 10) {
+        document.getElementById("statusPix").innerHTML = "⏳ Confirmando pagamento..."
+      }
+
+    } catch (e) {
+      console.log("erro", e)
     }
 
-  }, 5000)
+  }, 4000)
 }
 
-// enviar pedido
+// ENVIAR PEDIDO
 async function enviarPedido() {
 
-  const totalFinal = total + frete
+  const totalFinal = total + frete - desconto
 
   const pedido = {
     id: pedidoNumero,
@@ -227,6 +244,8 @@ async function enviarPedido() {
       cidade: cidade.value
     },
     total: totalFinal,
+    desconto,
+    frete,
     itens
   }
 
@@ -236,13 +255,17 @@ async function enviarPedido() {
   })
 
   let msg = `🧾 Pedido ${pedidoNumero}\n\n`
+
   msg += `${nome.value}\n${cidade.value}\n\n`
 
   itens.forEach(i => {
     msg += `${i.servico} - ${i.material}\n${i.largura}x${i.altura} | ${i.qtd}\n\n`
   })
 
-  msg += `💰 Total: R$ ${totalFinal.toFixed(2)}`
+  msg += `Subtotal: R$ ${total.toFixed(2)}\n`
+  msg += `Frete: ${frete === 0 ? "Grátis" : frete}\n`
+  msg += `Desconto: R$ ${desconto.toFixed(2)}\n`
+  msg += `Total: R$ ${totalFinal.toFixed(2)}`
 
   window.open(`https://wa.me/5511946447040?text=${encodeURIComponent(msg)}`)
 
