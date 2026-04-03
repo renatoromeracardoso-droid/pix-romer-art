@@ -35,7 +35,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <div class="card">
 <h3>Pedido</h3>
 
-<select id="servico">
+<select id="servico" onchange="ajustarCampos()">
 <option>Corte</option>
 <option>Gravação</option>
 <option>Corte + Gravação</option>
@@ -49,6 +49,12 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <select id="esp">
 <option>3mm</option>
 <option>6mm</option>
+</select>
+
+<select id="produto" style="display:none;">
+<option>Chaveiro</option>
+<option>Placa</option>
+<option>Quadro</option>
 </select>
 
 <input id="larg" placeholder="Largura mm (máx 400)">
@@ -73,6 +79,23 @@ let pago = false;
 let mpId = null;
 const WHATS = "5511946447040";
 
+// ================= AJUSTE CAMPOS =================
+function ajustarCampos(){
+
+ let s = document.getElementById("servico").value;
+
+ if(s === "Gravação"){
+   document.getElementById("produto").style.display = "block";
+   document.getElementById("material").style.display = "none";
+   document.getElementById("esp").style.display = "none";
+ } else {
+   document.getElementById("produto").style.display = "none";
+   document.getElementById("material").style.display = "block";
+   document.getElementById("esp").style.display = "block";
+ }
+
+}
+
 // ================= CEP =================
 document.getElementById("cep").addEventListener("blur", function() {
 
@@ -90,12 +113,13 @@ document.getElementById("cep").addEventListener("blur", function() {
 
 });
 
-// ================= ADD ITEM =================
+// ================= ADD =================
 function addItem(){
 
  let l = Number(document.getElementById("larg").value);
  let a = Number(document.getElementById("alt").value);
  let q = Number(document.getElementById("qtd").value);
+ let s = document.getElementById("servico").value;
 
  if(!l || !a || !q){
    alert("Preencha corretamente");
@@ -109,12 +133,19 @@ function addItem(){
 
  let valor = ((l*a)/100)*0.1*q + 2;
 
- itens.push({
-   servico: document.getElementById("servico").value,
-   material: document.getElementById("material").value,
-   esp: document.getElementById("esp").value,
+ let item = {
+   servico: s,
    l,a,q,valor
- });
+ };
+
+ if(s === "Gravação"){
+   item.produto = document.getElementById("produto").value;
+ } else {
+   item.material = document.getElementById("material").value;
+   item.esp = document.getElementById("esp").value;
+ }
+
+ itens.push(item);
 
  render();
 
@@ -138,10 +169,16 @@ function render(){
 
    total += i.valor;
 
-   html += (x+1) + ") " + i.servico + "<br>" +
-   i.material + " | Esp:" + i.esp + "<br>" +
-   i.l + "x" + i.a + " mm | Qtd:" + i.q + "<br>" +
-   "R$ " + i.valor.toFixed(2) + "<br><br>";
+   html += (x+1) + ") " + i.servico + "<br>";
+
+   if(i.servico === "Gravação"){
+     html += "Produto: " + i.produto + "<br>";
+   } else {
+     html += i.material + " | Esp:" + i.esp + "<br>";
+   }
+
+   html += i.l + "x" + i.a + " mm | Qtd:" + i.q + "<br>";
+   html += "R$ " + i.valor.toFixed(2) + "<br><br>";
 
  });
 
@@ -191,8 +228,7 @@ function gerarPix(){
 
    verificar();
 
- })
- .catch(()=> alert("Erro PIX"));
+ });
 
 }
 
