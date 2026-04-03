@@ -9,7 +9,6 @@ body{background:#0f172a;font-family:Arial;color:#fff;}
 .app{max-width:420px;margin:auto;padding:20px;}
 .card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
 input,select{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:none;}
-input.error{border:2px solid red;}
 button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;color:#fff;font-weight:bold;}
 .add{background:#f97316;}
 .pix{background:#16a34a;}
@@ -78,31 +77,15 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 let itens = [];
 let pago = false;
 let mpId = null;
+let intervalo = null;
+
 const WHATS = "5511946447040";
 
-// ================= VALIDAÇÃO =================
-function validarCampos(){
+// 🔒 GARANTE BOTÃO ESCONDIDO SEMPRE
+document.getElementById("btnWhats").style.display = "none";
 
- let campos = ["cliente","email","cep","numero"];
- let valido = true;
-
- campos.forEach(id=>{
-   let el = document.getElementById(id);
-
-   if(!el.value){
-     el.classList.add("error");
-     valido = false;
-   } else {
-     el.classList.remove("error");
-   }
- });
-
- return valido;
-}
-
-// ================= AJUSTAR CAMPOS =================
+// ================= CAMPOS =================
 function ajustarCampos(){
-
  if(servico.value === "Gravação"){
    produto.style.display = "block";
    material.style.display = "none";
@@ -112,14 +95,11 @@ function ajustarCampos(){
    material.style.display = "block";
    esp.style.display = "block";
  }
-
 }
 
 // ================= CEP =================
 cep.addEventListener("blur", function(){
-
  let c = this.value.replace(/\D/g,'');
-
  if(c.length !== 8) return;
 
  fetch("https://viacep.com.br/ws/"+c+"/json/")
@@ -129,25 +109,14 @@ cep.addEventListener("blur", function(){
    bairro.value = d.bairro || "";
    cidade.value = d.localidade || "";
  });
-
 });
 
-// ================= ADD ITEM =================
+// ================= ADD =================
 function addItem(){
-
- if(!validarCampos()){
-   alert("Preencha os campos obrigatórios");
-   return;
- }
 
  let l = Number(larg.value);
  let a = Number(alt.value);
  let q = Number(qtd.value);
-
- if(!l || !a || !q){
-   alert("Preencha medidas");
-   return;
- }
 
  if(l > 400 || a > 400){
    alert("Limite máximo 400mm");
@@ -162,14 +131,7 @@ function addItem(){
  };
 
  if(servico.value === "Gravação"){
-
-   if(!produto.value){
-     alert("Selecione o produto");
-     return;
-   }
-
    item.produto = produto.value;
-
  } else {
    item.material = material.value;
    item.esp = esp.value;
@@ -178,7 +140,6 @@ function addItem(){
  itens.push(item);
 
  render();
-
 }
 
 // ================= RENDER =================
@@ -194,7 +155,6 @@ function render(){
  bairro.value+" - "+cidade.value+"<br><br>";
 
  itens.forEach((i,x)=>{
-
    total += i.valor;
 
    html += (x+1)+") "+i.servico+"<br>";
@@ -207,7 +167,6 @@ function render(){
 
    html += i.l+"x"+i.a+" mm | Qtd:"+i.q+"<br>";
    html += "R$ "+i.valor.toFixed(2)+"<br><br>";
-
  });
 
  let desc = total*0.05;
@@ -218,7 +177,6 @@ function render(){
  html += "<b>Total: R$ "+final.toFixed(2)+"</b><br><br>";
 
  resumo.innerHTML = html;
-
 }
 
 // ================= PIX =================
@@ -229,12 +187,15 @@ function gerarPix(){
    return;
  }
 
+ // 🔒 RESET TOTAL
  pago = false;
+ mpId = null;
  btnWhats.style.display = "none";
+
+ if(intervalo) clearInterval(intervalo);
 
  let total = 0;
  itens.forEach(i=> total += i.valor);
-
  let final = Number((total-total*0.05).toFixed(2));
 
  resumo.innerHTML += "<br>Gerando PIX...";
@@ -258,53 +219,46 @@ function gerarPix(){
    "<b id='status'>Aguardando pagamento...</b>";
 
    verificar();
-
  });
-
 }
 
 // ================= STATUS =================
 function verificar(){
 
- let tentativas = 0;
-
- let t = setInterval(()=>{
+ intervalo = setInterval(()=>{
 
    fetch("https://pix-romer-art.onrender.com/status/"+mpId)
    .then(r=>r.json())
    .then(d=>{
 
+     console.log("STATUS:", d);
+
      if(d.status === "approved"){
-       status.innerHTML = "✅ PAGAMENTO APROVADO";
-       btnWhats.style.display = "block";
+
+       document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
+
        pago = true;
-       clearInterval(t);
+       btnWhats.style.display = "block";
+
+       clearInterval(intervalo);
      }
 
    });
 
-   tentativas++;
-
-   if(tentativas > 60){
-     clearInterval(t);
-   }
-
  },3000);
-
 }
 
 // ================= WHATS =================
 function enviarWhats(){
 
  if(!pago){
-   alert("⚠️ Aguarde confirmação do pagamento");
+   alert("⚠️ Pagamento não confirmado");
    return;
  }
 
  let txt = resumo.innerText;
 
  window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(txt));
-
 }
 
 </script>
