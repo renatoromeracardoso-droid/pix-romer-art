@@ -172,8 +172,12 @@ async function pix(){
 
   resumo.innerHTML += `
   <br><br><b>PIX:</b><br>
-  <img src="data:image/png;base64,${data.qr}">
-  <br>Aguardando pagamento...
+  <img src="data:image/png;base64,${data.qr}" style="width:250px"><br><br>
+
+  <input value="${data.copia}" style="width:100%;padding:10px" readonly>
+  <br><small>Copia e cola PIX</small>
+
+  <br><br>Aguardando pagamento...
   `;
 
   verificar();
@@ -185,7 +189,7 @@ async function pix(){
 }
 
 
-// 🔎 VERIFICAR STATUS
+// 🔎 VERIFICAR STATUS REAL
 function verificar(){
 
  const intervalo = setInterval(async()=>{
