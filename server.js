@@ -8,7 +8,7 @@ app.use(cors())
 
 const TOKEN = process.env.MP_TOKEN
 
-// ---------------- PIX ----------------
+// ------------------ PIX ------------------
 app.post("/pix", async (req, res) => {
   try {
 
@@ -25,17 +25,23 @@ app.post("/pix", async (req, res) => {
         description: "Pedido RomerArt",
         payment_method_id: "pix",
         payer: {
-          email: "teste@email.com"
+          email: "comprador@email.com"
         }
       })
     })
 
     const data = await response.json()
 
+    console.log("PIX GERADO:", data)
+
+    if (!data.id) {
+      return res.status(500).json({ erro: "Erro ao gerar PIX" })
+    }
+
     res.json({
-      id: data.id,
+      id: data.id, // 🔥 ID CORRETO
       status: data.status,
-      qr_code: data.point_of_interaction.transaction_data.qr_code,
+      copiaecola: data.point_of_interaction.transaction_data.qr_code,
       qr_code_base64: data.point_of_interaction.transaction_data.qr_code_base64
     })
 
@@ -45,7 +51,8 @@ app.post("/pix", async (req, res) => {
   }
 })
 
-// ---------------- STATUS (🔥 CORRETO MESMO) ----------------
+
+// ------------------ STATUS ------------------
 app.get("/status/:id", async (req, res) => {
   try {
 
@@ -60,10 +67,14 @@ app.get("/status/:id", async (req, res) => {
 
     const data = await response.json()
 
-    console.log("STATUS REAL:", data.status)
+    console.log("STATUS:", data)
+
+    if (!data || !data.status) {
+      return res.json({ status: "erro_api" })
+    }
 
     res.json({
-      status: data.status
+      status: data.status // pending | approved
     })
 
   } catch (error) {
@@ -72,11 +83,14 @@ app.get("/status/:id", async (req, res) => {
   }
 })
 
-// ---------------- SERVER ----------------
+
+// ------------------ TESTE ------------------
 app.get("/", (req, res) => {
   res.send("API funcionando 🚀")
 })
 
+
+// ------------------ SERVER ------------------
 app.listen(process.env.PORT || 10000, () => {
   console.log("Servidor rodando 🚀")
 })
