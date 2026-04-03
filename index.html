@@ -171,7 +171,6 @@ function addItem(){
    item.produto = produto.value;
 
  } else {
-
    item.material = material.value;
    item.esp = esp.value;
  }
@@ -230,6 +229,9 @@ function gerarPix(){
    return;
  }
 
+ pago = false;
+ btnWhats.style.display = "none";
+
  let total = 0;
  itens.forEach(i=> total += i.valor);
 
@@ -264,6 +266,8 @@ function gerarPix(){
 // ================= STATUS =================
 function verificar(){
 
+ let tentativas = 0;
+
  let t = setInterval(()=>{
 
    fetch("https://pix-romer-art.onrender.com/status/"+mpId)
@@ -279,6 +283,12 @@ function verificar(){
 
    });
 
+   tentativas++;
+
+   if(tentativas > 60){
+     clearInterval(t);
+   }
+
  },3000);
 
 }
@@ -287,7 +297,7 @@ function verificar(){
 function enviarWhats(){
 
  if(!pago){
-   alert("Pagamento não confirmado");
+   alert("⚠️ Aguarde confirmação do pagamento");
    return;
  }
 
