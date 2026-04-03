@@ -5,48 +5,22 @@
 <title>RomerArt Pedidos</title>
 
 <style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-  padding: 20px;
-}
-
-.container {
-  max-width: 400px;
-  margin: auto;
-}
-
+body { font-family: Arial; background:#0f172a; color:white; padding:20px }
+.container { max-width:420px; margin:auto }
 input, select {
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  border-radius: 5px;
-  border: none;
+  width:100%; padding:10px; margin:5px 0;
+  border-radius:5px; border:none
 }
-
 button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
+  width:100%; padding:12px; margin-top:10px;
+  border:none; border-radius:5px; font-weight:bold
 }
-
-.add { background: orange; }
-.pix { background: green; color: white; }
-.enviar { background: #22c55e; color: white; }
-
-.card {
-  background: #1e293b;
-  padding: 15px;
-  margin-top: 20px;
-  border-radius: 10px;
-}
-
+.add{background:orange}
+.pix{background:green;color:white}
+.enviar{background:#22c55e;color:white}
+.card{background:#1e293b;padding:15px;margin-top:20px;border-radius:10px}
 </style>
+
 </head>
 
 <body>
@@ -58,34 +32,33 @@ button {
 <h3>Cliente</h3>
 <input id="nome" placeholder="Nome">
 <input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
+<input id="rua" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
 
 <h3>Pedido</h3>
-<select id="produto">
-  <option>Corte</option>
-</select>
-
-<select id="material">
-  <option>MDF</option>
-</select>
-
+<select id="produto"><option>Corte</option></select>
+<select id="material"><option>MDF</option></select>
 <input id="largura" placeholder="Largura mm">
 <input id="altura" placeholder="Altura mm">
 <input id="quantidade" placeholder="Quantidade">
 
 <button class="add" onclick="adicionar()">Adicionar</button>
-
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
-
 <button id="btnEnviar" class="enviar" disabled>Enviar Pedido</button>
 
 <div class="card">
-  <h3>Resumo</h3>
-  <div id="resumo"></div>
-  <h3 id="total">R$ 0.00</h3>
+<h3 id="pedidoId"></h3>
+<div id="resumo"></div>
+<h3 id="total">R$ 0.00</h3>
 
-  <img id="qrcode" width="200">
-  <p id="pixCopiaCola"></p>
-  <p id="status"></p>
+<p id="frete"></p>
+
+<img id="qrcode" width="200">
+<p id="pixCopiaCola"></p>
+<p id="status"></p>
 </div>
 
 </div>
@@ -97,19 +70,40 @@ let total = 0
 let pagamentoId = null
 let intervalo = null
 
+const CEP_BASE = "03822000"
+
+// 🔥 ID PEDIDO
+const pedidoNumero = "PED-" + Date.now()
+document.getElementById("pedidoId").innerText = "Pedido: " + pedidoNumero
+
 function adicionar() {
 
-  const produto = document.getElementById("produto").value
-  const material = document.getElementById("material").value
-  const largura = document.getElementById("largura").value
-  const altura = document.getElementById("altura").value
-  const qtd = Number(document.getElementById("quantidade").value)
+  if (largura.value > 400 || altura.value > 400) {
+    alert("Limite máximo: 400mm")
+    return
+  }
 
-  const valor = qtd * 0.10
+  const item = {
+    produto: produto.value,
+    material: material.value,
+    largura: Number(largura.value),
+    altura: Number(altura.value),
+    qtd: Number(quantidade.value),
+    valor: Number(quantidade.value) * 0.10
+  }
 
-  itens.push({ produto, material, largura, altura, qtd, valor })
-
+  itens.push(item)
   atualizarResumo()
+}
+
+function calcularFrete() {
+
+  // 🔥 SIMPLES (mesmo CEP = grátis)
+  if (cep.value.replace("-", "") === CEP_BASE) {
+    return 0
+  }
+
+  return 10
 }
 
 function atualizarResumo() {
@@ -117,65 +111,99 @@ function atualizarResumo() {
   let html = ""
   total = 0
 
-  itens.forEach((item, i) => {
+  itens.forEach((i, idx) => {
     html += `
-      <p>${i+1}) ${item.produto} - ${item.material}<br>
-      ${item.largura}x${item.altura} mm | Qtd: ${item.qtd}<br>
-      R$ ${item.valor.toFixed(2)}</p>
-    `
-    total += item.valor
+    <p>${idx+1}) ${i.produto} - ${i.material}<br>
+    ${i.largura}x${i.altura} mm | Qtd: ${i.qtd}<br>
+    R$ ${i.valor.toFixed(2)}</p>`
+    total += i.valor
   })
 
+  const freteValor = calcularFrete()
+  total += freteValor
+
   document.getElementById("resumo").innerHTML = html
-  document.getElementById("total").innerText = "R$ " + total.toFixed(2)
+  document.getElementById("total").innerText = "Total: R$ " + total.toFixed(2)
+
+  document.getElementById("frete").innerText =
+    freteValor === 0 ? "🚚 Frete grátis" : "🚚 Frete: R$ " + freteValor
 }
 
 
-// ---------------- PIX ----------------
+// PIX
 async function gerarPix() {
 
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      valor: total
-    })
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ valor: total })
   })
 
   const data = await res.json()
 
   pagamentoId = data.id
 
-  document.getElementById("qrcode").src =
-    "data:image/png;base64," + data.qr_code_base64
-
-  document.getElementById("pixCopiaCola").innerText = data.copiaecola
-  document.getElementById("status").innerText = "⏳ Aguardando pagamento..."
+  qrcode.src = "data:image/png;base64," + data.qr_code_base64
+  pixCopiaCola.innerText = data.copiaecola
+  status.innerText = "⏳ Aguardando pagamento..."
 
   intervalo = setInterval(verificarStatus, 3000)
 }
 
 
-// ---------------- STATUS ----------------
+// STATUS
 async function verificarStatus() {
-
-  if (!pagamentoId) return
 
   const res = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
   const data = await res.json()
 
-  console.log("STATUS:", data)
-
   if (data.status === "approved") {
-
     clearInterval(intervalo)
-
-    document.getElementById("status").innerText = "✅ Pagamento aprovado!"
-
-    document.getElementById("btnEnviar").disabled = false
+    status.innerText = "✅ Pagamento aprovado"
+    btnEnviar.disabled = false
   }
+}
+
+
+// ENVIAR
+btnEnviar.onclick = async () => {
+
+  const dados = {
+    pedido: pedidoNumero,
+    nome: nome.value,
+    email: email.value,
+    cep: cep.value,
+    rua: rua.value,
+    bairro: bairro.value,
+    cidade: cidade.value,
+    numero: numero.value,
+    total,
+    itens,
+    status: "pago"
+  }
+
+  await fetch("https://script.google.com/macros/s/AKfycbyoE1fckemtWTKY6KNkrvnsZWUXkvDsmmjpPe2AKoZK1Vk52YzdDLvdDz6UVpqoYPDr/exec", {
+    method:"POST",
+    body: JSON.stringify(dados)
+  })
+
+  let msg = `📦 *PEDIDO ${pedidoNumero}*\n\n`
+  msg += `👤 ${dados.nome}\n📧 ${dados.email}\n`
+  msg += `📍 ${dados.rua}, ${dados.numero} - ${dados.bairro}\n${dados.cidade}\n\n`
+
+  itens.forEach((i, idx)=>{
+    msg += `${idx+1}) ${i.produto} ${i.material}\n`
+    msg += `${i.largura}x${i.altura} mm | Qtd ${i.qtd}\n`
+    msg += `R$ ${i.valor.toFixed(2)}\n\n`
+  })
+
+  msg += `💰 Total: R$ ${total.toFixed(2)}\n`
+  msg += `🚚 ${calcularFrete() === 0 ? "Frete grátis" : "Frete pago"}\n`
+  msg += `✅ Pago`
+
+  window.open(`https://wa.me/5511946447040?text=${encodeURIComponent(msg)}`)
+
+  alert("Pedido enviado 🚀")
 }
 
 </script>
