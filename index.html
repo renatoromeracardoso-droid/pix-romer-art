@@ -1,26 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RomerArt Pedidos</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
+}
+input, button {
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: none;
+}
+button { font-weight: bold }
+.add { background: orange }
+.pix { background: green; color: white }
+.enviar { background: #22c55e; color: white }
+.card {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🚀 RomerArt Pedidos</h2>
+
+<h3>Cliente</h3>
+<input id="nome" placeholder="Nome">
+<input id="email" placeholder="Email">
+<input id="cep" placeholder="CEP">
+<input id="rua" placeholder="Rua">
+<input id="bairro" placeholder="Bairro">
+<input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
+
+<h3>Pedido</h3>
+<input id="largura" placeholder="Largura (mm)">
+<input id="altura" placeholder="Altura (mm)">
+<input id="qtd" placeholder="Quantidade">
+
+<button class="add" onclick="addItem()">Adicionar</button>
+<button class="pix" onclick="gerarPix()">Gerar PIX</button>
+<button class="enviar" onclick="enviarPedido()">Enviar Pedido</button>
+
+<div class="card" id="resumo"></div>
+
 <script>
 
 let itens = []
 let pixId = null
 let pedidoId = "PED-" + Date.now()
 
-// 🔥 VALIDAÇÃO FORTE
-function validar() {
+// 🔥 CEP automático
+cep.addEventListener("blur", async () => {
+  const c = cep.value.replace(/\D/g,"")
+  if (c.length !== 8) return
 
+  const res = await fetch(`https://viacep.com.br/ws/${c}/json/`)
+  const d = await res.json()
+
+  rua.value = d.logradouro || ""
+  bairro.value = d.bairro || ""
+  cidade.value = d.localidade || ""
+})
+
+// 🔥 Validação
+function validar() {
   if (!nome.value || !email.value || !cep.value || !numero.value) {
-    alert("Preencha todos os campos obrigatórios")
+    alert("Preencha os campos obrigatórios")
     return false
   }
 
   if (itens.length === 0) {
-    alert("Adicione pelo menos 1 item")
+    alert("Adicione itens")
     return false
   }
 
   return true
 }
 
-// 🔥 ADD ITEM (CORRIGIDO)
+// 🔥 Adicionar item
 function addItem() {
 
   const l = Number(largura.value)
@@ -28,7 +98,7 @@ function addItem() {
   const q = Number(qtd.value)
 
   if (!l || !a || !q) {
-    alert("Preencha todos os campos do item")
+    alert("Preencha largura, altura e quantidade")
     return
   }
 
@@ -37,27 +107,21 @@ function addItem() {
     return
   }
 
-  // 🔥 REGRA MELHORADA
   const area = (l * a) / 10000
-  const valorUnit = 0.10 // base temporária
+  const valorUnit = 0.10
   const valor = area * valorUnit * q
 
-  itens.push({
-    largura: l,
-    altura: a,
-    qtd: q,
-    valor
-  })
+  itens.push({ l,a,q,valor })
 
   atualizarResumo()
 }
 
-// 🔥 TOTAL
+// 🔥 Total
 function total() {
   return itens.reduce((s,i)=>s+i.valor,0)
 }
 
-// 🔥 RESUMO COMPLETO
+// 🔥 Resumo
 function atualizarResumo(status="Aguardando pagamento") {
 
   let html = `<b>Pedido:</b> ${pedidoId}<br>`
@@ -66,7 +130,7 @@ function atualizarResumo(status="Aguardando pagamento") {
   html += `<b>Endereço:</b> ${rua.value}, ${numero.value} - ${bairro.value} - ${cidade.value}<br><br>`
 
   itens.forEach((i,idx)=>{
-    html += `${idx+1}) ${i.largura}x${i.altura} | Qtd: ${i.qtd} | R$ ${i.valor.toFixed(2)}<br>`
+    html += `${idx+1}) ${i.l}x${i.a} | Qtd: ${i.q} | R$ ${i.valor.toFixed(2)}<br>`
   })
 
   html += `<br><b>Total: R$ ${total().toFixed(2)}</b><br>`
@@ -78,35 +142,44 @@ function atualizarResumo(status="Aguardando pagamento") {
   resumo.innerHTML = html
 }
 
-// 🔥 PIX
+// 🔥 Gerar PIX
 async function gerarPix() {
 
   if (!validar()) return
 
-  const res = await fetch("https://pix-romer-art.onrender.com/pix", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ valor: total() })
-  })
+  try {
 
-  const data = await res.json()
+    const res = await fetch("https://pix-romer-art.onrender.com/pix", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ valor: total() })
+    })
 
-  if (!data.id) {
-    alert("Erro ao gerar PIX")
-    return
+    const data = await res.json()
+
+    if (!data.id) {
+      alert("Erro ao gerar PIX")
+      return
+    }
+
+    pixId = data.id
+
+    atualizarResumo()
+
+    document.getElementById("qrcode").src =
+      "data:image/png;base64," + data.qr_code_base64
+
+    document.getElementById("pixCopia").innerText =
+      data.copiaecola
+
+    monitorar()
+
+  } catch (e) {
+    alert("Erro PIX")
   }
-
-  pixId = data.id
-
-  atualizarResumo()
-
-  qrcode.src = "data:image/png;base64," + data.qr_code_base64
-  pixCopia.innerText = data.copiaecola
-
-  monitorar()
 }
 
-// 🔥 MONITORAMENTO
+// 🔥 Monitorar pagamento
 function monitorar() {
 
   const loop = setInterval(async ()=>{
@@ -122,7 +195,7 @@ function monitorar() {
   }, 4000)
 }
 
-// 🔥 ENVIO GARANTIDO (COM LOG)
+// 🔥 Enviar pedido
 async function enviarPedido() {
 
   if (!validar()) return
@@ -148,21 +221,20 @@ async function enviarPedido() {
       body: JSON.stringify(dados)
     })
 
-    const result = await res.json()
-    console.log("PLANILHA:", result)
+    const r = await res.json()
+    console.log("Planilha:", r)
 
-  } catch (err) {
-    console.log("ERRO PLANILHA:", err)
+  } catch (e) {
     alert("Erro ao salvar na planilha")
   }
 
-  // 🔥 WHATSAPP COMPLETO
+  // 🔥 WhatsApp completo
   let msg = `Pedido ${pedidoId}%0A`
   msg += `Cliente: ${nome.value}%0A`
   msg += `Endereço: ${rua.value}, ${numero.value}%0A`
 
   itens.forEach((i,idx)=>{
-    msg += `${idx+1}) ${i.largura}x${i.altura} Qtd:${i.qtd} R$${i.valor.toFixed(2)}%0A`
+    msg += `${idx+1}) ${i.l}x${i.a} Qtd:${i.q} R$${i.valor.toFixed(2)}%0A`
   })
 
   msg += `Total: R$ ${total().toFixed(2)}`
@@ -173,3 +245,6 @@ async function enviarPedido() {
 }
 
 </script>
+
+</body>
+</html>
