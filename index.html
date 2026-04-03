@@ -74,13 +74,10 @@ cep.onblur = async () => {
   bairro.value = d.bairro || ""
   cidade.value = d.localidade || ""
 
-  calcularFrete()
-}
-
-function calcularFrete() {
   frete = cep.value.startsWith("03822") ? 0 : 15
 }
 
+// ---------------- ADD ITEM ----------------
 function addItem() {
 
   if (largura.value > 400 || altura.value > 400) {
@@ -110,6 +107,7 @@ function addItem() {
   btnPix.disabled = false
 }
 
+// ---------------- RESUMO ----------------
 function atualizarResumo() {
 
   desconto = (total + frete) * 0.05
@@ -137,14 +135,10 @@ function atualizarResumo() {
   resumo.innerHTML = html
 }
 
+// ---------------- PIX ----------------
 async function gerarPix() {
 
   const totalFinal = total + frete - desconto
-
-  if (totalFinal < 1) {
-    alert("Valor inválido")
-    return
-  }
 
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
     method: "POST",
@@ -154,17 +148,23 @@ async function gerarPix() {
 
   const data = await res.json()
 
+  if (!data.qr_code_base64) {
+    alert("Erro ao gerar PIX")
+    return
+  }
+
   pagamentoId = data.id
 
   resumo.innerHTML += `
-  <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200">
-  <br><small>${data.copiaecola}</small>
-  <br id="statusPix">⏳ Aguardando pagamento...
+    <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200">
+    <br><small>${data.copiaecola}</small>
+    <br id="statusPix">⏳ Aguardando pagamento...
   `
 
   verificarPagamento()
 }
 
+// ---------------- STATUS ----------------
 function verificarPagamento() {
 
   const interval = setInterval(async () => {
@@ -182,21 +182,21 @@ function verificarPagamento() {
 
         document.getElementById("statusPix").innerHTML = "✅ Pagamento aprovado"
         document.getElementById("btnEnviar").disabled = false
+
+      } else {
+        document.getElementById("btnEnviar").disabled = true
       }
 
     } catch (e) {
       console.log("Erro status:", e)
+      document.getElementById("btnEnviar").disabled = true
     }
 
   }, 3000)
 }
 
+// ---------------- ENVIAR ----------------
 async function enviarPedido() {
-
-  if (!pagamentoId) {
-    alert("Gere o PIX primeiro")
-    return
-  }
 
   const resStatus = await fetch(`https://pix-romer-art.onrender.com/status/${pagamentoId}`)
   const dataStatus = await resStatus.json()
@@ -217,12 +217,16 @@ async function enviarPedido() {
     itens
   }
 
-  // 🔥 SUA URL JÁ AQUI
+  // 🔥 SALVAR PLANILHA
   await fetch("https://script.google.com/macros/s/AKfycbyoE1fckemtWTKY6KNkrvnsZWUXkvDsmmjpPe2AKoZK1Vk52YzdDLvdDz6UVpqoYPDr/exec", {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(pedido)
   })
 
+  // 🔥 WHATSAPP
   window.open(`https://wa.me/5511946447040?text=Pedido%20${pedidoNumero}`)
 
   alert("Pedido enviado com sucesso 🚀")
