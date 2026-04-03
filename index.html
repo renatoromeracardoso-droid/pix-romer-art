@@ -66,6 +66,7 @@ let desconto = 0
 let pagamentoId = null
 let pedidoNumero = "PED-" + Date.now()
 
+// ---------------- CEP ----------------
 cep.onblur = async () => {
   const res = await fetch(`https://viacep.com.br/ws/${cep.value}/json/`)
   const d = await res.json()
@@ -164,10 +165,14 @@ async function gerarPix() {
   verificarPagamento()
 }
 
-// ---------------- STATUS ----------------
+// ---------------- STATUS (CORRIGIDO) ----------------
 function verificarPagamento() {
 
+  let tentativas = 0
+
   const interval = setInterval(async () => {
+
+    tentativas++
 
     try {
 
@@ -183,13 +188,15 @@ function verificarPagamento() {
         document.getElementById("statusPix").innerHTML = "✅ Pagamento aprovado"
         document.getElementById("btnEnviar").disabled = false
 
-      } else {
-        document.getElementById("btnEnviar").disabled = true
+      }
+
+      if (tentativas > 30) {
+        clearInterval(interval)
+        document.getElementById("statusPix").innerHTML = "⚠️ Tempo excedido, tente novamente"
       }
 
     } catch (e) {
-      console.log("Erro status:", e)
-      document.getElementById("btnEnviar").disabled = true
+      console.log("Erro:", e)
     }
 
   }, 3000)
@@ -220,9 +227,7 @@ async function enviarPedido() {
   // 🔥 SALVAR PLANILHA
   await fetch("https://script.google.com/macros/s/AKfycbyoE1fckemtWTKY6KNkrvnsZWUXkvDsmmjpPe2AKoZK1Vk52YzdDLvdDz6UVpqoYPDr/exec", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: {"Content-Type": "application/json"},
     body: JSON.stringify(pedido)
   })
 
