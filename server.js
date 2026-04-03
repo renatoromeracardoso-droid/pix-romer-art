@@ -8,17 +8,12 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-// ✅ AJUSTE AQUI
+// 🔐 TOKEN CERTO
 const MP_TOKEN = process.env.MP_TOKEN;
-
-// 🔥 MEMÓRIA DE STATUS
-let pagamentos = {};
 
 // ================= PIX =================
 app.post("/pix", async (req, res) => {
-
   try {
-
     const { valor, email } = req.body;
 
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
@@ -39,8 +34,8 @@ app.post("/pix", async (req, res) => {
 
     const data = await response.json();
 
-    // 🔥 SALVA COMO PENDING
-    pagamentos[data.id] = "pending";
+    // 🔍 DEBUG (pode ver no Render)
+    console.log("PIX GERADO:", data.id);
 
     res.json({
       id: data.id,
@@ -49,58 +44,42 @@ app.post("/pix", async (req, res) => {
     });
 
   } catch (err) {
-    console.log(err);
+    console.log("ERRO PIX:", err);
     res.status(500).json({ error: "Erro ao gerar PIX" });
   }
-
 });
 
 // ================= WEBHOOK =================
 app.post("/webhook", async (req, res) => {
-
-  try {
-
-    const body = req.body;
-
-    console.log("WEBHOOK RECEBIDO:", body);
-
-    if (body.type === "payment") {
-
-      const paymentId = body.data.id;
-
-      const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: {
-          "Authorization": `Bearer ${MP_TOKEN}`
-        }
-      });
-
-      const data = await response.json();
-
-      console.log("STATUS MP:", data.status);
-
-      // 🔥 SALVA STATUS CORRETO
-      pagamentos[paymentId] = data.status;
-
-    }
-
-    res.sendStatus(200);
-
-  } catch (err) {
-    console.log("Erro webhook:", err);
-    res.sendStatus(500);
-  }
-
+  console.log("WEBHOOK RECEBIDO:", req.body);
+  res.sendStatus(200);
 });
 
-// ================= STATUS =================
-app.get("/status/:id", (req, res) => {
+// ================= STATUS (CONSULTA DIRETA MP) =================
+app.get("/status/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
 
-  const id = req.params.id;
+    console.log("CONSULTANDO STATUS:", id);
 
-  const status = pagamentos[id] || "pending";
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
+      headers: {
+        "Authorization": `Bearer ${MP_TOKEN}`
+      }
+    });
 
-  res.json({ status });
+    const data = await response.json();
 
+    console.log("STATUS MP:", data.status);
+
+    res.json({
+      status: data.status || "pending"
+    });
+
+  } catch (err) {
+    console.log("ERRO STATUS:", err);
+    res.json({ status: "pending" });
+  }
 });
 
 // ================= START =================
