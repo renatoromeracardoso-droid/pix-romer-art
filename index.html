@@ -62,14 +62,42 @@ let itens = []
 let total = 0
 let pedidoId = null
 
-function add(){
+// 🔥 CEP AUTOMÁTICO
+cep.addEventListener("blur", async () => {
 
- if(largura.value>400 || altura.value>400){
-  alert("Máx 400mm")
-  return
+ const c = cep.value.replace(/\D/g,'');
+
+ if(c.length !== 8) return;
+
+ try{
+  const res = await fetch(`https://viacep.com.br/ws/${c}/json/`);
+  const data = await res.json();
+
+  rua.value = data.logradouro || "";
+  bairro.value = data.bairro || "";
+  cidade.value = data.localidade || "";
+
+ }catch(e){
+  console.log("Erro CEP", e);
  }
 
- let valor = qtd.value * 0.20
+});
+
+
+// ➕ ADD ITEM
+function add(){
+
+ if(!largura.value || !altura.value || !qtd.value){
+  alert("Preencha largura, altura e quantidade");
+  return;
+ }
+
+ if(largura.value>400 || altura.value>400){
+  alert("Máx 400mm");
+  return;
+ }
+
+ let valor = qtd.value * 0.20;
 
  itens.push({
   tipo: tipo.value,
@@ -79,15 +107,17 @@ function add(){
   altura: altura.value,
   qtd: qtd.value,
   valor: valor
- })
+ });
 
- atualizar()
+ atualizar();
 }
 
+
+// 🔄 ATUALIZAR RESUMO
 function atualizar(){
 
  total = 0
- let html = "Pedido:<br><br>"
+ let html = "<b>Pedido:</b><br><br>"
 
  itens.forEach((i,index)=>{
   total += i.valor
@@ -105,38 +135,60 @@ function atualizar(){
  resumo.innerHTML = html
 }
 
+
+// 💰 GERAR PIX
 async function pix(){
 
  if(!nome.value || !email.value || !cep.value || !numero.value){
-  alert("Preencha cliente")
-  return
+  alert("Preencha os dados do cliente");
+  return;
  }
 
- pedidoId = Date.now()
+ if(itens.length === 0){
+  alert("Adicione um item");
+  return;
+ }
 
- const res = await fetch("https://pix-romer-art.onrender.com/pix",{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-    valor: total,
-    pedidoId: pedidoId
-  })
- })
+ try{
 
- const data = await res.json()
+  pedidoId = Date.now();
 
- resumo.innerHTML += `
- <br><br>PIX:<br>
- <img src="data:image/png;base64,${data.qr}">
- <br>Aguardando pagamento...
- `
+  const res = await fetch("https://pix-romer-art.onrender.com/pix",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      valor: total,
+      pedidoId: pedidoId
+    })
+  });
 
- verificar()
+  const data = await res.json();
+
+  if(!data.qr){
+    alert("Erro ao gerar PIX");
+    console.log(data);
+    return;
+  }
+
+  resumo.innerHTML += `
+  <br><br><b>PIX:</b><br>
+  <img src="data:image/png;base64,${data.qr}">
+  <br>Aguardando pagamento...
+  `;
+
+  verificar();
+
+ }catch(e){
+  alert("Erro conexão PIX");
+  console.log(e);
+ }
 }
 
+
+// 🔎 VERIFICAR STATUS
 function verificar(){
 
- setInterval(async()=>{
+ const intervalo = setInterval(async()=>{
 
   const res = await fetch(`https://pix-romer-art.onrender.com/status/${pedidoId}`)
   const data = await res.json()
@@ -144,6 +196,7 @@ function verificar(){
   if(data.status=="approved"){
     resumo.innerHTML += "<br>✅ PAGAMENTO APROVADO"
     enviar.disabled = false
+    clearInterval(intervalo)
   }
 
  },3000)
