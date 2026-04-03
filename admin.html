@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel RomerArt</title>
+
+<style>
+body{background:#0f172a;color:#fff;font-family:Arial;}
+.container{max-width:500px;margin:auto;padding:20px;}
+.card{background:#1e293b;padding:15px;border-radius:12px;margin-bottom:10px;}
+.pago{color:#22c55e;font-weight:bold;}
+.pendente{color:#f59e0b;font-weight:bold;}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+<h2>📊 Painel de Pedidos</h2>
+
+<div id="lista"></div>
+
+</div>
+
+<script>
+
+function carregar(){
+
+ fetch("https://pix-romer-art.onrender.com/pedidos")
+ .then(r=>r.json())
+ .then(data=>{
+
+   let html = "";
+
+   data.reverse().forEach(p=>{
+
+     html += `
+     <div class="card">
+       <b>Pedido ${p.id}</b><br>
+       Cliente: ${p.cliente}<br>
+       Total: R$ ${p.total}<br>
+       Status: <span class="${p.status === 'approved' ? 'pago' : 'pendente'}">
+         ${p.status}
+       </span>
+     </div>
+     `;
+
+   });
+
+   document.getElementById("lista").innerHTML = html;
+
+ });
+
+}
+
+setInterval(carregar,3000);
+carregar();
+
+</script>
+
+</body>
+</html>
