@@ -12,17 +12,14 @@ const TOKEN = process.env.MP_TOKEN
 // ---------------- PIX ----------------
 app.post("/pix", async (req, res) => {
   try {
-
     const { valor } = req.body
-
-    const idempotencyKey = crypto.randomUUID()
 
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${TOKEN}`,
         "Content-Type": "application/json",
-        "X-Idempotency-Key": idempotencyKey
+        "X-Idempotency-Key": crypto.randomUUID()
       },
       body: JSON.stringify({
         transaction_amount: Number(valor),
@@ -36,11 +33,7 @@ app.post("/pix", async (req, res) => {
 
     const data = await response.json()
 
-    console.log("PIX RESPONSE:", data)
-
-    if (data.error) {
-      return res.status(500).json({ erro: data.message })
-    }
+    console.log("PIX:", data)
 
     res.json({
       id: data.id,
@@ -49,8 +42,8 @@ app.post("/pix", async (req, res) => {
       qr_code_base64: data.point_of_interaction.transaction_data.qr_code_base64
     })
 
-  } catch (error) {
-    console.log("ERRO PIX:", error)
+  } catch (err) {
+    console.log(err)
     res.status(500).json({ erro: "Erro ao gerar PIX" })
   }
 })
@@ -59,7 +52,6 @@ app.post("/pix", async (req, res) => {
 // ---------------- STATUS ----------------
 app.get("/status/:id", async (req, res) => {
   try {
-
     const { id } = req.params
 
     const response = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
@@ -70,16 +62,14 @@ app.get("/status/:id", async (req, res) => {
 
     const data = await response.json()
 
-    if (data.error) {
-      return res.json({ status: "erro_api" })
-    }
+    console.log("STATUS:", data)
 
     res.json({
       status: data.status
     })
 
-  } catch (error) {
-    res.status(500).json({ erro: "Erro ao consultar status" })
+  } catch (err) {
+    res.json({ status: "erro" })
   }
 })
 
