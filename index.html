@@ -37,8 +37,9 @@ button {
 .resumo {
   margin-top: 20px;
   background: #1e293b;
-  padding: 10px;
+  padding: 15px;
   border-radius: 10px;
+  font-size: 14px;
 }
 </style>
 
@@ -71,13 +72,13 @@ button {
   <option value="Acrílico">Acrílico</option>
 </select>
 
-<input id="largura" type="number" placeholder="Largura">
-<input id="altura" type="number" placeholder="Altura">
+<input id="largura" type="number" placeholder="Largura (mm)">
+<input id="altura" type="number" placeholder="Altura (mm)">
 <input id="qtd" type="number" placeholder="Quantidade">
 
 <button class="btn-add" onclick="addItem()">Adicionar</button>
-<button class="btn-pix" onclick="gerarPix()">Gerar PIX</button>
-<button id="btnEnviar" class="btn-send" disabled onclick="enviarPedido()">Enviar Pedido</button>
+<button id="btnPix" class="btn-pix" onclick="gerarPix()" disabled>Gerar PIX</button>
+<button id="btnEnviar" class="btn-send" onclick="enviarPedido()" disabled>Enviar Pedido</button>
 
 <div class="resumo" id="resumo"></div>
 
@@ -90,56 +91,83 @@ let total = 0
 let pagamentoId = null
 
 // CEP automático
-document.getElementById("cep").addEventListener("blur", async () => {
-  const cep = document.getElementById("cep").value
-
-  const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+cep.addEventListener("blur", async () => {
+  if (!cep.value) return
+  const res = await fetch(`https://viacep.com.br/ws/${cep.value}/json/`)
   const data = await res.json()
 
-  document.getElementById("rua").value = data.logradouro
-  document.getElementById("bairro").value = data.bairro
-  document.getElementById("cidade").value = data.localidade
+  rua.value = data.logradouro || ""
+  bairro.value = data.bairro || ""
+  cidade.value = data.localidade || ""
 })
 
 // adicionar item
 function addItem() {
 
-  const servico = document.getElementById("servico").value
-  const material = document.getElementById("material").value
-  const largura = Number(document.getElementById("largura").value)
-  const altura = Number(document.getElementById("altura").value)
-  const qtd = Number(document.getElementById("qtd").value)
+  if (!largura.value || !altura.value || !qtd.value) {
+    alert("Preencha largura, altura e quantidade")
+    return
+  }
 
-  const preco = ((largura * altura) / 1000) * qtd
+  const item = {
+    servico: servico.value,
+    material: material.value,
+    largura: Number(largura.value),
+    altura: Number(altura.value),
+    qtd: Number(qtd.value)
+  }
 
-  itens.push({ servico, material, largura, altura, qtd, preco })
+  item.preco = ((item.largura * item.altura) / 1000) * item.qtd
 
-  total += preco
+  itens.push(item)
+  total += item.preco
 
   atualizarResumo()
+
+  btnPix.disabled = false
 }
 
-// resumo
+// resumo completo
 function atualizarResumo() {
 
-  let html = ""
+  let html = `<b>📋 RESUMO DO PEDIDO</b><br><br>`
+
+  html += `<b>👤 Cliente:</b> ${nome.value || "-"}<br>`
+  html += `<b>📧 Email:</b> ${email.value || "-"}<br>`
+  html += `<b>📍 Endereço:</b><br>`
+  html += `${rua.value || ""}, ${numero.value || ""}<br>`
+  html += `${bairro.value || ""} - ${cidade.value || ""}<br>`
+  html += `CEP: ${cep.value || ""}<br><br>`
+
+  html += `<b>📦 Itens:</b><br><br>`
 
   itens.forEach((i, index) => {
     html += `
     ${index + 1}) ${i.servico}<br>
     Material: ${i.material}<br>
-    ${i.largura}x${i.altura} | Qtd: ${i.qtd}<br>
-    R$ ${i.preco.toFixed(2)}<br><br>
+    Tamanho: ${i.largura}x${i.altura} mm<br>
+    Quantidade: ${i.qtd}<br>
+    Subtotal: R$ ${i.preco.toFixed(2)}<br><br>
     `
   })
 
-  html += `<b>Total: R$ ${total.toFixed(2)}</b><br>`
+  html += `<b>💰 TOTAL: R$ ${total.toFixed(2)}</b><br>`
 
-  document.getElementById("resumo").innerHTML = html
+  resumo.innerHTML = html
+}
+
+// validação
+function validarFormulario() {
+  return nome.value && email.value && cep.value && rua.value && cidade.value && itens.length > 0
 }
 
 // gerar PIX
 async function gerarPix() {
+
+  if (!validarFormulario()) {
+    alert("Preencha tudo antes")
+    return
+  }
 
   const res = await fetch("https://pix-romer-art.onrender.com/pix", {
     method: "POST",
@@ -151,10 +179,11 @@ async function gerarPix() {
 
   pagamentoId = data.id
 
-  document.getElementById("resumo").innerHTML += `
-    <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
-    <small>${data.copiaecola}</small>
-    <br>⏳ Aguardando pagamento...
+  resumo.innerHTML += `
+  <br><br>
+  <img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
+  <small>${data.copiaecola}</small>
+  <br id="statusPix">⏳ Aguardando pagamento...
   `
 
   verificarPagamento()
@@ -171,22 +200,15 @@ function verificarPagamento() {
     if (data.status === "approved") {
       clearInterval(interval)
 
-      document.getElementById("resumo").innerHTML += "<br>✅ Pagamento aprovado"
+      document.getElementById("statusPix").innerHTML = "✅ Pagamento aprovado"
 
-      liberarEnvio()
+      btnEnviar.disabled = false
     }
 
   }, 3000)
 }
 
-// liberar botão
-function liberarEnvio() {
-  const btn = document.getElementById("btnEnviar")
-  btn.disabled = false
-  btn.style.opacity = "1"
-}
-
-// enviar pedido (Google Sheets)
+// enviar pedido + WhatsApp
 async function enviarPedido() {
 
   const pedido = {
@@ -200,10 +222,34 @@ async function enviarPedido() {
     itens
   }
 
+  // salvar na planilha
   await fetch("https://script.google.com/macros/s/AKfycbwor6wiV4noo8eysSyl4_nsdN2O897SiaErtuy00RlMVU6zBIHYIpqhsLakagnvjbls/exec", {
     method: "POST",
     body: JSON.stringify(pedido)
   })
+
+  // mensagem completa WhatsApp
+  let msg = `🧾 *NOVO PEDIDO - ROMERART*\n\n`
+
+  msg += `👤 Cliente: ${nome.value}\n`
+  msg += `📧 Email: ${email.value}\n`
+  msg += `📍 Endereço:\n${rua.value}, ${numero.value}\n${bairro.value} - ${cidade.value}\nCEP: ${cep.value}\n\n`
+
+  msg += `📦 *ITENS:*\n\n`
+
+  itens.forEach((i, index) => {
+    msg += `${index + 1}) ${i.servico}\n`
+    msg += `Material: ${i.material}\n`
+    msg += `Tamanho: ${i.largura}x${i.altura} mm\n`
+    msg += `Qtd: ${i.qtd}\n`
+    msg += `Subtotal: R$ ${i.preco.toFixed(2)}\n\n`
+  })
+
+  msg += `💰 *TOTAL: R$ ${total.toFixed(2)}*`
+
+  const numero = "5511946447040"
+
+  window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`)
 
   alert("Pedido enviado com sucesso 🚀")
 }
