@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>RomerArt Pedidos</title>
+<title>RomerArt</title>
 
 <style>
 body{background:#0f172a;font-family:Arial;color:#fff;}
@@ -23,13 +23,13 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <div class="card">
 <h3>Cliente</h3>
-<input id="cliente" placeholder="Nome *">
-<input id="email" placeholder="Email *">
-<input id="cep" placeholder="CEP *">
+<input id="cliente" placeholder="Nome" required>
+<input id="email" placeholder="Email" required>
+<input id="cep" placeholder="CEP" required>
 <input id="endereco" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número *">
+<input id="numero" placeholder="Número" required>
 </div>
 
 <div class="card">
@@ -38,6 +38,7 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 <select id="servico">
 <option>Corte</option>
 <option>Gravação</option>
+<option>Corte + Gravação</option>
 </select>
 
 <select id="material">
@@ -66,100 +67,96 @@ button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;co
 
 <script>
 
+// ================= VAR =================
 let itens = [];
 let pago = false;
-let pedidoNumero = Date.now();
+let mpId = null;
 const WHATS = "5511946447040";
 
 // ================= CEP =================
-document.getElementById("cep").addEventListener("blur", function(){
+document.getElementById("cep").addEventListener("blur", function() {
 
- let c = this.value.replace(/\D/g,'');
+  let c = this.value.replace(/\D/g,'');
 
- if(c.length !== 8) return;
+  if(c.length !== 8) return;
 
- fetch("https://viacep.com.br/ws/"+c+"/json/")
- .then(r=>r.json())
- .then(d=>{
-   document.getElementById("endereco").value = d.logradouro || "";
-   document.getElementById("bairro").value = d.bairro || "";
-   document.getElementById("cidade").value = d.localidade || "";
- });
+  fetch("https://viacep.com.br/ws/" + c + "/json/")
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById("endereco").value = d.logradouro || "";
+    document.getElementById("bairro").value = d.bairro || "";
+    document.getElementById("cidade").value = d.localidade || "";
+  });
 
-});
-
-// ================= LIMITES =================
-document.getElementById("larg").addEventListener("input", function(){
- if(this.value > 400) this.value = 400;
-});
-
-document.getElementById("alt").addEventListener("input", function(){
- if(this.value > 400) this.value = 400;
 });
 
 // ================= ADD ITEM =================
 function addItem(){
 
- if(!cliente.value || !email.value || !cep.value || !numero.value){
-   alert("Preencha os dados do cliente");
-   return;
- }
-
- let l = Number(larg.value);
- let a = Number(alt.value);
- let q = Number(qtd.value);
+ let l = Number(document.getElementById("larg").value);
+ let a = Number(document.getElementById("alt").value);
+ let q = Number(document.getElementById("qtd").value);
 
  if(!l || !a || !q){
    alert("Preencha corretamente");
    return;
  }
 
+ if(l > 400 || a > 400){
+   alert("Limite máximo 400mm");
+   return;
+ }
+
  let valor = ((l*a)/100)*0.1*q + 2;
 
  itens.push({
-   servico: servico.value,
-   material: material.value,
-   esp: esp.value,
+   servico: document.getElementById("servico").value,
+   material: document.getElementById("material").value,
+   esp: document.getElementById("esp").value,
    l,a,q,valor
  });
 
  render();
+
 }
 
 // ================= RENDER =================
 function render(){
 
  let total = 0;
+ let html = "📦 Pedido " + Date.now() + "<br><br>";
 
- let html = `📦 Pedido ${pedidoNumero}<br><br>
+ html += "<b>Cliente:</b><br>" +
+ document.getElementById("cliente").value + "<br>" +
+ document.getElementById("email").value + "<br>" +
+ document.getElementById("endereco").value + ", " +
+ document.getElementById("numero").value + "<br>" +
+ document.getElementById("bairro").value + " - " +
+ document.getElementById("cidade").value + "<br><br>";
 
-<b>Cliente:</b><br>
-${cliente.value}<br>
-${email.value}<br>
-${endereco.value}, ${numero.value}<br>
-${bairro.value} - ${cidade.value}<br><br>
-`;
+ itens.forEach(function(i,x){
 
- itens.forEach((i,x)=>{
    total += i.valor;
 
-   html += `${x+1}) ${i.servico}<br>
-${i.material} | Esp:${i.esp}<br>
-${i.l}x${i.a} mm | Qtd:${i.q}<br>
-R$ ${i.valor.toFixed(2)}<br><br>`;
+   html += (x+1) + ") " + i.servico + "<br>" +
+   i.material + " | Esp:" + i.esp + "<br>" +
+   i.l + "x" + i.a + " mm | Qtd:" + i.q + "<br>" +
+   "R$ " + i.valor.toFixed(2) + "<br><br>";
+
  });
 
  let desc = total * 0.05;
  let final = total - desc;
 
- html += `Subtotal: R$ ${total.toFixed(2)}<br>
-Desconto PIX: -R$ ${desc.toFixed(2)}<br>
-<b>Total: R$ ${final.toFixed(2)}</b><br><br>`;
+ html += "Subtotal: R$ " + total.toFixed(2) + "<br>";
+ html += "Desconto PIX: -R$ " + desc.toFixed(2) + "<br>";
+ html += "<b>Total: R$ " + final.toFixed(2) + "</b><br><br>";
 
  document.getElementById("resumo").innerHTML = html;
+
 }
 
-// ================= GERAR PIX =================
+// ================= PIX =================
 function gerarPix(){
 
  if(itens.length === 0){
@@ -167,7 +164,9 @@ function gerarPix(){
    return;
  }
 
- let total = itens.reduce((s,i)=>s+i.valor,0);
+ let total = 0;
+ itens.forEach(i => total += i.valor);
+
  let final = Number((total - total*0.05).toFixed(2));
 
  document.getElementById("resumo").innerHTML += "<br>Gerando PIX...";
@@ -177,45 +176,46 @@ function gerarPix(){
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({
      valor: final,
-     email: email.value
+     email: document.getElementById("email").value
    })
  })
- .then(r=>r.json())
- .then(data=>{
+ .then(r => r.json())
+ .then(data => {
 
-   document.getElementById("resumo").innerHTML += `
-   <br><img src="data:image/png;base64,${data.qr_code_base64}" width="200"><br>
-   <textarea style="width:100%">${data.qr_code}</textarea><br>
-   <b id="status">Aguardando pagamento...</b>
-   `;
+   mpId = data.id;
 
-   verificar(data.id);
- });
+   document.getElementById("resumo").innerHTML +=
+   "<br><img src='data:image/png;base64,"+data.qr_code_base64+"' width='200'><br>" +
+   "<textarea style='width:100%'>"+data.qr_code+"</textarea><br>" +
+   "<b id='status'>Aguardando pagamento...</b>";
+
+   verificar();
+
+ })
+ .catch(()=> alert("Erro PIX"));
+
 }
 
 // ================= STATUS =================
-function verificar(id){
+function verificar(){
 
- let t = setInterval(()=>{
+ let t = setInterval(function(){
 
-   fetch("https://pix-romer-art.onrender.com/status/"+id+"?t="+Date.now())
-   .then(r=>r.json())
-   .then(d=>{
-
-     console.log("STATUS:", d.status);
+   fetch("https://pix-romer-art.onrender.com/status/"+mpId)
+   .then(r => r.json())
+   .then(d => {
 
      if(d.status === "approved"){
-
        document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO";
        document.getElementById("btnWhats").style.display = "block";
        pago = true;
-
        clearInterval(t);
      }
 
    });
 
  },3000);
+
 }
 
 // ================= WHATS =================
@@ -226,7 +226,10 @@ function enviarWhats(){
    return;
  }
 
- window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(resumo.innerText));
+ let txt = document.getElementById("resumo").innerText;
+
+ window.open("https://wa.me/"+WHATS+"?text="+encodeURIComponent(txt));
+
 }
 
 </script>
