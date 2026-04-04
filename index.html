@@ -5,57 +5,30 @@
 <title>RomerArt</title>
 
 <style>
-body{
-  background:#0f1b2d;
-  font-family:Arial;
-  color:#fff;
-  padding:20px;
-}
-.container{
-  max-width:500px;
-  margin:auto;
-}
-input,select{
-  width:100%;
-  padding:12px;
-  margin:5px 0;
-  border-radius:8px;
-  border:none;
-}
-button{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border:none;
-  border-radius:10px;
-  font-weight:bold;
-}
+body{background:#0f1b2d;color:#fff;font-family:Arial;padding:20px;}
+.container{max-width:500px;margin:auto;}
+input,select{width:100%;padding:12px;margin:5px 0;border-radius:8px;border:none;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;font-weight:bold;}
 .add{background:orange;}
 .pix{background:green;color:#fff;}
-.enviar{background:#2ecc71;color:#fff;}
-.card{
-  background:#1e2a3a;
-  padding:15px;
-  margin-top:20px;
-  border-radius:10px;
-}
+.enviar{background:#2ecc71;color:#fff;opacity:0.5}
+.card{background:#1e2a3a;padding:15px;margin-top:20px;border-radius:10px;}
 </style>
-
 </head>
-<body>
 
+<body>
 <div class="container">
 
 <h2>🚀 RomerArt</h2>
 
-<input id="nome" placeholder="Nome *">
-<input id="email" placeholder="Email *">
+<input id="nome" placeholder="Nome">
+<input id="email" placeholder="Email">
 
-<input id="cep" placeholder="CEP *">
-<input id="rua" placeholder="Rua">
-<input id="bairro" placeholder="Bairro">
-<input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número">
+<input id="cep" placeholder="CEP">
+<input id="rua">
+<input id="bairro">
+<input id="cidade">
+<input id="numero">
 
 <hr>
 
@@ -64,13 +37,13 @@ button{
 <select id="produto"></select>
 <select id="espessura"></select>
 
-<input id="largura" placeholder="Largura (mm)">
-<input id="altura" placeholder="Altura (mm)">
-<input id="qtd" placeholder="Quantidade">
+<input id="largura" placeholder="Largura mm">
+<input id="altura" placeholder="Altura mm">
+<input id="qtd" placeholder="Qtd">
 
 <button class="add" onclick="addItem()">Adicionar</button>
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button class="enviar" onclick="enviarPedido()">Enviar Pedido</button>
+<button id="btnEnviar" class="enviar" disabled onclick="enviarPedido()">Enviar Pedido</button>
 
 <div id="resumo" class="card">Nenhum item</div>
 
@@ -79,135 +52,82 @@ button{
 <script>
 
 const URL = "https://script.google.com/macros/s/AKfycbySieWPENR4fuSFyWxJprDE-w-9_V6MbM-o7jNb3sMoHaMFTrqWou69kPJNZh4Si0e2/exec"
+const API = "https://SEU-RENDER.onrender.com"
 
-let config = []
-let itens = []
+let config=[]
+let itens=[]
+let pagamentoId=null
+let pago=false
+let pedidoId=""
 
-// 🔥 CARREGAR CONFIG
+// 🔥 CONFIG
 async function carregarConfig(){
-  try{
-    const res = await fetch(URL,{
-      method:"POST",
-      body: JSON.stringify({ tipo:"config" })
-    })
-    config = await res.json()
-    montarSelects()
-  }catch(e){
-    alert("Erro ao carregar config")
-  }
+  const res = await fetch(URL,{
+    method:"POST",
+    body: JSON.stringify({tipo:"config"})
+  })
+  config = await res.json()
+  montarSelects()
 }
 
-// 🔥 SELECTS
 function montarSelects(){
-  const tipos = [...new Set(config.map(i=>i.tipo_servico))]
-  document.getElementById("tipo").innerHTML =
-    tipos.map(v=>`<option>${v}</option>`).join("")
-
+  const tipos=[...new Set(config.map(i=>i.tipo_servico))]
+  tipo.innerHTML = tipos.map(v=>`<option>${v}</option>`).join("")
   atualizarMaterial()
 }
 
 function atualizarMaterial(){
-  const tipo = document.getElementById("tipo").value
-
-  const lista = [...new Set(
-    config.filter(i=>i.tipo_servico==tipo).map(i=>i.material)
-  )]
-
-  document.getElementById("material").innerHTML =
-    lista.map(v=>`<option>${v}</option>`).join("")
-
+  const lista=[...new Set(config.filter(i=>i.tipo_servico==tipo.value).map(i=>i.material))]
+  material.innerHTML = lista.map(v=>`<option>${v}</option>`).join("")
   atualizarProduto()
 }
 
 function atualizarProduto(){
-  const tipo = tipoSel()
-  const material = materialSel()
-
-  const lista = [...new Set(
-    config.filter(i=>
-      i.tipo_servico==tipo && i.material==material
-    ).map(i=>i.produto)
-  )]
-
-  document.getElementById("produto").innerHTML =
-    lista.map(v=>`<option>${v}</option>`).join("")
-
+  const lista=[...new Set(config.filter(i=>i.tipo_servico==tipo.value && i.material==material.value).map(i=>i.produto))]
+  produto.innerHTML = lista.map(v=>`<option>${v}</option>`).join("")
   atualizarEspessura()
 }
 
 function atualizarEspessura(){
-  const lista = config.filter(i=>
-    i.tipo_servico==tipoSel() &&
-    i.material==materialSel() &&
-    i.produto==produtoSel()
-  )
-
-  document.getElementById("espessura").innerHTML =
-    lista.map(v=>`<option>${v.espessura}</option>`).join("")
+  const lista=config.filter(i=>i.tipo_servico==tipo.value && i.material==material.value && i.produto==produto.value)
+  espessura.innerHTML = lista.map(v=>`<option>${v.espessura}</option>`).join("")
 }
 
-// 🔥 HELPERS
-function tipoSel(){ return document.getElementById("tipo").value }
-function materialSel(){ return document.getElementById("material").value }
-function produtoSel(){ return document.getElementById("produto").value }
-function espSel(){ return document.getElementById("espessura").value }
-
-// 🔥 EVENTOS
-document.addEventListener("change", (e)=>{
+document.addEventListener("change",(e)=>{
   if(e.target.id==="tipo") atualizarMaterial()
   if(e.target.id==="material") atualizarProduto()
   if(e.target.id==="produto") atualizarEspessura()
 })
 
 // 🔥 CEP
-document.getElementById("cep").addEventListener("blur", async ()=>{
-  const cep = document.getElementById("cep").value
-
-  if(cep.length<8) return
-
-  const res = await fetch(`https://viacep.com.br/ws/${cep}/json`)
-  const data = await res.json()
-
-  rua.value = data.logradouro
-  bairro.value = data.bairro
-  cidade.value = data.localidade
+cep.addEventListener("blur", async ()=>{
+  const res = await fetch(`https://viacep.com.br/ws/${cep.value}/json`)
+  const d = await res.json()
+  rua.value=d.logradouro
+  bairro.value=d.bairro
+  cidade.value=d.localidade
 })
 
 // 🔥 ADD ITEM
 function addItem(){
 
-  const largura = parseFloat(document.getElementById("largura").value)
-  const altura = parseFloat(document.getElementById("altura").value)
-  const qtd = parseInt(document.getElementById("qtd").value)
+  let l=parseFloat(largura.value)
+  let a=parseFloat(altura.value)
+  let q=parseInt(qtd.value)
 
-  if(!largura || !altura || !qtd){
-    alert("Preencha todos os campos")
-    return
-  }
+  if(!l||!a||!q) return alert("Preencha tudo")
+  if(l>400||a>400) return alert("Máx 400mm")
 
-  if(largura>400 || altura>400){
-    alert("Máximo 400mm")
-    return
-  }
-
-  const conf = config.find(i=>
-    i.tipo_servico==tipoSel() &&
-    i.material==materialSel() &&
-    i.produto==produtoSel() &&
-    i.espessura==espSel()
+  const conf=config.find(i=>
+    i.tipo_servico==tipo.value &&
+    i.material==material.value &&
+    i.produto==produto.value &&
+    i.espessura==espessura.value
   )
 
-  if(!conf){
-    alert("Config não encontrada")
-    return
-  }
+  let valor=(l*a/1000000)*conf.preco_m2*q
 
-  const area = (largura*altura)/1000000
-  const valor = area * conf.preco_m2 * qtd
-
-  itens.push({
-    largura, altura, qtd, valor
-  })
+  itens.push({l,a,q,valor})
 
   atualizarResumo()
 }
@@ -215,74 +135,93 @@ function addItem(){
 // 🔥 RESUMO
 function atualizarResumo(){
 
-  if(itens.length===0){
-    resumo.innerHTML="Nenhum item"
-    return
-  }
+  let total=0
 
-  let total = 0
-
-  let html = itens.map((i,idx)=>{
-    total += i.valor
-    return `${idx+1}) ${i.largura}x${i.altura}mm | Qtd:${i.qtd} | R$ ${i.valor.toFixed(2)}`
+  let html=itens.map((i,idx)=>{
+    total+=i.valor
+    return `${idx+1}) ${i.l}x${i.a}mm | Qtd:${i.q} | R$ ${i.valor.toFixed(2)}`
   }).join("<br>")
 
-  resumo.innerHTML = `
-    <b>Itens:</b><br><br>
-    ${html}
-    <hr>
-    <b>Total: R$ ${total.toFixed(2)}</b>
-  `
+  resumo.innerHTML=html+`<hr><b>Total: R$ ${total.toFixed(2)}</b>`
 }
 
-// 🔥 PIX
-function gerarPix(){
-  if(itens.length===0){
-    alert("Adicione item primeiro")
-    return
-  }
-  alert("PIX gerado (simulação)")
+// 🔥 PIX REAL
+async function gerarPix(){
+
+  if(itens.length==0) return alert("Adicione item")
+
+  pedidoId="PED-"+Date.now()
+  let total=itens.reduce((s,i)=>s+i.valor,0)
+
+  const res=await fetch(API+"/pix",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({total,pedido:pedidoId})
+  })
+
+  const data=await res.json()
+
+  pagamentoId=data.id
+
+  alert("PIX gerado, faça o pagamento")
+
+  monitorar()
+}
+
+// 🔥 MONITORAR
+function monitorar(){
+
+  const intervalo=setInterval(async ()=>{
+
+    const res=await fetch(API+"/status/"+pagamentoId)
+    const data=await res.json()
+
+    if(data.status==="approved"){
+      pago=true
+      clearInterval(intervalo)
+
+      alert("Pagamento aprovado")
+
+      btnEnviar.disabled=false
+      btnEnviar.style.opacity=1
+    }
+
+  },5000)
 }
 
 // 🔥 ENVIAR
 async function enviarPedido(){
 
-  if(itens.length===0){
-    alert("Adicione itens")
-    return
-  }
+  if(!pago) return alert("Aguardando pagamento")
 
-  const total = itens.reduce((s,i)=>s+i.valor,0)
-
-  const pedido = {
-    tipo:"pedido",
-    pedido:"PED-"+Date.now(),
-    nome:nome.value,
-    email:email.value,
-    cep:cep.value,
-    rua:rua.value,
-    bairro:bairro.value,
-    cidade:cidade.value,
-    numero:numero.value,
-    total:total,
-    itens:itens
-  }
+  let total=itens.reduce((s,i)=>s+i.valor,0)
 
   await fetch(URL,{
     method:"POST",
-    body: JSON.stringify(pedido)
+    body:JSON.stringify({
+      tipo:"pedido",
+      pedido:pedidoId,
+      nome:nome.value,
+      email:email.value,
+      cep:cep.value,
+      rua:rua.value,
+      bairro:bairro.value,
+      cidade:cidade.value,
+      numero:numero.value,
+      total,
+      itens
+    })
   })
 
-  let texto = `Pedido RomerArt\nTotal: R$ ${total.toFixed(2)}`
-  window.open(`https://wa.me/5511946447040?text=${encodeURIComponent(texto)}`)
+  let lista=itens.map((i,idx)=>`${idx+1}) ${i.l}x${i.a}mm | Qtd:${i.q}`).join("\n")
 
-  alert("Pedido enviado!")
+  let msg=`Pedido ${pedidoId}\n${lista}\nTotal: R$ ${total.toFixed(2)}\nPago via PIX`
+
+  window.open(`https://wa.me/5511946447040?text=${encodeURIComponent(msg)}`)
 }
 
-// INIT
 carregarConfig()
 
 </script>
-
 </body>
 </html>
