@@ -10,11 +10,9 @@ mercadopago.configure({
   access_token: process.env.MP_TOKEN
 })
 
-// 🔥 CRIAR PIX
+// 🔥 GERAR PIX
 app.post("/pix", async (req, res) => {
-
   try{
-
     const { total, pedido } = req.body
 
     const pagamento = await mercadopago.payment.create({
@@ -22,7 +20,7 @@ app.post("/pix", async (req, res) => {
       description: `Pedido ${pedido}`,
       payment_method_id: "pix",
       payer: {
-        email: "comprador@email.com"
+        email: "cliente@email.com"
       }
     })
 
@@ -35,12 +33,10 @@ app.post("/pix", async (req, res) => {
   }catch(e){
     res.status(500).json({ erro: e.message })
   }
-
 })
 
-// 🔥 STATUS
+// 🔥 STATUS DO PAGAMENTO
 app.get("/status/:id", async (req, res) => {
-
   try{
     const pagamento = await mercadopago.payment.findById(req.params.id)
 
@@ -51,7 +47,6 @@ app.get("/status/:id", async (req, res) => {
   }catch(e){
     res.status(500).json({ erro: e.message })
   }
-
 })
 
-app.listen(10000, ()=> console.log("Servidor rodando"))
+app.listen(10000, () => console.log("Servidor rodando 🚀"))
