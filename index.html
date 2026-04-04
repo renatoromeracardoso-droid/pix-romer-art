@@ -6,28 +6,18 @@
 <title>RomerArt Pedidos</title>
 
 <style>
-body {
-  font-family: Arial;
-  background:#0f172a;
-  color:white;
-  padding:20px;
-}
+body { font-family: Arial; background:#0f172a; color:white; padding:20px }
 input, select, button {
-  width:100%;
-  padding:12px;
-  margin:6px 0;
-  border-radius:8px;
-  border:none;
+  width:100%; padding:12px; margin:6px 0;
+  border-radius:8px; border:none
 }
 button { font-weight:bold }
 .add{background:orange}
 .pix{background:green;color:white}
 .enviar{background:#22c55e;color:white}
 .card{
-  background:#1e293b;
-  padding:15px;
-  border-radius:10px;
-  margin-top:15px;
+  background:#1e293b; padding:15px;
+  border-radius:10px; margin-top:15px
 }
 </style>
 </head>
@@ -46,15 +36,11 @@ button { font-weight:bold }
 <input id="numero" placeholder="Número *">
 
 <h3>Pedido</h3>
-<select id="tipo">
-  <option value="Corte">Corte</option>
-  <option value="Gravação">Gravação</option>
-</select>
 
-<select id="material">
-  <option value="MDF">MDF</option>
-  <option value="Acrílico">Acrílico</option>
-</select>
+<select id="tipoServico"></select>
+<select id="material"></select>
+<select id="produto"></select>
+<select id="espessura"></select>
 
 <input id="largura" placeholder="Largura (mm)">
 <input id="altura" placeholder="Altura (mm)">
@@ -70,39 +56,108 @@ button { font-weight:bold }
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCAeWy1XtDSe12sj89HF9gSiJId9IsVWbrTQPm4h3_OQJ39_rHUEglzVCFfVuJald2/exec"
 
+let config = []
 let itens = []
 let pixId = null
 let pedidoId = "PED-" + Date.now()
 
-// CEP automático
-cep.addEventListener("blur", async () => {
+// CEP AUTO
+cep.addEventListener("blur", async ()=>{
   const c = cep.value.replace(/\D/g,"")
   if(c.length !== 8) return
-
-  const res = await fetch(`https://viacep.com.br/ws/${c}/json/`)
-  const d = await res.json()
-
+  const r = await fetch(`https://viacep.com.br/ws/${c}/json/`)
+  const d = await r.json()
   rua.value = d.logradouro || ""
   bairro.value = d.bairro || ""
   cidade.value = d.localidade || ""
 })
 
-// validação geral
+// CARREGAR CONFIG
+async function carregarConfig(){
+  const res = await fetch(SCRIPT_URL,{
+    method:"POST",
+    body: JSON.stringify({ tipo:"config" })
+  })
+  config = await res.json()
+  preencherTipoServico()
+}
+
+// SELECTS
+function preencherTipoServico(){
+  const lista = [...new Set(config.map(i=>i.tipo_servico))]
+  tipoServico.innerHTML = lista.map(i=>`<option>${i}</option>`).join("")
+  atualizarMaterial()
+}
+
+function atualizarMaterial(){
+  const lista = config
+    .filter(i=>i.tipo_servico === tipoServico.value)
+    .map(i=>i.material)
+
+  material.innerHTML =
+    [...new Set(lista)].map(i=>`<option>${i}</option>`).join("")
+
+  atualizarProduto()
+}
+
+function atualizarProduto(){
+  const lista = config
+    .filter(i =>
+      i.tipo_servico === tipoServico.value &&
+      i.material === material.value
+    )
+    .map(i=>i.produto)
+
+  produto.innerHTML =
+    [...new Set(lista)].map(i=>`<option>${i}</option>`).join("")
+
+  atualizarEspessura()
+}
+
+function atualizarEspessura(){
+
+  if(tipoServico.value === "Gravação"){
+    espessura.style.display = "none"
+    return
+  }
+
+  espessura.style.display = "block"
+
+  const lista = config.filter(i =>
+    i.tipo_servico === tipoServico.value &&
+    i.material === material.value &&
+    i.produto === produto.value
+  )
+
+  espessura.innerHTML =
+    lista.map(i=>`<option>${i.espessura}</option>`).join("")
+}
+
+// PREÇO
+function getPreco(){
+  const item = config.find(i =>
+    i.tipo_servico === tipoServico.value &&
+    i.material === material.value &&
+    i.produto === produto.value &&
+    (tipoServico.value === "Gravação" || i.espessura === espessura.value)
+  )
+  return item ? item.preco_m2 : 0
+}
+
+// VALIDAR
 function validar(){
   if(!nome.value || !email.value || !cep.value || !numero.value){
-    alert("Preencha todos os campos obrigatórios (*)")
+    alert("Preencha os campos obrigatórios")
     return false
   }
-
   if(itens.length === 0){
-    alert("Adicione pelo menos um item")
+    alert("Adicione itens")
     return false
   }
-
   return true
 }
 
-// adicionar item
+// ADD ITEM
 function addItem(){
 
   const l = Number(largura.value)
@@ -110,66 +165,65 @@ function addItem(){
   const q = Number(qtd.value)
 
   if(!l || !a || !q){
-    alert("Preencha largura, altura e quantidade")
+    alert("Preencha medidas")
     return
   }
 
   if(l > 400 || a > 400){
-    alert("Limite máximo 400mm")
+    alert("Máximo 400mm")
     return
   }
 
-  const area = (l*a)/10000
-  const valor = area * 0.10 * q
+  const preco = getPreco()
+  if(!preco){
+    alert("Preço não encontrado")
+    return
+  }
+
+  const area = (l*a)/1000000
+  const valor = area * preco * q
 
   itens.push({
-    tipo: tipo.value,
+    tipoServico: tipoServico.value,
     material: material.value,
+    produto: produto.value,
+    espessura: espessura.value || "-",
     l,a,q,valor
   })
 
   atualizarResumo()
 }
 
-// total
+// TOTAL
 function total(){
   return itens.reduce((s,i)=>s+i.valor,0)
 }
 
-// resumo completo
+// RESUMO
 function atualizarResumo(status="Aguardando pagamento"){
 
-  let html = ""
-
-  html += `<b>Pedido:</b> ${pedidoId}<br><br>`
+  let html = `<b>Pedido:</b> ${pedidoId}<br><br>`
 
   html += `<b>Cliente:</b> ${nome.value}<br>`
-  html += `<b>Email:</b> ${email.value}<br>`
-  html += `<b>Endereço:</b><br>`
   html += `${rua.value}, ${numero.value}<br>`
   html += `${bairro.value} - ${cidade.value}<br><br>`
 
-  html += `<b>Itens:</b><br>`
-
   itens.forEach((i,idx)=>{
-    html += `${idx+1}) ${i.tipo} - ${i.material}<br>`
-    html += `${i.l}x${i.a} mm | Qtd: ${i.q}<br>`
+    html += `${idx+1}) ${i.tipoServico} - ${i.material} - ${i.produto}<br>`
+    html += `${i.l}x${i.a} mm | Qtd:${i.q}<br>`
     html += `R$ ${i.valor.toFixed(2)}<br><br>`
   })
 
-  html += `<hr>`
-  html += `<b>Total: R$ ${total().toFixed(2)}</b><br>`
+  html += `<hr><b>Total: R$ ${total().toFixed(2)}</b><br>`
   html += `<b>Status:</b> ${status}<br><br>`
-
   html += `<img id="qrcode" width="200"><br>`
   html += `<p id="pixCopia"></p>`
 
   resumo.innerHTML = html
 }
 
-// gerar PIX
+// PIX
 async function gerarPix(){
-
   if(!validar()) return
 
   const res = await fetch("https://pix-romer-art.onrender.com/pix",{
@@ -179,11 +233,6 @@ async function gerarPix(){
   })
 
   const data = await res.json()
-
-  if(!data.id){
-    alert("Erro ao gerar PIX")
-    return
-  }
 
   pixId = data.id
 
@@ -198,11 +247,9 @@ async function gerarPix(){
   monitorar()
 }
 
-// monitoramento pagamento
+// STATUS
 function monitorar(){
-
   const loop = setInterval(async ()=>{
-
     const res = await fetch(`https://pix-romer-art.onrender.com/status/${pixId}`)
     const data = await res.json()
 
@@ -210,16 +257,16 @@ function monitorar(){
       atualizarResumo("Pagamento aprovado ✅")
       clearInterval(loop)
     }
-
   },4000)
 }
 
-// enviar pedido
+// ENVIAR
 async function enviarPedido(){
 
   if(!validar()) return
 
   const dados = {
+    tipo:"pedido",
     pedido: pedidoId,
     nome: nome.value,
     email: email.value,
@@ -234,7 +281,6 @@ async function enviarPedido(){
   }
 
   try{
-
     const res = await fetch(SCRIPT_URL,{
       method:"POST",
       body: JSON.stringify(dados)
@@ -252,13 +298,12 @@ async function enviarPedido(){
     return
   }
 
-  // WhatsApp
   let msg = `📦 Pedido ${pedidoId}%0A`
   msg += `👤 ${nome.value}%0A`
   msg += `📍 ${rua.value}, ${numero.value}%0A%0A`
 
-  itens.forEach((i,idx)=>{
-    msg += `🔹 ${i.tipo} ${i.material}%0A`
+  itens.forEach(i=>{
+    msg += `🔹 ${i.tipoServico} ${i.material} ${i.produto}%0A`
     msg += `${i.l}x${i.a} | Qtd:${i.q} | R$${i.valor.toFixed(2)}%0A`
   })
 
@@ -266,8 +311,16 @@ async function enviarPedido(){
 
   window.open(`https://wa.me/5511946447040?text=${msg}`)
 
-  alert("Pedido enviado com sucesso 🚀")
+  alert("Pedido enviado 🚀")
 }
+
+// EVENTOS
+tipoServico.onchange = atualizarMaterial
+material.onchange = atualizarProduto
+produto.onchange = atualizarEspessura
+
+// INIT
+carregarConfig()
 
 </script>
 
