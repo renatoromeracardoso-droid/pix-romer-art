@@ -1,98 +1,57 @@
 import express from "express"
-import fetch from "node-fetch"
+import mercadopago from "mercadopago"
 import cors from "cors"
 
 const app = express()
-app.use(cors())
 app.use(express.json())
+app.use(cors())
 
-const MP_TOKEN = process.env.MP_TOKEN
-
-// 🔥 ROTA TESTE
-app.get("/", (req, res) => {
-  res.send("Servidor PIX rodando 🚀")
+mercadopago.configure({
+  access_token: process.env.MP_TOKEN
 })
 
-
-// 🔥 GERAR PIX
+// 🔥 CRIAR PIX
 app.post("/pix", async (req, res) => {
-  try {
 
-    const { valor } = req.body
+  try{
 
-    const response = await fetch("https://api.mercadopago.com/v1/payments", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${MP_TOKEN}`,
-        "Content-Type": "application/json",
-        "X-Idempotency-Key": Date.now().toString()
-      },
-      body: JSON.stringify({
-        transaction_amount: Number(valor),
-        description: "Pedido RomerArt",
-        payment_method_id: "pix",
-        payer: {
-          email: "cliente@romerart.com"
-        }
-      })
-    })
+    const { total, pedido } = req.body
 
-    const data = await response.json()
-
-    console.log("PIX RESPONSE:", data)
-
-    const qr =
-      data.point_of_interaction?.transaction_data?.qr_code_base64
-
-    const copia =
-      data.point_of_interaction?.transaction_data?.qr_code
-
-    res.json({
-      id: data.id,
-      qr_code_base64: qr,
-      copiaecola: copia
-    })
-
-  } catch (error) {
-    console.log(error)
-    res.status(500).json({ erro: "Erro ao gerar PIX" })
-  }
-})
-
-
-// 🔥 STATUS PIX
-app.get("/status/:id", async (req, res) => {
-  try {
-
-    const id = req.params.id
-
-    const response = await fetch(
-      `https://api.mercadopago.com/v1/payments/${id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${MP_TOKEN}`
-        }
+    const pagamento = await mercadopago.payment.create({
+      transaction_amount: Number(total),
+      description: `Pedido ${pedido}`,
+      payment_method_id: "pix",
+      payer: {
+        email: "comprador@email.com"
       }
-    )
-
-    const data = await response.json()
-
-    console.log("STATUS:", data.status)
-
-    res.json({
-      status: data.status
     })
 
-  } catch (error) {
-    console.log(error)
-    res.status(500).json({ status: "erro" })
+    res.json({
+      id: pagamento.body.id,
+      qr_code: pagamento.body.point_of_interaction.transaction_data.qr_code,
+      qr_base64: pagamento.body.point_of_interaction.transaction_data.qr_code_base64
+    })
+
+  }catch(e){
+    res.status(500).json({ erro: e.message })
   }
+
 })
 
+// 🔥 STATUS
+app.get("/status/:id", async (req, res) => {
 
-// 🔥 PORTA
-const PORT = process.env.PORT || 10000
+  try{
+    const pagamento = await mercadopago.payment.findById(req.params.id)
 
-app.listen(PORT, () => {
-  console.log("Servidor rodando 🚀 na porta", PORT)
+    res.json({
+      status: pagamento.body.status
+    })
+
+  }catch(e){
+    res.status(500).json({ erro: e.message })
+  }
+
 })
+
+app.listen(10000, ()=> console.log("Servidor rodando"))
