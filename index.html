@@ -14,7 +14,7 @@ button{font-weight:bold}
 
 <body>
 
-<h2>Teste Sistema</h2>
+<h2>🚀 RomerArt</h2>
 
 <div class="card">
 <input id="cep" placeholder="CEP">
@@ -28,103 +28,171 @@ button{font-weight:bold}
 <select id="material"></select>
 <select id="produto"></select>
 <select id="espessura"></select>
+
+<input id="largura" placeholder="Largura">
+<input id="altura" placeholder="Altura">
+<input id="qtd" value="1">
+
+<button onclick="addItem()">Adicionar</button>
+<button onclick="gerarPix()">Gerar PIX</button>
 </div>
+
+<div id="resumo" class="card"></div>
 
 <script>
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxKYsZW6vJntpqhsdo0S7pnbwMnK3tTvosWMkANOhKj4YcVrMr3KjLWpzVKzDudKgYV/exec"
+const API_PIX = "https://pix-romer-art.onrender.com"
 
-let config=[]
+let config=[], itens=[], pixId=null
 
-// 🔥 TESTE CONFIG
+// CONFIG
 async function carregar(){
-
  try{
-
-  console.log("Carregando config...")
-
   let r = await fetch(SCRIPT_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({tipo:"config"})
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({tipo:"config"})
   })
 
   let txt = await r.text()
-
-  console.log("RESPOSTA:", txt)
+  console.log("CONFIG:", txt)
 
   config = JSON.parse(txt)
 
-  if(!config.length){
-    alert("Config vazia")
-    return
-  }
-
-  tipoServico.innerHTML = [...new Set(config.map(i=>i.tipo_servico))]
-    .map(i=>`<option>${i}</option>`).join("")
+  tipoServico.innerHTML=[...new Set(config.map(i=>i.tipo_servico))]
+   .map(i=>`<option>${i}</option>`).join("")
 
   atualizarMaterial()
 
  }catch(e){
-  console.error("ERRO CONFIG:", e)
-  alert("Erro ao carregar config")
+  console.error("Erro config:", e)
  }
-
 }
 
 // SELECTS
 function atualizarMaterial(){
-
- material.innerHTML = [...new Set(config
+ material.innerHTML=[...new Set(config
   .filter(i=>i.tipo_servico==tipoServico.value)
   .map(i=>i.material))]
   .map(i=>`<option>${i}</option>`).join("")
-
  atualizarProduto()
 }
 
 function atualizarProduto(){
-
- produto.innerHTML = [...new Set(config
+ produto.innerHTML=[...new Set(config
   .filter(i=>i.tipo_servico==tipoServico.value && i.material==material.value)
   .map(i=>i.produto))]
   .map(i=>`<option>${i}</option>`).join("")
-
  atualizarEsp()
 }
 
 function atualizarEsp(){
-
- espessura.innerHTML = config
+ espessura.innerHTML=config
   .filter(i=>i.tipo_servico==tipoServico.value && i.material==material.value && i.produto==produto.value)
   .map(i=>i.espessura)
   .filter(e=>e && e!="-")
   .map(e=>`<option>${e}</option>`).join("")
 }
 
-// 🔥 CEP CORRIGIDO
+// PREÇO
+function getPreco(){
+ let item=config.find(i=>{
+  let espOk=true
+  if(tipoServico.value!="Gravação"){
+   espOk=(i.espessura||"")===(espessura.value||"")
+  }
+
+  return i.tipo_servico==tipoServico.value &&
+         i.material==material.value &&
+         i.produto==produto.value &&
+         espOk
+ })
+ return item?Number(item.preco_m2):0
+}
+
+// ADD
+function addItem(){
+
+ let preco=getPreco()
+ if(!preco){alert("Preço não encontrado");return}
+
+ let l=Number(largura.value||0)
+ let a=Number(altura.value||0)
+ let q=Number(qtd.value||1)
+
+ let valor=((l*a)/1000000)*preco*q
+
+ if(valor <= 0){
+  alert("Valor inválido")
+  return
+ }
+
+ itens.push({l,a,q,valor})
+ render()
+}
+
+// TOTAL
+function total(){
+ return itens.reduce((s,i)=>s+i.valor,0)
+}
+
+// RENDER
+function render(){
+ let html="Itens:<br>"
+ itens.forEach(i=>{
+  html+=`${i.l}x${i.a} = R$${i.valor.toFixed(2)}<br>`
+ })
+ html+=`<br>Total: R$ ${total().toFixed(2)}`
+ resumo.innerHTML=html
+}
+
+// PIX
+async function gerarPix(){
+
+ let valor = total()
+
+ if(valor <= 0){
+  alert("Total inválido (PIX bloqueado)")
+  return
+ }
+
+ try{
+
+  let r = await fetch(API_PIX+"/pix",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({valor})
+  })
+
+  let d = await r.json()
+
+  if(!d.qr_code){
+   alert("Erro ao gerar PIX")
+   console.log(d)
+   return
+  }
+
+  alert("PIX gerado com sucesso")
+
+ }catch(e){
+  console.error("Erro PIX:", e)
+  alert("Erro no PIX")
+ }
+
+}
+
+// CEP
 cep.addEventListener("blur", async ()=>{
 
  try{
 
   let c = cep.value.replace(/\D/g,'')
 
-  if(c.length !== 8){
-    console.log("CEP inválido")
-    return
-  }
-
-  console.log("Buscando CEP...")
+  if(c.length !== 8) return
 
   let r = await fetch(`https://viacep.com.br/ws/${c}/json/`)
   let d = await r.json()
-
-  console.log("CEP:", d)
-
-  if(d.erro){
-    alert("CEP não encontrado")
-    return
-  }
 
   rua.value = d.logradouro || ""
   bairro.value = d.bairro || ""
@@ -137,9 +205,9 @@ cep.addEventListener("blur", async ()=>{
 })
 
 // EVENTOS
-tipoServico.onchange = atualizarMaterial
-material.onchange = atualizarProduto
-produto.onchange = atualizarEsp
+tipoServico.onchange=atualizarMaterial
+material.onchange=atualizarProduto
+produto.onchange=atualizarEsp
 
 carregar()
 
