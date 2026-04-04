@@ -17,13 +17,17 @@ button{font-weight:bold}
 <h2>🚀 RomerArt</h2>
 
 <div class="card">
-<input id="cep" placeholder="CEP">
+<input id="nome" placeholder="Nome *">
+<input id="email" placeholder="Email *">
+<input id="cep" placeholder="CEP *">
 <input id="rua" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
+<input id="numero" placeholder="Número">
 </div>
 
 <div class="card">
+
 <select id="tipoServico"></select>
 <select id="material"></select>
 <select id="produto"></select>
@@ -35,6 +39,7 @@ button{font-weight:bold}
 
 <button onclick="addItem()">Adicionar</button>
 <button onclick="gerarPix()">Gerar PIX</button>
+
 </div>
 
 <div id="resumo" class="card"></div>
@@ -44,11 +49,15 @@ button{font-weight:bold}
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxKYsZW6vJntpqhsdo0S7pnbwMnK3tTvosWMkANOhKj4YcVrMr3KjLWpzVKzDudKgYV/exec"
 const API_PIX = "https://pix-romer-art.onrender.com"
 
-let config=[], itens=[], pixId=null
+let config=[], itens=[]
 
-// CONFIG
+// 🔥 CARREGAR CONFIG COM DEBUG
 async function carregar(){
+
  try{
+
+  console.log("Buscando config...")
+
   let r = await fetch(SCRIPT_URL,{
    method:"POST",
    headers:{"Content-Type":"application/json"},
@@ -56,9 +65,20 @@ async function carregar(){
   })
 
   let txt = await r.text()
-  console.log("CONFIG:", txt)
+
+  console.log("RETORNO BRUTO:", txt)
+
+  if(!txt || txt.includes("html")){
+   alert("❌ Apps Script não está retornando JSON")
+   return
+  }
 
   config = JSON.parse(txt)
+
+  if(!config.length){
+   alert("❌ Config vazia")
+   return
+  }
 
   tipoServico.innerHTML=[...new Set(config.map(i=>i.tipo_servico))]
    .map(i=>`<option>${i}</option>`).join("")
@@ -66,8 +86,10 @@ async function carregar(){
   atualizarMaterial()
 
  }catch(e){
-  console.error("Erro config:", e)
+  console.error("ERRO:", e)
+  alert("Erro ao carregar config")
  }
+
 }
 
 // SELECTS
@@ -95,6 +117,21 @@ function atualizarEsp(){
   .map(e=>`<option>${e}</option>`).join("")
 }
 
+// CEP
+cep.addEventListener("blur", async ()=>{
+ try{
+  let c=cep.value.replace(/\D/g,'')
+  if(c.length!=8)return
+  let r=await fetch(`https://viacep.com.br/ws/${c}/json/`)
+  let d=await r.json()
+  rua.value=d.logradouro||""
+  bairro.value=d.bairro||""
+  cidade.value=d.localidade||""
+ }catch(e){
+  console.log("Erro CEP",e)
+ }
+})
+
 // PREÇO
 function getPreco(){
  let item=config.find(i=>{
@@ -102,7 +139,6 @@ function getPreco(){
   if(tipoServico.value!="Gravação"){
    espOk=(i.espessura||"")===(espessura.value||"")
   }
-
   return i.tipo_servico==tipoServico.value &&
          i.material==material.value &&
          i.produto==produto.value &&
@@ -115,7 +151,11 @@ function getPreco(){
 function addItem(){
 
  let preco=getPreco()
- if(!preco){alert("Preço não encontrado");return}
+
+ if(!preco){
+  alert("Preço não encontrado")
+  return
+ }
 
  let l=Number(largura.value||0)
  let a=Number(altura.value||0)
@@ -123,12 +163,13 @@ function addItem(){
 
  let valor=((l*a)/1000000)*preco*q
 
- if(valor <= 0){
+ if(valor<=0){
   alert("Valor inválido")
   return
  }
 
  itens.push({l,a,q,valor})
+
  render()
 }
 
@@ -141,7 +182,7 @@ function total(){
 function render(){
  let html="Itens:<br>"
  itens.forEach(i=>{
-  html+=`${i.l}x${i.a} = R$${i.valor.toFixed(2)}<br>`
+  html+=`${i.l}x${i.a} | ${i.q} = R$${i.valor.toFixed(2)}<br>`
  })
  html+=`<br>Total: R$ ${total().toFixed(2)}`
  resumo.innerHTML=html
@@ -150,59 +191,28 @@ function render(){
 // PIX
 async function gerarPix(){
 
- let valor = total()
+ let valor=total()
 
- if(valor <= 0){
-  alert("Total inválido (PIX bloqueado)")
+ if(valor<=0){
+  alert("Total inválido")
   return
  }
 
- try{
+ let r=await fetch(API_PIX+"/pix",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({valor})
+ })
 
-  let r = await fetch(API_PIX+"/pix",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({valor})
-  })
+ let d=await r.json()
 
-  let d = await r.json()
+ console.log("PIX:",d)
 
-  if(!d.qr_code){
-   alert("Erro ao gerar PIX")
-   console.log(d)
-   return
-  }
-
-  alert("PIX gerado com sucesso")
-
- }catch(e){
-  console.error("Erro PIX:", e)
+ if(!d.qr_code){
   alert("Erro no PIX")
  }
 
 }
-
-// CEP
-cep.addEventListener("blur", async ()=>{
-
- try{
-
-  let c = cep.value.replace(/\D/g,'')
-
-  if(c.length !== 8) return
-
-  let r = await fetch(`https://viacep.com.br/ws/${c}/json/`)
-  let d = await r.json()
-
-  rua.value = d.logradouro || ""
-  bairro.value = d.bairro || ""
-  cidade.value = d.localidade || ""
-
- }catch(e){
-  console.error("Erro CEP:", e)
- }
-
-})
 
 // EVENTOS
 tipoServico.onchange=atualizarMaterial
