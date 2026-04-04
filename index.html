@@ -93,12 +93,33 @@ async function carregarConfigGeral(){
  dados.forEach(i=>configGeral[i.chave]=Number(i.valor))
 }
 
-// CONFIG
+// CONFIG PRINCIPAL
 async function carregar(){
+
  await carregarConfigGeral()
- let r=await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({tipo:"config"})})
- config=await r.json()
- tipoServico.innerHTML=[...new Set(config.map(i=>i.tipo_servico))].map(i=>`<option>${i}</option>`).join("")
+
+ let r=await fetch(SCRIPT_URL,{
+  method:"POST",
+  body:JSON.stringify({tipo:"config"})
+ })
+
+ let txt=await r.text()
+ console.log("CONFIG RAW:", txt)
+
+ config=JSON.parse(txt)
+
+ // NORMALIZA
+ config=config.map(i=>({
+  tipo_servico:i.tipo_servico,
+  material:i.material,
+  produto:i.produto,
+  espessura:(i.espessura && i.espessura !== "-") ? i.espessura : "",
+  preco_m2:Number(i.preco_m2)
+ }))
+
+ tipoServico.innerHTML=[...new Set(config.map(i=>i.tipo_servico))]
+ .map(i=>`<option>${i}</option>`).join("")
+
  atualizarMaterial()
 }
 
@@ -115,13 +136,21 @@ cep.onblur=async()=>{
 
 // SELECTS
 function atualizarMaterial(){
- material.innerHTML=[...new Set(config.filter(i=>i.tipo_servico==tipoServico.value).map(i=>i.material))].map(i=>`<option>${i}</option>`).join("")
+ material.innerHTML=[...new Set(config
+  .filter(i=>i.tipo_servico==tipoServico.value)
+  .map(i=>i.material))]
+  .map(i=>`<option>${i}</option>`).join("")
  atualizarProduto()
 }
+
 function atualizarProduto(){
- produto.innerHTML=[...new Set(config.filter(i=>i.tipo_servico==tipoServico.value && i.material==material.value).map(i=>i.produto))].map(i=>`<option>${i}</option>`).join("")
+ produto.innerHTML=[...new Set(config
+  .filter(i=>i.tipo_servico==tipoServico.value && i.material==material.value)
+  .map(i=>i.produto))]
+  .map(i=>`<option>${i}</option>`).join("")
  atualizarExtras()
 }
+
 function atualizarExtras(){
 
  if(produto.value=="Camiseta"){
@@ -132,14 +161,32 @@ function atualizarExtras(){
   cor.style.display="none"
  }
 
- if(tipoServico.value=="Gravação"){
-  espessura.style.display="none"
- }else{
-  espessura.style.display="block"
-  espessura.innerHTML=config
-   .filter(i=>i.tipo_servico==tipoServico.value && i.material==material.value && i.produto==produto.value)
-   .map(i=>`<option>${i.espessura}</option>`).join("")
- }
+ espessura.innerHTML=config
+  .filter(i=>i.tipo_servico==tipoServico.value && i.material==material.value && i.produto==produto.value)
+  .map(i=>i.espessura)
+  .filter(e=>e)
+  .map(e=>`<option>${e}</option>`).join("")
+}
+
+// PREÇO CORRIGIDO
+function getPreco(){
+
+ let item=config.find(i=>{
+  let tipo=i.tipo_servico==tipoServico.value
+  let mat=i.material==material.value
+  let prod=i.produto==produto.value
+
+  let esp=true
+  if(tipoServico.value!="Gravação"){
+    esp=(i.espessura||"")===(espessura.value||"")
+  }
+
+  return tipo && mat && prod && esp
+ })
+
+ console.log("ITEM:",item)
+
+ return item?Number(item.preco_m2):0
 }
 
 // VALIDAÇÃO
@@ -151,21 +198,10 @@ function validar(){
  return true
 }
 
-// PREÇO
-function getPreco(){
- let item=config.find(i=>
-  i.tipo_servico==tipoServico.value &&
-  i.material==material.value &&
-  i.produto==produto.value &&
-  (tipoServico.value=="Gravação"||i.espessura==espessura.value)
- )
- return item?Number(item.preco_m2):0
-}
-
 // ADD
 function addItem(){
 
- if(!validar()) return
+ if(!validar())return
 
  let q=Number(qtd.value||1)
  let preco=getPreco()
@@ -174,16 +210,17 @@ function addItem(){
  let valor=0
 
  if(produto.value=="Camiseta"){
-  if(!tamanho.value||!cor.value){alert("Selecione tamanho e cor");return}
+  if(!tamanho.value||!cor.value){
+   alert("Escolha tamanho e cor");return
+  }
   valor=preco*q
   if(cor.value=="Colorido") valor+=5*q
  }else{
-  let l=Number(largura.value||0)
-  let a=Number(altura.value||0)
+  let l=Number(largura.value)
+  let a=Number(altura.value)
   if(!l||!a){alert("Informe medidas");return}
   if(l>400||a>400){alert("Máx 400mm");return}
-  let area=(l*a)/1000000
-  valor=area*preco*q
+  valor=((l*a)/1000000)*preco*q
  }
 
  itens.push({
@@ -212,7 +249,7 @@ function frete(){
  return configGeral.frete_base||15
 }
 
-// RESUMO
+// RENDER
 function render(status="Aguardando pagamento"){
 
  let desc=total()*(configGeral.desconto_pix||0.05)
@@ -258,8 +295,6 @@ async function gerarPix(){
  if(!d.qr_code){alert("Erro PIX");return}
 
  pixId=d.id
- pago=false
-
  render()
 
  qr.src="data:image/png;base64,"+d.qr_code_base64
@@ -307,6 +342,7 @@ async function enviarPedido(){
  itens.forEach(i=>{
   msg+=`${i.tipo} ${i.material} ${i.produto}%0AQtd:${i.q} R$${i.valor.toFixed(2)}%0A`
  })
+
  window.open(`https://wa.me/${WHATS}?text=${msg}`)
 }
 
