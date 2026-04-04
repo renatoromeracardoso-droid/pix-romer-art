@@ -6,29 +6,13 @@
 <title>RomerArt Pedidos</title>
 
 <style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-  padding: 20px;
-}
-input, button {
-  width: 100%;
-  padding: 12px;
-  margin: 6px 0;
-  border-radius: 8px;
-  border: none;
-}
-button { font-weight: bold }
-.add { background: orange }
-.pix { background: green; color: white }
-.enviar { background: #22c55e; color: white }
-.card {
-  background: #1e293b;
-  padding: 15px;
-  border-radius: 10px;
-  margin-top: 15px;
-}
+body { font-family: Arial; background:#0f172a; color:white; padding:20px }
+input,button { width:100%; padding:12px; margin:6px 0; border-radius:8px; border:none }
+button { font-weight:bold }
+.add{background:orange}
+.pix{background:green;color:white}
+.enviar{background:#22c55e;color:white}
+.card{background:#1e293b;padding:15px;border-radius:10px;margin-top:15px}
 </style>
 </head>
 
@@ -37,13 +21,13 @@ button { font-weight: bold }
 <h2>🚀 RomerArt Pedidos</h2>
 
 <h3>Cliente</h3>
-<input id="nome" placeholder="Nome">
-<input id="email" placeholder="Email">
-<input id="cep" placeholder="CEP">
+<input id="nome" placeholder="Nome" required>
+<input id="email" placeholder="Email" required>
+<input id="cep" placeholder="CEP" required>
 <input id="rua" placeholder="Rua">
 <input id="bairro" placeholder="Bairro">
 <input id="cidade" placeholder="Cidade">
-<input id="numero" placeholder="Número">
+<input id="numero" placeholder="Número" required>
 
 <h3>Pedido</h3>
 <input id="largura" placeholder="Largura (mm)">
@@ -75,66 +59,66 @@ cep.addEventListener("blur", async () => {
   cidade.value = d.localidade || ""
 })
 
-// 🔥 Validação
-function validar() {
-  if (!nome.value || !email.value || !cep.value || !numero.value) {
+// 🔥 validação
+function validar(){
+  if(!nome.value || !email.value || !cep.value || !numero.value){
     alert("Preencha os campos obrigatórios")
     return false
   }
-
-  if (itens.length === 0) {
+  if(itens.length === 0){
     alert("Adicione itens")
     return false
   }
-
   return true
 }
 
-// 🔥 Adicionar item
-function addItem() {
-
+// 🔥 adicionar item
+function addItem(){
   const l = Number(largura.value)
   const a = Number(altura.value)
   const q = Number(qtd.value)
 
-  if (!l || !a || !q) {
-    alert("Preencha largura, altura e quantidade")
+  if(!l || !a || !q){
+    alert("Preencha os dados do item")
     return
   }
 
-  if (l > 400 || a > 400) {
-    alert("Limite máximo 400mm")
-    return
-  }
+  const area = (l*a)/10000
+  const valor = area * 0.10 * q
 
-  const area = (l * a) / 10000
-  const valorUnit = 0.10
-  const valor = area * valorUnit * q
-
-  itens.push({ l,a,q,valor })
+  itens.push({l,a,q,valor})
 
   atualizarResumo()
 }
 
-// 🔥 Total
-function total() {
+// 🔥 total
+function total(){
   return itens.reduce((s,i)=>s+i.valor,0)
 }
 
-// 🔥 Resumo
-function atualizarResumo(status="Aguardando pagamento") {
+// 🔥 resumo completo
+function atualizarResumo(status="Aguardando pagamento"){
+  let html = ""
 
-  let html = `<b>Pedido:</b> ${pedidoId}<br>`
+  html += `<b>Pedido:</b> ${pedidoId}<br><br>`
+
   html += `<b>Cliente:</b> ${nome.value}<br>`
   html += `<b>Email:</b> ${email.value}<br>`
-  html += `<b>Endereço:</b> ${rua.value}, ${numero.value} - ${bairro.value} - ${cidade.value}<br><br>`
+  html += `<b>Endereço:</b><br>`
+  html += `${rua.value}, ${numero.value}<br>`
+  html += `${bairro.value} - ${cidade.value}<br><br>`
+
+  html += `<b>Itens:</b><br>`
 
   itens.forEach((i,idx)=>{
-    html += `${idx+1}) ${i.l}x${i.a} | Qtd: ${i.q} | R$ ${i.valor.toFixed(2)}<br>`
+    html += `${idx+1}) ${i.l}x${i.a} mm<br>`
+    html += `Qtd: ${i.q}<br>`
+    html += `Valor: R$ ${i.valor.toFixed(2)}<br><br>`
   })
 
-  html += `<br><b>Total: R$ ${total().toFixed(2)}</b><br>`
-  html += `<b>Status:</b> ${status}<br>`
+  html += `<hr>`
+  html += `<b>Total: R$ ${total().toFixed(2)}</b><br>`
+  html += `<b>Status:</b> ${status}<br><br>`
 
   html += `<img id="qrcode" width="200"><br>`
   html += `<p id="pixCopia"></p>`
@@ -142,63 +126,54 @@ function atualizarResumo(status="Aguardando pagamento") {
   resumo.innerHTML = html
 }
 
-// 🔥 Gerar PIX
-async function gerarPix() {
+// 🔥 gerar PIX
+async function gerarPix(){
 
-  if (!validar()) return
+  if(!validar()) return
 
-  try {
+  const res = await fetch("https://pix-romer-art.onrender.com/pix",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ valor: total() })
+  })
 
-    const res = await fetch("https://pix-romer-art.onrender.com/pix", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ valor: total() })
-    })
+  const data = await res.json()
 
-    const data = await res.json()
-
-    if (!data.id) {
-      alert("Erro ao gerar PIX")
-      return
-    }
-
-    pixId = data.id
-
-    atualizarResumo()
-
-    document.getElementById("qrcode").src =
-      "data:image/png;base64," + data.qr_code_base64
-
-    document.getElementById("pixCopia").innerText =
-      data.copiaecola
-
-    monitorar()
-
-  } catch (e) {
+  if(!data.id){
     alert("Erro PIX")
+    return
   }
+
+  pixId = data.id
+
+  atualizarResumo()
+
+  document.getElementById("qrcode").src =
+    "data:image/png;base64," + data.qr_code_base64
+
+  document.getElementById("pixCopia").innerText =
+    data.copiaecola
+
+  monitorar()
 }
 
-// 🔥 Monitorar pagamento
-function monitorar() {
-
+// 🔥 monitoramento
+function monitorar(){
   const loop = setInterval(async ()=>{
-
     const res = await fetch(`https://pix-romer-art.onrender.com/status/${pixId}`)
     const data = await res.json()
 
-    if (data.status === "approved") {
+    if(data.status === "approved"){
       atualizarResumo("Pagamento aprovado ✅")
       clearInterval(loop)
     }
-
-  }, 4000)
+  },4000)
 }
 
-// 🔥 Enviar pedido
-async function enviarPedido() {
+// 🔥 enviar pedido
+async function enviarPedido(){
 
-  if (!validar()) return
+  if(!validar()) return
 
   const dados = {
     pedido: pedidoId,
@@ -214,21 +189,25 @@ async function enviarPedido() {
     status: "Novo"
   }
 
-  try {
-
-    const res = await fetch("https://script.google.com/macros/s/AKfycbyoE1fckemtWTKY6KNkrvnsZWUXkvDsmmjpPe2AKoZK1Vk52YzdDLvdDz6UVpqoYPDr/exec", {
+  try{
+    const res = await fetch("https://script.google.com/macros/s/AKfycbyoE1fckemtWTKY6KNkrvnsZWUXkvDsmmjpPe2AKoZK1Vk52YzdDLvdDz6UVpqoYPDr/exec",{
       method:"POST",
       body: JSON.stringify(dados)
     })
 
-    const r = await res.json()
-    console.log("Planilha:", r)
+    const text = await res.text()
 
-  } catch (e) {
-    alert("Erro ao salvar na planilha")
+    if(!text.includes("ok")){
+      alert("Erro ao salvar na planilha")
+      return
+    }
+
+  }catch(e){
+    alert("Erro conexão planilha")
+    return
   }
 
-  // 🔥 WhatsApp completo
+  // 🔥 WhatsApp
   let msg = `Pedido ${pedidoId}%0A`
   msg += `Cliente: ${nome.value}%0A`
   msg += `Endereço: ${rua.value}, ${numero.value}%0A`
@@ -241,7 +220,7 @@ async function enviarPedido() {
 
   window.open(`https://wa.me/5511946447040?text=${msg}`)
 
-  alert("Pedido enviado 🚀")
+  alert("Pedido salvo + enviado 🚀")
 }
 
 </script>
