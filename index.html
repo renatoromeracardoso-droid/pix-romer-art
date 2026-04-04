@@ -72,7 +72,7 @@ button{
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
 <button class="enviar" onclick="enviarPedido()">Enviar Pedido</button>
 
-<div id="resumo" class="card"></div>
+<div id="resumo" class="card">Nenhum item</div>
 
 </div>
 
@@ -85,104 +85,128 @@ let itens = []
 
 // 🔥 CARREGAR CONFIG
 async function carregarConfig(){
-  const res = await fetch(URL,{
-    method:"POST",
-    body: JSON.stringify({ tipo:"config" })
-  })
-  config = await res.json()
-  montarSelects()
+  try{
+    const res = await fetch(URL,{
+      method:"POST",
+      body: JSON.stringify({ tipo:"config" })
+    })
+    config = await res.json()
+    montarSelects()
+  }catch(e){
+    alert("Erro ao carregar config")
+  }
 }
 
 // 🔥 SELECTS
 function montarSelects(){
-
   const tipos = [...new Set(config.map(i=>i.tipo_servico))]
   document.getElementById("tipo").innerHTML =
-    tipos.map(v=>`<option>${v}</option>`)
+    tipos.map(v=>`<option>${v}</option>`).join("")
 
   atualizarMaterial()
 }
 
 function atualizarMaterial(){
   const tipo = document.getElementById("tipo").value
-  const materiais = config.filter(i=>i.tipo_servico==tipo)
 
-  const lista = [...new Set(materiais.map(i=>i.material))]
+  const lista = [...new Set(
+    config.filter(i=>i.tipo_servico==tipo).map(i=>i.material)
+  )]
+
   document.getElementById("material").innerHTML =
-    lista.map(v=>`<option>${v}</option>`)
+    lista.map(v=>`<option>${v}</option>`).join("")
 
   atualizarProduto()
 }
 
 function atualizarProduto(){
-  const tipo = document.getElementById("tipo").value
-  const material = document.getElementById("material").value
+  const tipo = tipoSel()
+  const material = materialSel()
 
-  const produtos = config.filter(i=>
-    i.tipo_servico==tipo && i.material==material)
+  const lista = [...new Set(
+    config.filter(i=>
+      i.tipo_servico==tipo && i.material==material
+    ).map(i=>i.produto)
+  )]
 
-  const lista = [...new Set(produtos.map(i=>i.produto))]
   document.getElementById("produto").innerHTML =
-    lista.map(v=>`<option>${v}</option>`)
+    lista.map(v=>`<option>${v}</option>`).join("")
 
   atualizarEspessura()
 }
 
 function atualizarEspessura(){
-  const tipo = document.getElementById("tipo").value
-  const material = document.getElementById("material").value
-  const produto = document.getElementById("produto").value
-
   const lista = config.filter(i=>
-    i.tipo_servico==tipo &&
-    i.material==material &&
-    i.produto==produto)
+    i.tipo_servico==tipoSel() &&
+    i.material==materialSel() &&
+    i.produto==produtoSel()
+  )
 
   document.getElementById("espessura").innerHTML =
-    lista.map(v=>`<option>${v.espessura}</option>`)
+    lista.map(v=>`<option>${v.espessura}</option>`).join("")
 }
 
+// 🔥 HELPERS
+function tipoSel(){ return document.getElementById("tipo").value }
+function materialSel(){ return document.getElementById("material").value }
+function produtoSel(){ return document.getElementById("produto").value }
+function espSel(){ return document.getElementById("espessura").value }
+
 // 🔥 EVENTOS
-document.getElementById("tipo").onchange = atualizarMaterial
-document.getElementById("material").onchange = atualizarProduto
-document.getElementById("produto").onchange = atualizarEspessura
+document.addEventListener("change", (e)=>{
+  if(e.target.id==="tipo") atualizarMaterial()
+  if(e.target.id==="material") atualizarProduto()
+  if(e.target.id==="produto") atualizarEspessura()
+})
 
 // 🔥 CEP
 document.getElementById("cep").addEventListener("blur", async ()=>{
   const cep = document.getElementById("cep").value
+
+  if(cep.length<8) return
+
   const res = await fetch(`https://viacep.com.br/ws/${cep}/json`)
   const data = await res.json()
 
-  document.getElementById("rua").value = data.logradouro
-  document.getElementById("bairro").value = data.bairro
-  document.getElementById("cidade").value = data.localidade
+  rua.value = data.logradouro
+  bairro.value = data.bairro
+  cidade.value = data.localidade
 })
 
-// 🔥 ADICIONAR ITEM
+// 🔥 ADD ITEM
 function addItem(){
 
-  let largura = parseFloat(largura.value)
-  let altura = parseFloat(altura.value)
-  let qtd = parseInt(qtd.value)
+  const largura = parseFloat(document.getElementById("largura").value)
+  const altura = parseFloat(document.getElementById("altura").value)
+  const qtd = parseInt(document.getElementById("qtd").value)
 
-  if(largura>400 || altura>400){
-    alert("Máx 400mm")
+  if(!largura || !altura || !qtd){
+    alert("Preencha todos os campos")
     return
   }
 
-  let area = (largura*altura)/1000000
+  if(largura>400 || altura>400){
+    alert("Máximo 400mm")
+    return
+  }
 
-  const itemConfig = config.find(i=>
-    i.tipo_servico==tipo.value &&
-    i.material==material.value &&
-    i.produto==produto.value &&
-    i.espessura==espessura.value
+  const conf = config.find(i=>
+    i.tipo_servico==tipoSel() &&
+    i.material==materialSel() &&
+    i.produto==produtoSel() &&
+    i.espessura==espSel()
   )
 
-  let valor = area * itemConfig.preco_m2 * qtd
+  if(!conf){
+    alert("Config não encontrada")
+    return
+  }
+
+  const area = (largura*altura)/1000000
+  const valor = area * conf.preco_m2 * qtd
 
   itens.push({
-    largura,altura,qtd,valor
+    largura, altura, qtd, valor
   })
 
   atualizarResumo()
@@ -191,26 +215,42 @@ function addItem(){
 // 🔥 RESUMO
 function atualizarResumo(){
 
-  let total = itens.reduce((s,i)=>s+i.valor,0)
+  if(itens.length===0){
+    resumo.innerHTML="Nenhum item"
+    return
+  }
 
-  let html = itens.map((i,idx)=>
-    `${idx+1}) ${i.largura}x${i.altura} | Qtd:${i.qtd} | R$ ${i.valor.toFixed(2)}`
-  ).join("<br>")
+  let total = 0
 
-  document.getElementById("resumo").innerHTML = `
+  let html = itens.map((i,idx)=>{
+    total += i.valor
+    return `${idx+1}) ${i.largura}x${i.altura}mm | Qtd:${i.qtd} | R$ ${i.valor.toFixed(2)}`
+  }).join("<br>")
+
+  resumo.innerHTML = `
+    <b>Itens:</b><br><br>
     ${html}
     <hr>
     <b>Total: R$ ${total.toFixed(2)}</b>
   `
 }
 
-// 🔥 PIX (simples)
+// 🔥 PIX
 function gerarPix(){
+  if(itens.length===0){
+    alert("Adicione item primeiro")
+    return
+  }
   alert("PIX gerado (simulação)")
 }
 
 // 🔥 ENVIAR
 async function enviarPedido(){
+
+  if(itens.length===0){
+    alert("Adicione itens")
+    return
+  }
 
   const total = itens.reduce((s,i)=>s+i.valor,0)
 
@@ -233,8 +273,7 @@ async function enviarPedido(){
     body: JSON.stringify(pedido)
   })
 
-  // WhatsApp
-  let texto = `Pedido\nTotal: R$ ${total.toFixed(2)}`
+  let texto = `Pedido RomerArt\nTotal: R$ ${total.toFixed(2)}`
   window.open(`https://wa.me/5511946447040?text=${encodeURIComponent(texto)}`)
 
   alert("Pedido enviado!")
