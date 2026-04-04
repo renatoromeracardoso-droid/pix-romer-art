@@ -6,19 +6,13 @@
 <title>RomerArt Pedidos</title>
 
 <style>
-body { font-family: Arial; background:#0f172a; color:white; padding:20px }
-input, select, button {
-  width:100%; padding:12px; margin:6px 0;
-  border-radius:8px; border:none
-}
-button { font-weight:bold }
-.add{background:orange}
-.pix{background:green;color:white}
-.enviar{background:#22c55e;color:white}
-.card{
-  background:#1e293b; padding:15px;
-  border-radius:10px; margin-top:15px
-}
+body{font-family:Arial;background:#0f172a;color:#fff;padding:20px}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:none}
+button{font-weight:bold}
+.add{background:#f97316}
+.pix{background:#16a34a}
+.enviar{background:#22c55e}
+.card{background:#1e293b;padding:15px;border-radius:10px;margin-top:15px}
 </style>
 </head>
 
@@ -42,284 +36,219 @@ button { font-weight:bold }
 <select id="produto"></select>
 <select id="espessura"></select>
 
-<input id="largura" placeholder="Largura (mm)">
-<input id="altura" placeholder="Altura (mm)">
+<select id="tamanho" style="display:none">
+<option>P</option><option>M</option><option>G</option><option>GG</option>
+</select>
+
+<select id="cor" style="display:none">
+<option>Branco</option><option>Preto</option><option>Colorido</option>
+</select>
+
+<input id="largura" placeholder="Largura mm">
+<input id="altura" placeholder="Altura mm">
 <input id="qtd" placeholder="Quantidade">
 
 <button class="add" onclick="addItem()">Adicionar</button>
 <button class="pix" onclick="gerarPix()">Gerar PIX</button>
 <button class="enviar" onclick="enviarPedido()">Enviar Pedido</button>
 
-<div class="card" id="resumo"></div>
+<div id="resumo" class="card"></div>
 
 <script>
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCAeWy1XtDSe12sj89HF9gSiJId9IsVWbrTQPm4h3_OQJ39_rHUEglzVCFfVuJald2/exec"
 
-let config = []
-let itens = []
-let pixId = null
-let pedidoId = "PED-" + Date.now()
+let config=[], itens=[], pixId=null
+let pedidoId="PED-"+Date.now()
 
-// CEP AUTO
-cep.addEventListener("blur", async ()=>{
-  const c = cep.value.replace(/\D/g,"")
-  if(c.length !== 8) return
-  const r = await fetch(`https://viacep.com.br/ws/${c}/json/`)
-  const d = await r.json()
-  rua.value = d.logradouro || ""
-  bairro.value = d.bairro || ""
-  cidade.value = d.localidade || ""
-})
-
-// CARREGAR CONFIG
-async function carregarConfig(){
-  const res = await fetch(SCRIPT_URL,{
-    method:"POST",
-    body: JSON.stringify({ tipo:"config" })
-  })
-  config = await res.json()
-  preencherTipoServico()
+// CEP
+cep.onblur=async()=>{
+ let c=cep.value.replace(/\D/g,'')
+ if(c.length!=8)return
+ let r=await fetch(`https://viacep.com.br/ws/${c}/json/`)
+ let d=await r.json()
+ rua.value=d.logradouro||""
+ bairro.value=d.bairro||""
+ cidade.value=d.localidade||""
 }
 
-// SELECTS
-function preencherTipoServico(){
-  const lista = [...new Set(config.map(i=>i.tipo_servico))]
-  tipoServico.innerHTML = lista.map(i=>`<option>${i}</option>`).join("")
-  atualizarMaterial()
+// CONFIG
+async function carregarConfig(){
+ let r=await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({tipo:"config"})})
+ config=await r.json()
+ preencherTipo()
+}
+
+function preencherTipo(){
+ tipoServico.innerHTML=[...new Set(config.map(i=>i.tipo_servico))].map(i=>`<option>${i}</option>`).join("")
+ atualizarMaterial()
 }
 
 function atualizarMaterial(){
-  const lista = config
-    .filter(i=>i.tipo_servico === tipoServico.value)
-    .map(i=>i.material)
-
-  material.innerHTML =
-    [...new Set(lista)].map(i=>`<option>${i}</option>`).join("")
-
-  atualizarProduto()
+ material.innerHTML=[...new Set(config.filter(i=>i.tipo_servico==tipoServico.value).map(i=>i.material))].map(i=>`<option>${i}</option>`).join("")
+ atualizarProduto()
 }
 
 function atualizarProduto(){
-  const lista = config
-    .filter(i =>
-      i.tipo_servico === tipoServico.value &&
-      i.material === material.value
-    )
-    .map(i=>i.produto)
-
-  produto.innerHTML =
-    [...new Set(lista)].map(i=>`<option>${i}</option>`).join("")
-
-  atualizarEspessura()
+ produto.innerHTML=[...new Set(config.filter(i=>i.tipo_servico==tipoServico.value&&i.material==material.value).map(i=>i.produto))].map(i=>`<option>${i}</option>`).join("")
+ atualizarExtras()
 }
 
-function atualizarEspessura(){
+function atualizarExtras(){
 
-  if(tipoServico.value === "Gravação"){
-    espessura.style.display = "none"
-    return
-  }
+ // camiseta
+ if(produto.value=="Camiseta"){
+  tamanho.style.display="block"
+  cor.style.display="block"
+ }else{
+  tamanho.style.display="none"
+  cor.style.display="none"
+ }
 
-  espessura.style.display = "block"
-
-  const lista = config.filter(i =>
-    i.tipo_servico === tipoServico.value &&
-    i.material === material.value &&
-    i.produto === produto.value
-  )
-
-  espessura.innerHTML =
-    lista.map(i=>`<option>${i.espessura}</option>`).join("")
+ // espessura
+ if(tipoServico.value=="Gravação"){
+  espessura.style.display="none"
+ }else{
+  espessura.style.display="block"
+  espessura.innerHTML=config
+   .filter(i=>i.tipo_servico==tipoServico.value && i.material==material.value && i.produto==produto.value)
+   .map(i=>`<option>${i.espessura}</option>`).join("")
+ }
 }
 
 // PREÇO
 function getPreco(){
-  const item = config.find(i =>
-    i.tipo_servico === tipoServico.value &&
-    i.material === material.value &&
-    i.produto === produto.value &&
-    (tipoServico.value === "Gravação" || i.espessura === espessura.value)
-  )
-  return item ? item.preco_m2 : 0
+ let item=config.find(i=>
+  i.tipo_servico==tipoServico.value &&
+  i.material==material.value &&
+  i.produto==produto.value &&
+  (tipoServico.value=="Gravação" || i.espessura==espessura.value)
+ )
+ return item?Number(item.preco_m2):0
 }
 
-// VALIDAR
-function validar(){
-  if(!nome.value || !email.value || !cep.value || !numero.value){
-    alert("Preencha os campos obrigatórios")
-    return false
-  }
-  if(itens.length === 0){
-    alert("Adicione itens")
-    return false
-  }
-  return true
-}
-
-// ADD ITEM
+// ADD
 function addItem(){
 
-  const l = Number(largura.value)
-  const a = Number(altura.value)
-  const q = Number(qtd.value)
+ let l=Number(largura.value||0)
+ let a=Number(altura.value||0)
+ let q=Number(qtd.value||1)
 
-  if(!l || !a || !q){
-    alert("Preencha medidas")
-    return
-  }
+ if(produto.value!="Camiseta"){
+  if(!l||!a){alert("Informe medidas");return}
+  if(l>400||a>400){alert("Máx 400mm");return}
+ }
 
-  if(l > 400 || a > 400){
-    alert("Máximo 400mm")
-    return
-  }
+ let preco=getPreco()
+ if(!preco){alert("Preço não encontrado");return}
 
-  const preco = getPreco()
-  if(!preco){
-    alert("Preço não encontrado")
-    return
-  }
+ let valor=0
 
-  const area = (l*a)/1000000
-  const valor = area * preco * q
+ if(produto.value=="Camiseta"){
+  valor=preco*q
+  if(cor.value=="Colorido") valor+=5*q
+ }else{
+  let area=(l*a)/1000000
+  valor=area*preco*q
+ }
 
-  itens.push({
-    tipoServico: tipoServico.value,
-    material: material.value,
-    produto: produto.value,
-    espessura: espessura.value || "-",
-    l,a,q,valor
-  })
+ itens.push({
+  tipo:tipoServico.value,
+  material:material.value,
+  produto:produto.value,
+  esp:espessura.value||"-",
+  tamanho:produto.value=="Camiseta"?tamanho.value:"-",
+  cor:produto.value=="Camiseta"?cor.value:"-",
+  l,a,q,valor
+ })
 
-  atualizarResumo()
+ render()
 }
 
-// TOTAL
-function total(){
-  return itens.reduce((s,i)=>s+i.valor,0)
-}
+// RENDER
+function total(){return itens.reduce((s,i)=>s+i.valor,0)}
 
-// RESUMO
-function atualizarResumo(status="Aguardando pagamento"){
+function render(status="Aguardando pagamento"){
 
-  let html = `<b>Pedido:</b> ${pedidoId}<br><br>`
+ let html=`<b>Pedido:</b> ${pedidoId}<br><br>`
+ html+=`${nome.value}<br>${rua.value},${numero.value}<br>${bairro.value}<br><br>`
 
-  html += `<b>Cliente:</b> ${nome.value}<br>`
-  html += `${rua.value}, ${numero.value}<br>`
-  html += `${bairro.value} - ${cidade.value}<br><br>`
+ itens.forEach((i,x)=>{
+  html+=`${x+1}) ${i.tipo} - ${i.material} - ${i.produto}<br>`
+  
+  if(i.produto=="Camiseta"){
+   html+=`Tam:${i.tamanho} | Cor:${i.cor}<br>`
+  }else{
+   html+=`${i.l}x${i.a}mm<br>`
+  }
 
-  itens.forEach((i,idx)=>{
-    html += `${idx+1}) ${i.tipoServico} - ${i.material} - ${i.produto}<br>`
-    html += `${i.l}x${i.a} mm | Qtd:${i.q}<br>`
-    html += `R$ ${i.valor.toFixed(2)}<br><br>`
-  })
+  html+=`Qtd:${i.q} - R$${i.valor.toFixed(2)}<br><br>`
+ })
 
-  html += `<hr><b>Total: R$ ${total().toFixed(2)}</b><br>`
-  html += `<b>Status:</b> ${status}<br><br>`
-  html += `<img id="qrcode" width="200"><br>`
-  html += `<p id="pixCopia"></p>`
+ html+=`<hr><b>Total: R$ ${total().toFixed(2)}</b><br>Status: ${status}<br>`
+ html+=`<img id="qr" width="200"><br><textarea id="pix"></textarea>`
 
-  resumo.innerHTML = html
+ resumo.innerHTML=html
 }
 
 // PIX
 async function gerarPix(){
-  if(!validar()) return
-
-  const res = await fetch("https://pix-romer-art.onrender.com/pix",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ valor: total() })
-  })
-
-  const data = await res.json()
-
-  pixId = data.id
-
-  atualizarResumo()
-
-  document.getElementById("qrcode").src =
-    "data:image/png;base64," + data.qr_code_base64
-
-  document.getElementById("pixCopia").innerText =
-    data.copiaecola
-
-  monitorar()
+ let r=await fetch("https://pix-romer-art.onrender.com/pix",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({valor:total()})
+ })
+ let d=await r.json()
+ pixId=d.id
+ render()
+ qr.src="data:image/png;base64,"+d.qr_code_base64
+ pix.value=d.copiaecola
+ monitorar()
 }
 
-// STATUS
 function monitorar(){
-  const loop = setInterval(async ()=>{
-    const res = await fetch(`https://pix-romer-art.onrender.com/status/${pixId}`)
-    const data = await res.json()
-
-    if(data.status === "approved"){
-      atualizarResumo("Pagamento aprovado ✅")
-      clearInterval(loop)
-    }
-  },4000)
+ let t=setInterval(async()=>{
+  let r=await fetch(`https://pix-romer-art.onrender.com/status/${pixId}`)
+  let d=await r.json()
+  if(d.status=="approved"){
+   render("Pagamento aprovado ✅")
+   clearInterval(t)
+  }
+ },4000)
 }
 
 // ENVIAR
 async function enviarPedido(){
 
-  if(!validar()) return
+ let dados={
+  tipo:"pedido",
+  pedido:pedidoId,
+  nome:nome.value,
+  email:email.value,
+  cep:cep.value,
+  rua:rua.value,
+  bairro:bairro.value,
+  cidade:cidade.value,
+  numero:numero.value,
+  total:total(),
+  itens
+ }
 
-  const dados = {
-    tipo:"pedido",
-    pedido: pedidoId,
-    nome: nome.value,
-    email: email.value,
-    cep: cep.value,
-    rua: rua.value,
-    bairro: bairro.value,
-    cidade: cidade.value,
-    numero: numero.value,
-    total: total(),
-    itens,
-    status: "Novo"
-  }
+ await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify(dados)})
 
-  try{
-    const res = await fetch(SCRIPT_URL,{
-      method:"POST",
-      body: JSON.stringify(dados)
-    })
+ let msg=`Pedido ${pedidoId}%0A`
+ itens.forEach(i=>{
+  msg+=`${i.produto} - R$${i.valor}%0A`
+ })
 
-    const json = await res.json()
-
-    if(!json.ok){
-      alert("Erro ao salvar: " + json.erro)
-      return
-    }
-
-  }catch(e){
-    alert("Erro conexão planilha")
-    return
-  }
-
-  let msg = `📦 Pedido ${pedidoId}%0A`
-  msg += `👤 ${nome.value}%0A`
-  msg += `📍 ${rua.value}, ${numero.value}%0A%0A`
-
-  itens.forEach(i=>{
-    msg += `🔹 ${i.tipoServico} ${i.material} ${i.produto}%0A`
-    msg += `${i.l}x${i.a} | Qtd:${i.q} | R$${i.valor.toFixed(2)}%0A`
-  })
-
-  msg += `%0A💰 Total: R$ ${total().toFixed(2)}`
-
-  window.open(`https://wa.me/5511946447040?text=${msg}`)
-
-  alert("Pedido enviado 🚀")
+ window.open(`https://wa.me/5511946447040?text=${msg}`)
 }
 
 // EVENTOS
-tipoServico.onchange = atualizarMaterial
-material.onchange = atualizarProduto
-produto.onchange = atualizarEspessura
+tipoServico.onchange=atualizarMaterial
+material.onchange=atualizarProduto
+produto.onchange=atualizarExtras
 
-// INIT
 carregarConfig()
 
 </script>
