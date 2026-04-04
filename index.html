@@ -37,10 +37,12 @@ button{font-weight:bold}
 <select id="espessura"></select>
 
 <select id="tamanho" style="display:none">
+<option value="">Tamanho</option>
 <option>P</option><option>M</option><option>G</option><option>GG</option>
 </select>
 
 <select id="cor" style="display:none">
+<option value="">Cor</option>
 <option>Branco</option><option>Preto</option><option>Colorido</option>
 </select>
 
@@ -127,16 +129,38 @@ function getPreco(){
  return item?Number(item.preco_m2):0
 }
 
-// ADD
+// ADD ITEM
 function addItem(){
 
  let l=Number(largura.value||0)
  let a=Number(altura.value||0)
  let q=Number(qtd.value||1)
 
- if(produto.value!="Camiseta"){
-  if(!l||!a){alert("Informe medidas");return}
-  if(l>400||a>400){alert("Máx 400mm");return}
+ // camiseta validação
+ if(produto.value=="Camiseta"){
+
+  if(!tamanho.value){
+    alert("Selecione o tamanho")
+    return
+  }
+
+  if(!cor.value){
+    alert("Selecione a cor")
+    return
+  }
+
+ }else{
+
+  if(!l||!a){
+    alert("Informe medidas")
+    return
+  }
+
+  if(l>400||a>400){
+    alert("Máx 400mm")
+    return
+  }
+
  }
 
  let preco=getPreco()
@@ -165,17 +189,18 @@ function addItem(){
  render()
 }
 
-// RENDER
+// TOTAL
 function total(){return itens.reduce((s,i)=>s+i.valor,0)}
 
+// RENDER
 function render(status="Aguardando pagamento"){
 
  let html=`<b>Pedido:</b> ${pedidoId}<br><br>`
- html+=`${nome.value}<br>${rua.value},${numero.value}<br>${bairro.value}<br><br>`
+ html+=`${nome.value}<br>${rua.value}, ${numero.value}<br>${bairro.value}<br><br>`
 
  itens.forEach((i,x)=>{
   html+=`${x+1}) ${i.tipo} - ${i.material} - ${i.produto}<br>`
-  
+
   if(i.produto=="Camiseta"){
    html+=`Tam:${i.tamanho} | Cor:${i.cor}<br>`
   }else{
@@ -193,19 +218,31 @@ function render(status="Aguardando pagamento"){
 
 // PIX
 async function gerarPix(){
+
+ if(itens.length==0){
+  alert("Adicione item")
+  return
+ }
+
  let r=await fetch("https://pix-romer-art.onrender.com/pix",{
   method:"POST",
   headers:{"Content-Type":"application/json"},
   body:JSON.stringify({valor:total()})
  })
+
  let d=await r.json()
+
  pixId=d.id
+
  render()
+
  qr.src="data:image/png;base64,"+d.qr_code_base64
  pix.value=d.copiaecola
+
  monitorar()
 }
 
+// STATUS
 function monitorar(){
  let t=setInterval(async()=>{
   let r=await fetch(`https://pix-romer-art.onrender.com/status/${pixId}`)
@@ -236,12 +273,27 @@ async function enviarPedido(){
 
  await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify(dados)})
 
- let msg=`Pedido ${pedidoId}%0A`
+ let msg=`📦 Pedido ${pedidoId}%0A`
+ msg+=`👤 ${nome.value}%0A`
+ msg+=`📍 ${rua.value}, ${numero.value}%0A%0A`
+
  itens.forEach(i=>{
-  msg+=`${i.produto} - R$${i.valor}%0A`
+  msg+=`🔹 ${i.tipo} ${i.material} ${i.produto}%0A`
+
+  if(i.produto=="Camiseta"){
+   msg+=`Tam:${i.tamanho} | Cor:${i.cor}%0A`
+  }else{
+   msg+=`${i.l}x${i.a}%0A`
+  }
+
+  msg+=`Qtd:${i.q} | R$${i.valor.toFixed(2)}%0A`
  })
 
+ msg+=`%0A💰 Total: R$ ${total().toFixed(2)}`
+
  window.open(`https://wa.me/5511946447040?text=${msg}`)
+
+ alert("Pedido enviado 🚀")
 }
 
 // EVENTOS
