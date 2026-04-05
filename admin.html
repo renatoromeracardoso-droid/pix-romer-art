@@ -2,20 +2,22 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Painel RomerArt</title>
+<title>Admin RomerArt</title>
 
 <style>
-body{font-family:Arial;background:#0f1b2d;color:#fff;padding:20px}
-.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:15px}
-input,select{width:100%;padding:10px;margin:5px 0}
-button{padding:12px;background:#22c55e;border:none;color:#fff;width:100%}
+body{font-family:Arial;background:#0f172a;color:#fff;padding:20px}
+.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:20px}
+input,select{width:100%;padding:10px;margin:5px 0;border:none;border-radius:5px}
+button{padding:12px;background:#22c55e;border:none;color:#fff;width:100%;border-radius:5px}
+h2{margin-bottom:10px}
+.result{font-size:18px;line-height:1.6}
 </style>
 
 </head>
 
 <body>
 
-<h2>🔥 Painel Administrativo</h2>
+<h2>🔥 Simulador RomerArt</h2>
 
 <div class="card">
 
@@ -24,32 +26,38 @@ button{padding:12px;background:#22c55e;border:none;color:#fff;width:100%}
 <select id="produto"></select>
 <select id="esp"></select>
 
-<input id="larg" placeholder="Largura mm">
-<input id="alt" placeholder="Altura mm">
-<input id="qtd" placeholder="Qtd">
+<input id="larg" placeholder="Largura (mm)">
+<input id="alt" placeholder="Altura (mm)">
+<input id="qtd" placeholder="Quantidade">
 
 <button onclick="calcular()">Calcular</button>
 
 </div>
 
-<div class="card" id="resultado"></div>
+<div class="card result" id="res"></div>
 
 <script>
 
-const API = "SEU_APPS_SCRIPT"
+const API = "https://script.google.com/macros/s/AKfycbxyz5rK0Jm3AZtH_GG7BA2HC4sd5WPC0BTZvOinfZmr9T_tgcADGZ70L5_SJ504S2Vu/exec"
 
 let dados=[]
 
 async function carregar(){
 
-  const res = await fetch(API,{
-    method:"POST",
-    body: JSON.stringify({tipo:"config"})
-  })
+  try{
 
-  dados = await res.json()
+    const r = await fetch(API,{
+      method:"POST",
+      body: JSON.stringify({tipo:"config"})
+    })
 
-  montar()
+    dados = await r.json()
+
+    montar()
+
+  }catch(e){
+    alert("Erro ao carregar config")
+  }
 }
 
 function montar(){
@@ -104,7 +112,12 @@ function calcular(){
   let a=+alt.value
   let q=+qtd.value
 
-  if(l>400||a>400){
+  if(!l || !a || !q){
+    alert("Preencha tudo")
+    return
+  }
+
+  if(l>400 || a>400){
     alert("Máx 400mm")
     return
   }
@@ -116,13 +129,25 @@ function calcular(){
     i.espessura==esp.value
   )
 
-  let area=(l*a)/1000000
+  if(!item){
+    alert("Config não encontrada")
+    return
+  }
 
-  let valor = (area * item.preco_m2 + item.setup) * q
+  let area = (l*a)/1000000
 
-  resultado.innerHTML = `
-  💰 Valor: R$ ${valor.toFixed(2)}<br>
-  📦 Custo baseado em dados reais da planilha
+  let custo = (area * item.preco_m2)
+  let setup = Number(item.setup || 0)
+
+  let total = (custo + setup) * q
+
+  let lucro = total * 0.4 // margem 40% (ajustável)
+
+  res.innerHTML = `
+  💰 Venda: R$ ${total.toFixed(2)}<br>
+  ⚙️ Custo base: R$ ${custo.toFixed(2)}<br>
+  📈 Lucro estimado: R$ ${lucro.toFixed(2)}<br>
+  📦 Área: ${area.toFixed(4)} m²<br>
   `
 }
 
