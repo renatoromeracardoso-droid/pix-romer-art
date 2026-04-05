@@ -2,58 +2,131 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin</title>
+<title>Painel RomerArt</title>
 
 <style>
-body{font-family:Arial;background:#0f172a;color:white;padding:20px}
-.card{background:#1e293b;padding:15px;margin-bottom:10px;border-radius:10px}
+body{font-family:Arial;background:#0f1b2d;color:#fff;padding:20px}
+.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:15px}
+input,select{width:100%;padding:10px;margin:5px 0}
+button{padding:12px;background:#22c55e;border:none;color:#fff;width:100%}
 </style>
+
 </head>
 
 <body>
 
-<h2>Pedidos</h2>
-<div id="lista"></div>
+<h2>🔥 Painel Administrativo</h2>
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<div class="card">
+
+<select id="tipo"></select>
+<select id="material"></select>
+<select id="produto"></select>
+<select id="esp"></select>
+
+<input id="larg" placeholder="Largura mm">
+<input id="alt" placeholder="Altura mm">
+<input id="qtd" placeholder="Qtd">
+
+<button onclick="calcular()">Calcular</button>
+
+</div>
+
+<div class="card" id="resultado"></div>
 
 <script>
 
-const firebaseConfig={
- apiKey:"SUA_KEY",
- authDomain:"firestore-database-9b92d.firebaseapp.com",
- projectId:"firestore-database-9b92d"
+const API = "SEU_APPS_SCRIPT"
+
+let dados=[]
+
+async function carregar(){
+
+  const res = await fetch(API,{
+    method:"POST",
+    body: JSON.stringify({tipo:"config"})
+  })
+
+  dados = await res.json()
+
+  montar()
 }
 
-firebase.initializeApp(firebaseConfig)
-const db=firebase.firestore()
+function montar(){
 
-db.collection("pedidos").onSnapshot(snapshot=>{
+  tipo.innerHTML = [...new Set(dados.map(i=>i.tipo_servico))]
+    .map(v=>`<option>${v}</option>`)
 
- const div=document.getElementById("lista")
- div.innerHTML=""
-
- snapshot.forEach(doc=>{
-  const p=doc.data()
-
-  div.innerHTML+=`
-  <div class="card">
-   <b>${p.cliente.nome}</b><br>
-   Total: R$ ${p.total}<br>
-   Status: ${p.status}<br>
-   Pagamento: ${p.pagamento}<br>
-
-   <button onclick="update('${doc.id}','produção')">Produção</button>
-   <button onclick="update('${doc.id}','enviado')">Enviado</button>
-  </div>`
- })
-
-})
-
-function update(id,status){
- db.collection("pedidos").doc(id).update({status})
+  atualizarMaterial()
 }
+
+function atualizarMaterial(){
+
+  const lista = dados.filter(i=>i.tipo_servico==tipo.value)
+
+  material.innerHTML = [...new Set(lista.map(i=>i.material))]
+    .map(v=>`<option>${v}</option>`)
+
+  atualizarProduto()
+}
+
+function atualizarProduto(){
+
+  const lista = dados.filter(i=>
+    i.tipo_servico==tipo.value &&
+    i.material==material.value
+  )
+
+  produto.innerHTML = [...new Set(lista.map(i=>i.produto))]
+    .map(v=>`<option>${v}</option>`)
+
+  atualizarEsp()
+}
+
+function atualizarEsp(){
+
+  const lista = dados.filter(i=>
+    i.tipo_servico==tipo.value &&
+    i.material==material.value &&
+    i.produto==produto.value
+  )
+
+  esp.innerHTML = lista.map(v=>`<option>${v.espessura}</option>`)
+}
+
+tipo.onchange=atualizarMaterial
+material.onchange=atualizarProduto
+produto.onchange=atualizarEsp
+
+function calcular(){
+
+  let l=+larg.value
+  let a=+alt.value
+  let q=+qtd.value
+
+  if(l>400||a>400){
+    alert("Máx 400mm")
+    return
+  }
+
+  const item = dados.find(i=>
+    i.tipo_servico==tipo.value &&
+    i.material==material.value &&
+    i.produto==produto.value &&
+    i.espessura==esp.value
+  )
+
+  let area=(l*a)/1000000
+
+  let valor = (area * item.preco_m2 + item.setup) * q
+
+  resultado.innerHTML = `
+  💰 Valor: R$ ${valor.toFixed(2)}<br>
+  📦 Custo baseado em dados reais da planilha
+  `
+}
+
+carregar()
 
 </script>
 
