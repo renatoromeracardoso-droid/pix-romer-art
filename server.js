@@ -4,28 +4,23 @@ const app = express();
 
 app.use(express.json());
 
-// 🔐 senha simples admin
-const ADMIN_PASSWORD = "123456";
+// 🔥 SUA URL DO GOOGLE SCRIPT
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyhPHe-E1kKugmDcoftKfyOp7sIH-5YEoJ6JwmLjMNjEuBLnPkvJRpzBkji77ZgZeS/exec";
 
-// rota para salvar no sheets
 app.post("/salvar", async (req, res) => {
-  const response = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-EWqn0pnDWtXB4Jz54d4OuVzcb9VEVKWU5cHYr76cc_RjKc76Mt00s51AEfOAbrx2T_xsBnriDFeH/pub?gid=921668890&single=true&output=csv", {
-    method: "POST",
-    body: JSON.stringify(req.body)
-  });
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(req.body)
+    });
 
-  res.json({ status: "ok" });
-});
+    const text = await response.text();
 
-// login admin
-app.post("/login", (req, res) => {
-  const { senha } = req.body;
+    res.json({ status: "ok", resposta: text });
 
-  if (senha === ADMIN_PASSWORD) {
-    res.json({ autorizado: true });
-  } else {
-    res.json({ autorizado: false });
+  } catch (error) {
+    res.status(500).json({ erro: error.message });
   }
 });
 
-app.listen(3000, () => console.log("Servidor rodando"));
+app.listen(3000, () => console.log("Rodando..."));
