@@ -1,52 +1,13 @@
 const express = require("express");
-const fetch = require("node-fetch");
-const cors = require("cors");
 
 const app = express();
 
-// 🔥 libera acesso (CORS)
-app.use(cors());
-
-// aceita JSON
-app.use(express.json());
-
-// 🔥 SUA URL DO APPS SCRIPT
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzs4Har9IjrgsqLoU_dgUFYb-J21wv4TRAycpMMMmo56Ys_qU3B8CAh1zU92SkuVS_/exec";
-
-// teste
 app.get("/", (req, res) => {
-  res.send("API OK 🚀");
+  res.send("OK FUNCIONANDO");
 });
 
-// salvar
-app.post("/salvar", async (req, res) => {
-  try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain" // 🔥 importante
-      },
-      body: JSON.stringify(req.body)
-    });
-
-    const text = await response.text();
-
-    res.json({
-      status: "ok",
-      retorno: text
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      status: "erro",
-      mensagem: error.message
-    });
-  }
-});
-
-// porta render
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Servidor rodando 🚀");
+  console.log("Servidor rodando");
 });
