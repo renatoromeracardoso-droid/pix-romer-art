@@ -1,159 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Admin RomerArt</title>
-
-<style>
-body{font-family:Arial;background:#0f172a;color:#fff;padding:20px}
-.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:20px}
-input,select{width:100%;padding:10px;margin:5px 0;border:none;border-radius:5px}
-button{padding:12px;background:#22c55e;border:none;color:#fff;width:100%;border-radius:5px}
-h2{margin-bottom:10px}
-.result{font-size:18px;line-height:1.6}
-</style>
-
-</head>
-
-<body>
-
-<h2>🔥 Simulador RomerArt</h2>
-
-<div class="card">
-
-<select id="tipo"></select>
-<select id="material"></select>
-<select id="produto"></select>
-<select id="esp"></select>
-
-<input id="larg" placeholder="Largura (mm)">
-<input id="alt" placeholder="Altura (mm)">
-<input id="qtd" placeholder="Quantidade">
-
-<button onclick="calcular()">Calcular</button>
-
+<div style="max-width:300px;margin:auto">
+  <h3>Login Admin</h3>
+  <input type="password" id="senha" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
 </div>
 
-<div class="card result" id="res"></div>
-
 <script>
-
-const API = "https://script.google.com/macros/s/AKfycbxyz5rK0Jm3AZtH_GG7BA2HC4sd5WPC0BTZvOinfZmr9T_tgcADGZ70L5_SJ504S2Vu/exec"
-
-let dados=[]
-
-async function carregar(){
-
-  try{
-
-    const r = await fetch(API,{
-      method:"POST",
-      body: JSON.stringify({tipo:"config"})
+function login() {
+  fetch("https://pix-romer-art.onrender.com/login", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      senha: document.getElementById("senha").value
     })
-
-    dados = await r.json()
-
-    montar()
-
-  }catch(e){
-    alert("Erro ao carregar config")
-  }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.autorizado){
+      alert("Acesso liberado");
+    } else {
+      alert("Senha incorreta");
+    }
+  });
 }
-
-function montar(){
-
-  tipo.innerHTML = [...new Set(dados.map(i=>i.tipo_servico))]
-    .map(v=>`<option>${v}</option>`)
-
-  atualizarMaterial()
-}
-
-function atualizarMaterial(){
-
-  const lista = dados.filter(i=>i.tipo_servico==tipo.value)
-
-  material.innerHTML = [...new Set(lista.map(i=>i.material))]
-    .map(v=>`<option>${v}</option>`)
-
-  atualizarProduto()
-}
-
-function atualizarProduto(){
-
-  const lista = dados.filter(i=>
-    i.tipo_servico==tipo.value &&
-    i.material==material.value
-  )
-
-  produto.innerHTML = [...new Set(lista.map(i=>i.produto))]
-    .map(v=>`<option>${v}</option>`)
-
-  atualizarEsp()
-}
-
-function atualizarEsp(){
-
-  const lista = dados.filter(i=>
-    i.tipo_servico==tipo.value &&
-    i.material==material.value &&
-    i.produto==produto.value
-  )
-
-  esp.innerHTML = lista.map(v=>`<option>${v.espessura}</option>`)
-}
-
-tipo.onchange=atualizarMaterial
-material.onchange=atualizarProduto
-produto.onchange=atualizarEsp
-
-function calcular(){
-
-  let l=+larg.value
-  let a=+alt.value
-  let q=+qtd.value
-
-  if(!l || !a || !q){
-    alert("Preencha tudo")
-    return
-  }
-
-  if(l>400 || a>400){
-    alert("Máx 400mm")
-    return
-  }
-
-  const item = dados.find(i=>
-    i.tipo_servico==tipo.value &&
-    i.material==material.value &&
-    i.produto==produto.value &&
-    i.espessura==esp.value
-  )
-
-  if(!item){
-    alert("Config não encontrada")
-    return
-  }
-
-  let area = (l*a)/1000000
-
-  let custo = (area * item.preco_m2)
-  let setup = Number(item.setup || 0)
-
-  let total = (custo + setup) * q
-
-  let lucro = total * 0.4 // margem 40% (ajustável)
-
-  res.innerHTML = `
-  💰 Venda: R$ ${total.toFixed(2)}<br>
-  ⚙️ Custo base: R$ ${custo.toFixed(2)}<br>
-  📈 Lucro estimado: R$ ${lucro.toFixed(2)}<br>
-  📦 Área: ${area.toFixed(4)} m²<br>
-  `
-}
-
-carregar()
-
 </script>
-
-</body>
-</html>
