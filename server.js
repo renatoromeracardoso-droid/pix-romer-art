@@ -4,15 +4,15 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.json());
 
-// 🔥 SUA URL DO GOOGLE SCRIPT
+// 🔥 COLE SUA URL DO GOOGLE SCRIPT AQUI
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyhPHe-E1kKugmDcoftKfyOp7sIH-5YEoJ6JwmLjMNjEuBLnPkvJRpzBkji77ZgZeS/exec";
 
-// teste
+// TESTE
 app.get("/", (req, res) => {
   res.send("API OK 🚀");
 });
 
-// salvar no sheets
+// SALVAR NO GOOGLE SHEETS
 app.post("/salvar", async (req, res) => {
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
