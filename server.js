@@ -1,30 +1,9 @@
-const express = require("express");
-const fetch = require("node-fetch");
-const cors = require("cors");
-
-const app = express();
-
-// 🔥 LIBERA ACESSO (resolve seu erro)
-app.use(cors());
-
-// permite JSON
-app.use(express.json());
-
-// 🔥 SUA URL DO GOOGLE SHEETS
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzs4Har9IjrgsqLoU_dgUFYb-J21wv4TRAycpMMMmo56Ys_qU3B8CAh1zU92SkuVS_/exec";
-
-// rota teste
-app.get("/", (req, res) => {
-  res.send("API OK 🚀");
-});
-
-// rota salvar
 app.post("/salvar", async (req, res) => {
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "text/plain" // 🔥 ESSA LINHA RESOLVE
       },
       body: JSON.stringify(req.body)
     });
@@ -33,7 +12,7 @@ app.post("/salvar", async (req, res) => {
 
     res.json({
       status: "ok",
-      resposta: text
+      retorno: text
     });
 
   } catch (error) {
@@ -42,11 +21,4 @@ app.post("/salvar", async (req, res) => {
       mensagem: error.message
     });
   }
-});
-
-// porta padrão render
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("Servidor rodando 🚀");
 });
