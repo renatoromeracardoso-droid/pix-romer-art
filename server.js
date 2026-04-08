@@ -1,18 +1,24 @@
 const express = require("express");
 const fetch = require("node-fetch");
+const cors = require("cors");
 
 const app = express();
+
+// 🔥 LIBERA ACESSO (resolve seu erro)
+app.use(cors());
+
+// permite JSON
 app.use(express.json());
 
-// 🔥 COLE SUA URL DO GOOGLE SCRIPT AQUI
+// 🔥 SUA URL DO GOOGLE SHEETS
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyhPHe-E1kKugmDcoftKfyOp7sIH-5YEoJ6JwmLjMNjEuBLnPkvJRpzBkji77ZgZeS/exec";
 
-// TESTE
+// rota teste
 app.get("/", (req, res) => {
   res.send("API OK 🚀");
 });
 
-// SALVAR NO GOOGLE SHEETS
+// rota salvar
 app.post("/salvar", async (req, res) => {
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
@@ -25,13 +31,22 @@ app.post("/salvar", async (req, res) => {
 
     const text = await response.text();
 
-    res.json({ status: "ok", retorno: text });
+    res.json({
+      status: "ok",
+      resposta: text
+    });
 
   } catch (error) {
-    res.status(500).json({ erro: error.message });
+    res.status(500).json({
+      status: "erro",
+      mensagem: error.message
+    });
   }
 });
 
-app.listen(3000, () => {
-  console.log("Servidor rodando");
+// porta padrão render
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("Servidor rodando 🚀");
 });
