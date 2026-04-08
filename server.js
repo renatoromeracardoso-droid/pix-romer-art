@@ -1,52 +1,31 @@
-import express from "express"
-import mercadopago from "mercadopago"
-import cors from "cors"
+const express = require("express");
+const fetch = require("node-fetch");
+const app = express();
 
-const app = express()
-app.use(express.json())
-app.use(cors())
+app.use(express.json());
 
-mercadopago.configure({
-  access_token: process.env.MP_TOKEN
-})
+// 🔐 senha simples admin
+const ADMIN_PASSWORD = "123456";
 
-// 🔥 GERAR PIX
-app.post("/pix", async (req, res) => {
-  try{
-    const { total, pedido } = req.body
+// rota para salvar no sheets
+app.post("/salvar", async (req, res) => {
+  const response = await fetch("SUA_URL_GOOGLE_SCRIPT", {
+    method: "POST",
+    body: JSON.stringify(req.body)
+  });
 
-    const pagamento = await mercadopago.payment.create({
-      transaction_amount: Number(total),
-      description: `Pedido ${pedido}`,
-      payment_method_id: "pix",
-      payer: {
-        email: "cliente@email.com"
-      }
-    })
+  res.json({ status: "ok" });
+});
 
-    res.json({
-      id: pagamento.body.id,
-      qr_code: pagamento.body.point_of_interaction.transaction_data.qr_code,
-      qr_base64: pagamento.body.point_of_interaction.transaction_data.qr_code_base64
-    })
+// login admin
+app.post("/login", (req, res) => {
+  const { senha } = req.body;
 
-  }catch(e){
-    res.status(500).json({ erro: e.message })
+  if (senha === ADMIN_PASSWORD) {
+    res.json({ autorizado: true });
+  } else {
+    res.json({ autorizado: false });
   }
-})
+});
 
-// 🔥 STATUS DO PAGAMENTO
-app.get("/status/:id", async (req, res) => {
-  try{
-    const pagamento = await mercadopago.payment.findById(req.params.id)
-
-    res.json({
-      status: pagamento.body.status
-    })
-
-  }catch(e){
-    res.status(500).json({ erro: e.message })
-  }
-})
-
-app.listen(10000, () => console.log("Servidor rodando 🚀"))
+app.listen(3000, () => console.log("Servidor rodando"));
