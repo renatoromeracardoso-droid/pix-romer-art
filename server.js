@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 // 🔥 SUA URL DO GOOGLE SHEETS
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyhPHe-E1kKugmDcoftKfyOp7sIH-5YEoJ6JwmLjMNjEuBLnPkvJRpzBkji77ZgZeS/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwICcMeCnz_yMzgVWAujLPkkPsceLrOU1cICawcHUhbFj95wD6CUATq9Q14OvhXmsuH/exec";
 
 // rota teste
 app.get("/", (req, res) => {
