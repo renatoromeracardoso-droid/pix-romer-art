@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 // 🔥 SUA URL DO APPS SCRIPT
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzs4Har9IjrgsqLoU_dgUFYb-J21wv4TRAycpMMMmo56Ys_qU3B8CAh1zU92SkuVS_/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpBKwjo-J2WLQ_Dm97fUUPNrWZGsKBX5LOhSqEebbVwCWDXHBgWuk1AYqHamxNH1Vbbw/exec";
 
 // teste
 app.get("/", (req, res) => {
