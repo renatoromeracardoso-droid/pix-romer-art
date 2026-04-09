@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 // 🔥 COLE SUA NOVA URL AQUI
-const GOOGLE_SCRIPT_URL = "COLE_AQUI_A_URL_NOVA";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYCFCuKJnEHFNXLsCbAZMR6KR6_2J01aMaZGbpvFi4V2aiTSdT7qJ5LEbN074P5dLz_Q/exec";
 
 // 🔥 PARAMETROS
 const CSV_PARAMETROS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfcG76Kqk9MpcvUwfnNfngHBt8T2P-FXUVLckUFj-7HKpMHaavt849j-LFO0WwJYTEioWRz8I9UfOi/pub?gid=1904121177&single=true&output=csv";
