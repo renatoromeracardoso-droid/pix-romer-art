@@ -6,8 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 Apps Script (SALVAR / EXCLUIR)
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYCFCuKJnEHFNXLsCbAZMR6KR6_2J01aMaZGbpvFi4V2aiTSdT7qJ5LEbN074P5dLz_Q/exec";
+// 🔥 COLE SUA NOVA URL AQUI
+const GOOGLE_SCRIPT_URL = "COLE_AQUI_A_URL_NOVA";
 
 // 🔥 PARAMETROS
 const CSV_PARAMETROS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfcG76Kqk9MpcvUwfnNfngHBt8T2P-FXUVLckUFj-7HKpMHaavt849j-LFO0WwJYTEioWRz8I9UfOi/pub?gid=1904121177&single=true&output=csv";
@@ -15,7 +15,6 @@ const CSV_PARAMETROS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfcG76K
 // 🔥 PEDIDOS
 const CSV_PEDIDOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfcG76Kqk9MpcvUwfnNfngHBt8T2P-FXUVLckUFj-7HKpMHaavt849j-LFO0WwJYTEioWRz8I9UfOi/pub?gid=0&single=true&output=csv";
 
-// CSV → JSON
 function parseCSV(text) {
   const linhas = text.split("\n").filter(l => l.trim() !== "");
   const headers = linhas[0].split(",");
@@ -30,7 +29,6 @@ function parseCSV(text) {
   });
 }
 
-// buscar parametros
 async function buscarParametro(material, servico, espessura) {
   const res = await fetch(CSV_PARAMETROS);
   const text = await res.text();
@@ -43,7 +41,7 @@ async function buscarParametro(material, servico, espessura) {
   );
 }
 
-// 🔥 CALCULAR + SALVAR
+// 🔥 SALVAR
 app.post("/salvar", async (req, res) => {
   try {
     const { cliente, material, servico, espessura } = req.body;
@@ -82,23 +80,19 @@ app.post("/salvar", async (req, res) => {
   }
 });
 
-// 🔥 LISTAR PEDIDOS
+// 🔥 LISTAR
 app.get("/pedidos", async (req, res) => {
-  try {
-    const r = await fetch(CSV_PEDIDOS);
-    const text = await r.text();
-    res.json(parseCSV(text));
-  } catch (err) {
-    res.json({ erro: err.message });
-  }
+  const r = await fetch(CSV_PEDIDOS);
+  const text = await r.text();
+  res.json(parseCSV(text));
 });
 
-// 🔥 EXCLUIR PEDIDO
+// 🔥 EXCLUIR
 app.post("/excluir", async (req, res) => {
   try {
     const { index } = req.body;
 
-    await fetch(GOOGLE_SCRIPT_URL, {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -109,6 +103,9 @@ app.post("/excluir", async (req, res) => {
       })
     });
 
+    const result = await response.text();
+    console.log("DELETE:", result);
+
     res.json({ ok: true });
 
   } catch (err) {
@@ -117,7 +114,7 @@ app.post("/excluir", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("API ROMER ART 🚀");
+  res.send("API OK 🚀");
 });
 
 app.listen(10000, () => console.log("Servidor rodando 🚀"));
