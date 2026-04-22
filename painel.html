@@ -1,87 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-  <title>Painel de Notas</title>
-  <style>
-    body {
-      font-family: Arial;
-      background: #0f172a;
-      color: white;
-      padding: 20px;
-    }
+<meta charset="UTF-8">
+<title>Painel de Notas Fiscais</title>
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #1e293b;
-    }
+<style>
+body {
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+    padding: 20px;
+}
 
-    th, td {
-      padding: 12px;
-      border-bottom: 1px solid #334155;
-    }
+h1 {
+    margin-bottom: 20px;
+}
 
-    button {
-      padding: 8px 12px;
-      background: #22c55e;
-      border: none;
-      color: white;
-      cursor: pointer;
-      border-radius: 5px;
-    }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1e293b;
+}
 
-    button:hover {
-      background: #16a34a;
-    }
-  </style>
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #334155;
+    text-align: left;
+}
+
+button {
+    background: #22c55e;
+    border: none;
+    padding: 8px 12px;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+button:hover {
+    background: #16a34a;
+}
+</style>
+
 </head>
 
 <body>
 
-<h2>📄 Painel de Notas Fiscais</h2>
+<h1>Painel de Notas Fiscais</h1>
 
-<table id="tabela">
-  <thead>
-    <tr>
-      <th>Pedido</th>
-      <th>Cliente</th>
-      <th>CPF/CNPJ</th>
-      <th>Email</th>
-      <th>Ação</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
+<table>
+<thead>
+<tr>
+    <th>ID Pedido</th>
+    <th>Cliente</th>
+    <th>CPF/CNPJ</th>
+    <th>Email</th>
+    <th>Serviço</th>
+    <th>Valor</th>
+    <th>Ação</th>
+</tr>
+</thead>
+
+<tbody id="tabelaPedidos"></tbody>
 </table>
 
 <script>
-const url = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
 
-fetch(url)
-  .then(res => res.json())
-  .then(data => {
-    const tabela = document.querySelector("#tabela tbody");
+// 🔥 COLE A URL DO MAKE AQUI
+const WEBHOOK_URL = "https://hook.us2.make.com/h2px8sg18oobcvnjh52hoez51sqqidqu";
 
-    data.forEach(pedido => {
-      const linha = `
-        <tr>
-          <td>${pedido["ID Pedido"]}</td>
-          <td>${pedido["Nome"]}</td>
-          <td>${pedido["CPF/CNPJ"]}</td>
-          <td>${pedido["Email"]}</td>
-          <td>
-          <button onclick="emitirNota('1234','Renato','2224433','email@email.com','corte x111',50)">
-  Emitir Nota
-</button>
-          </td>
-        </tr>
-      `;
-      tabela.innerHTML += linha;
+// Dados simulados (depois podemos puxar da planilha)
+const pedidos = [
+    {
+        id: "1234",
+        nome: "Renato",
+        cpf: "2224433",
+        email: "cliente@email.com",
+        servico: "corte tamanho x11",
+        valor: 50
+    }
+];
+
+// Renderizar tabela
+function carregarPedidos() {
+    const tabela = document.getElementById("tabelaPedidos");
+    tabela.innerHTML = "";
+
+    pedidos.forEach(p => {
+        tabela.innerHTML += `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.nome}</td>
+                <td>${p.cpf}</td>
+                <td>${p.email}</td>
+                <td>${p.servico}</td>
+                <td>R$ ${p.valor}</td>
+                <td>
+                    <button onclick="emitirNota('${p.id}')">
+                        Emitir Nota
+                    </button>
+                </td>
+            </tr>
+        `;
     });
-  });
-
-function emitirNota(id) {
-  alert("Nota enviada para pedido " + id);
 }
+
+// 🚀 Enviar para o Make
+function emitirNota(id) {
+
+    const pedido = pedidos.find(p => p.id === id);
+
+    fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            id_pedido: pedido.id,
+            nome: pedido.nome,
+            cpf_cnpj: pedido.cpf,
+            email: pedido.email,
+            servico: pedido.servico,
+            valor: pedido.valor
+        })
+    })
+    .then(() => {
+        alert("Nota enviada com sucesso para o pedido " + id);
+    })
+    .catch(() => {
+        alert("Erro ao enviar nota");
+    });
+}
+
+// Inicializar
+carregarPedidos();
+
 </script>
 
 </body>
