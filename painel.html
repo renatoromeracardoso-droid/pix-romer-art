@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Painel de Notas</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      padding: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #1e293b;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #334155;
+    }
+
+    button {
+      padding: 8px 12px;
+      background: #22c55e;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>📄 Painel de Notas Fiscais</h2>
+
+<table id="tabela">
+  <thead>
+    <tr>
+      <th>Pedido</th>
+      <th>Cliente</th>
+      <th>CPF/CNPJ</th>
+      <th>Email</th>
+      <th>Ação</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+const url = "COLE_SEU_LINK_OPEN_SHEET_AQUI";
+
+fetch(url)
+  .then(res => res.json())
+  .then(data => {
+    const tabela = document.querySelector("#tabela tbody");
+
+    data.forEach(pedido => {
+      const linha = `
+        <tr>
+          <td>${pedido["ID Pedido"]}</td>
+          <td>${pedido["Nome"]}</td>
+          <td>${pedido["CPF/CNPJ"]}</td>
+          <td>${pedido["Email"]}</td>
+          <td>
+            <button onclick="emitirNota('${pedido["ID Pedido"]}')">
+              Emitir Nota
+            </button>
+          </td>
+        </tr>
+      `;
+      tabela.innerHTML += linha;
+    });
+  });
+
+function emitirNota(id) {
+  alert("Nota enviada para pedido " + id);
+}
+</script>
+
+</body>
+</html>
