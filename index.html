@@ -2,226 +2,95 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>RomerArt</title>
+<title>Painel de Notas</title>
 
 <style>
-body{background:#0f1b2d;color:#fff;font-family:Arial;padding:20px;}
-.container{max-width:500px;margin:auto;}
-input,select{width:100%;padding:12px;margin:5px 0;border-radius:8px;border:none;}
-button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:10px;font-weight:bold;}
-.add{background:orange;}
-.pix{background:green;color:#fff;}
-.enviar{background:#2ecc71;color:#fff;opacity:0.5}
-.card{background:#1e2a3a;padding:15px;margin-top:20px;border-radius:10px;}
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1e293b;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #334155;
+}
+
+button {
+  padding: 8px 12px;
+  background: #22c55e;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
 </style>
 </head>
 
 <body>
-<div class="container">
 
-<h2>🚀 RomerArt</h2>
+<h1>Painel de Notas Fiscais</h1>
 
-<input id="nome" placeholder="Nome">
-<input id="email" placeholder="Email">
+<table>
+<thead>
+<tr>
+  <th>Pedido</th>
+  <th>Cliente</th>
+  <th>CPF/CNPJ</th>
+  <th>Email</th>
+  <th>Ação</th>
+</tr>
+</thead>
 
-<input id="cep" placeholder="CEP">
-<input id="rua">
-<input id="bairro">
-<input id="cidade">
-<input id="numero">
-
-<hr>
-
-<select id="tipo"></select>
-<select id="material"></select>
-<select id="produto"></select>
-<select id="espessura"></select>
-
-<input id="largura" placeholder="Largura mm">
-<input id="altura" placeholder="Altura mm">
-<input id="qtd" placeholder="Qtd">
-
-<button class="add" onclick="addItem()">Adicionar</button>
-<button class="pix" onclick="gerarPix()">Gerar PIX</button>
-<button id="btnEnviar" class="enviar" disabled onclick="enviarPedido()">Enviar Pedido</button>
-
-<div id="resumo" class="card">Nenhum item</div>
-
-</div>
+<tbody id="tabela">
+</tbody>
+</table>
 
 <script>
 
-const URL = "https://script.google.com/macros/s/AKfycbySieWPENR4fuSFyWxJprDE-w-9_V6MbM-o7jNb3sMoHaMFTrqWou69kPJNZh4Si0e2/exec"
-const API = "https://SEU-RENDER.onrender.com"
+const API_URL = "https://pix-romer-art.onrender.com/pedidos";
 
-let config=[]
-let itens=[]
-let pagamentoId=null
-let pago=false
-let pedidoId=""
+async function carregarDados() {
+  const resposta = await fetch(API_URL);
+  const dados = await resposta.json();
 
-// 🔥 CONFIG
-async function carregarConfig(){
-  const res = await fetch(URL,{
-    method:"POST",
-    body: JSON.stringify({tipo:"config"})
-  })
-  config = await res.json()
-  montarSelects()
+  const tabela = document.getElementById("tabela");
+  tabela.innerHTML = "";
+
+  dados.forEach(item => {
+
+    const linha = `
+      <tr>
+        <td>${item["ID Pedido"] || "-"}</td>
+        <td>${item["Nome"] || item["Cliente"] || "-"}</td>
+        <td>${item["CPF/CNPJ"] || "-"}</td>
+        <td>${item["Email"] || "-"}</td>
+        <td>
+          <button onclick="emitirNota('${item["ID Pedido"]}')">
+            Emitir Nota
+          </button>
+        </td>
+      </tr>
+    `;
+
+    tabela.innerHTML += linha;
+  });
 }
 
-function montarSelects(){
-  const tipos=[...new Set(config.map(i=>i.tipo_servico))]
-  tipo.innerHTML = tipos.map(v=>`<option>${v}</option>`).join("")
-  atualizarMaterial()
+function emitirNota(id) {
+  alert("Emitir nota para pedido: " + id);
 }
 
-function atualizarMaterial(){
-  const lista=[...new Set(config.filter(i=>i.tipo_servico==tipo.value).map(i=>i.material))]
-  material.innerHTML = lista.map(v=>`<option>${v}</option>`).join("")
-  atualizarProduto()
-}
-
-function atualizarProduto(){
-  const lista=[...new Set(config.filter(i=>i.tipo_servico==tipo.value && i.material==material.value).map(i=>i.produto))]
-  produto.innerHTML = lista.map(v=>`<option>${v}</option>`).join("")
-  atualizarEspessura()
-}
-
-function atualizarEspessura(){
-  const lista=config.filter(i=>i.tipo_servico==tipo.value && i.material==material.value && i.produto==produto.value)
-  espessura.innerHTML = lista.map(v=>`<option>${v.espessura}</option>`).join("")
-}
-
-document.addEventListener("change",(e)=>{
-  if(e.target.id==="tipo") atualizarMaterial()
-  if(e.target.id==="material") atualizarProduto()
-  if(e.target.id==="produto") atualizarEspessura()
-})
-
-// 🔥 CEP
-cep.addEventListener("blur", async ()=>{
-  const res = await fetch(`https://viacep.com.br/ws/${cep.value}/json`)
-  const d = await res.json()
-  rua.value=d.logradouro
-  bairro.value=d.bairro
-  cidade.value=d.localidade
-})
-
-// 🔥 ADD ITEM
-function addItem(){
-
-  let l=parseFloat(largura.value)
-  let a=parseFloat(altura.value)
-  let q=parseInt(qtd.value)
-
-  if(!l||!a||!q) return alert("Preencha tudo")
-  if(l>400||a>400) return alert("Máx 400mm")
-
-  const conf=config.find(i=>
-    i.tipo_servico==tipo.value &&
-    i.material==material.value &&
-    i.produto==produto.value &&
-    i.espessura==espessura.value
-  )
-
-  let valor=(l*a/1000000)*conf.preco_m2*q
-
-  itens.push({l,a,q,valor})
-
-  atualizarResumo()
-}
-
-// 🔥 RESUMO
-function atualizarResumo(){
-
-  let total=0
-
-  let html=itens.map((i,idx)=>{
-    total+=i.valor
-    return `${idx+1}) ${i.l}x${i.a}mm | Qtd:${i.q} | R$ ${i.valor.toFixed(2)}`
-  }).join("<br>")
-
-  resumo.innerHTML=html+`<hr><b>Total: R$ ${total.toFixed(2)}</b>`
-}
-
-// 🔥 PIX REAL
-async function gerarPix(){
-
-  if(itens.length==0) return alert("Adicione item")
-
-  pedidoId="PED-"+Date.now()
-  let total=itens.reduce((s,i)=>s+i.valor,0)
-
-  const res=await fetch(API+"/pix",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({total,pedido:pedidoId})
-  })
-
-  const data=await res.json()
-
-  pagamentoId=data.id
-
-  alert("PIX gerado, faça o pagamento")
-
-  monitorar()
-}
-
-// 🔥 MONITORAR
-function monitorar(){
-
-  const intervalo=setInterval(async ()=>{
-
-    const res=await fetch(API+"/status/"+pagamentoId)
-    const data=await res.json()
-
-    if(data.status==="approved"){
-      pago=true
-      clearInterval(intervalo)
-
-      alert("Pagamento aprovado")
-
-      btnEnviar.disabled=false
-      btnEnviar.style.opacity=1
-    }
-
-  },5000)
-}
-
-// 🔥 ENVIAR
-async function enviarPedido(){
-
-  if(!pago) return alert("Aguardando pagamento")
-
-  let total=itens.reduce((s,i)=>s+i.valor,0)
-
-  await fetch(URL,{
-    method:"POST",
-    body:JSON.stringify({
-      tipo:"pedido",
-      pedido:pedidoId,
-      nome:nome.value,
-      email:email.value,
-      cep:cep.value,
-      rua:rua.value,
-      bairro:bairro.value,
-      cidade:cidade.value,
-      numero:numero.value,
-      total,
-      itens
-    })
-  })
-
-  let lista=itens.map((i,idx)=>`${idx+1}) ${i.l}x${i.a}mm | Qtd:${i.q}`).join("\n")
-
-  let msg=`Pedido ${pedidoId}\n${lista}\nTotal: R$ ${total.toFixed(2)}\nPago via PIX`
-
-  window.open(`https://wa.me/5511946447040?text=${encodeURIComponent(msg)}`)
-}
-
-carregarConfig()
+carregarDados();
 
 </script>
+
 </body>
 </html>
