@@ -12,10 +12,6 @@ body {
   padding: 20px;
 }
 
-h1 {
-  margin-bottom: 20px;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
@@ -28,12 +24,11 @@ th, td {
 }
 
 button {
-  padding: 8px 12px;
   background: #22c55e;
   border: none;
-  border-radius: 6px;
+  padding: 8px 12px;
   color: white;
-  cursor: pointer;
+  border-radius: 6px;
 }
 </style>
 </head>
@@ -49,93 +44,65 @@ button {
   <th>Cliente</th>
   <th>CPF/CNPJ</th>
   <th>Email</th>
-  <th>Serviço</th>
-  <th>Valor</th>
   <th>Ação</th>
 </tr>
 </thead>
 
-<tbody id="tabela">
-</tbody>
+<tbody id="tabela"></tbody>
 </table>
 
 <script>
 
-const API_URL = "https://pix-romer-art.onrender.com/pedidos";
+async function carregarPedidos() {
 
-async function carregarDados() {
-  try {
-    const resposta = await fetch(API_URL);
-    const dados = await resposta.json();
+  const url = "https://pix-romer-art.onrender.com/pedidos";
 
-    const tabela = document.getElementById("tabela");
-    tabela.innerHTML = "";
+  const resposta = await fetch(url);
+  const dados = await resposta.json();
 
-    dados.forEach(item => {
+  const tabela = document.getElementById("tabela");
+  tabela.innerHTML = "";
 
-      console.log("DADO REAL:", item);
+  dados.forEach(p => {
 
-      // 🔥 Inteligente: tenta vários nomes possíveis
-      const id = item["ID Pedido"] || item["id"] || item["Pedido"] || "-";
-      const nome = item["Nome"] || item["Cliente"] || item["cliente"] || "-";
-      const cpf = item["CPF/CNPJ"] || item["cpf"] || "-";
-      const email = item["Email"] || item["email"] || "-";
-      const servico = item["Serviço"] || item["Material"] || "-";
-      const valor = item["Valor"] || item["Preço"] || item["preco"] || "-";
-
-      const linha = `
-        <tr>
-          <td>${id}</td>
-          <td>${nome}</td>
-          <td>${cpf}</td>
-          <td>${email}</td>
-          <td>${servico}</td>
-          <td>R$ ${valor}</td>
-          <td>
-            <button onclick="emitirNota('${id}', '${nome}', '${cpf}', '${email}', '${servico}', '${valor}')">
-              Emitir Nota
-            </button>
-          </td>
-        </tr>
-      `;
-
-      tabela.innerHTML += linha;
-    });
-
-  } catch (erro) {
-    console.error("Erro:", erro);
-    alert("Erro ao carregar dados");
-  }
+    tabela.innerHTML += `
+      <tr>
+        <td>${p["ID Pedido"] || "-"}</td>
+        <td>${p["Nome"] || "-"}</td>
+        <td>${p["CPF/CNPJ"] || "-"}</td>
+        <td>${p["Email"] || "-"}</td>
+        <td>
+          <button onclick="emitirNota(
+            '${p["ID Pedido"]}',
+            '${p["Nome"]}',
+            '${p["CPF/CNPJ"]}',
+            '${p["Email"]}'
+          )">
+            Emitir Nota
+          </button>
+        </td>
+      </tr>
+    `;
+  });
 }
 
-function emitirNota(id, nome, cpf, email, servico, valor) {
+function emitirNota(id, nome, cpf, email) {
 
-  const url = "https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa";
-
-  fetch(url, {
+  fetch("https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
       id_pedido: id,
-      nome: nome,
+      nome,
       cpf_cnpj: cpf,
-      email: email,
-      servico: servico,
-      valor: valor
+      email
     })
-  })
-  .then(() => {
-    alert("✅ Nota enviada!");
-  })
-  .catch(() => {
-    alert("❌ Erro ao enviar");
   });
 
+  alert("Nota enviada!");
 }
 
-carregarDados();
+carregarPedidos();
 
 </script>
 
