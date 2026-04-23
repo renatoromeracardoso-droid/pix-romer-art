@@ -60,33 +60,41 @@ button {
 </table>
 
 <script>
-const API = "https://pix-romer-art.onrender.com"; // ⚠️ SUA URL
+const API = "https://pix-romer-art.onrender.com"; // ⚠️ CONFERE ISSO
 
 async function carregarPedidos() {
-  const res = await fetch(`${API}/pedidos`);
-  const dados = await res.json();
+  try {
+    const res = await fetch(`${API}/pedidos`);
+    const dados = await res.json();
 
-  const tabela = document.getElementById("tabela");
-  tabela.innerHTML = "";
+    console.log(dados); // 🔍 debug
 
-  dados.forEach(p => {
-    tabela.innerHTML += `
-      <tr>
-        <td>${p["ID Pedido"] || "-"}</td>
-        <td>${p["Nome"] || "-"}</td>
-        <td>${p["CPF/CNPJ"] || "-"}</td>
-        <td>${p["Email"] || "-"}</td>
-        <td>${p["Servico"] || "-"}</td>
-        <td>${p["Valor"] || "-"}</td>
-        <td>${p["Status"] || "-"}</td>
-        <td>
-          <button onclick="emitirNota('${p["ID Pedido"]}')">
-            Emitir Nota
-          </button>
-        </td>
-      </tr>
-    `;
-  });
+    const tabela = document.getElementById("tabela");
+    tabela.innerHTML = "";
+
+    dados.forEach(p => {
+      tabela.innerHTML += `
+        <tr>
+          <td>${p["ID Pedido"] || "-"}</td>
+          <td>${p["Nome"] || "-"}</td>
+          <td>${p["CPF/CNPJ"] || "-"}</td>
+          <td>${p["Email"] || "-"}</td>
+          <td>${p["Servico"] || "-"}</td>
+          <td>${p["Valor"] || "-"}</td>
+          <td>${p["Status"] || "-"}</td>
+          <td>
+            <button onclick="emitirNota('${p["ID Pedido"]}')">
+              Emitir Nota
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+  } catch (erro) {
+    console.log("Erro ao carregar pedidos:", erro);
+    alert("Erro ao carregar dados");
+  }
 }
 
 async function emitirNota(id) {
