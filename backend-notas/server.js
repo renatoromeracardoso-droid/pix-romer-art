@@ -11,7 +11,7 @@ const SHEET_ID = "1rc7bmVfGwuSjrHTTYNx0dAWx9DPp5CdQetycT4EaGkM";
 
 app.get('/pedidos', async (req, res) => {
   try {
-    const url = https://opensheet.elk.sh/${SHEET_ID}/Notas;
+    const url = `https://opensheet.elk.sh/${SHEET_ID}/Notas`;
     const response = await axios.get(url);
     res.json(response.data);
   } catch (error) {
