@@ -9,34 +9,33 @@ body {
   font-family: Arial;
   background: #0f172a;
   color: white;
-  padding: 20px;
+}
+
+h1 {
+  text-align: center;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  background: #1e293b;
+  margin-top: 20px;
 }
 
 th, td {
-  padding: 12px;
-  border-bottom: 1px solid #334155;
+  padding: 10px;
+  border-bottom: 1px solid #333;
 }
 
 button {
-  padding: 8px 12px;
   background: #22c55e;
   border: none;
-  border-radius: 6px;
+  padding: 8px;
   color: white;
+  border-radius: 5px;
   cursor: pointer;
 }
-
-.emitido {
-  background: #64748b;
-  cursor: not-allowed;
-}
 </style>
+
 </head>
 
 <body>
@@ -44,86 +43,72 @@ button {
 <h1>Painel de Notas Fiscais</h1>
 
 <table>
-<thead>
-<tr>
-  <th>Pedido</th>
-  <th>Cliente</th>
-  <th>CPF/CNPJ</th>
-  <th>Email</th>
-  <th>Serviço</th>
-  <th>Valor</th>
-  <th>Status</th>
-  <th>Ação</th>
-</tr>
-</thead>
+  <thead>
+    <tr>
+      <th>Pedido</th>
+      <th>Cliente</th>
+      <th>CPF/CNPJ</th>
+      <th>Email</th>
+      <th>Serviço</th>
+      <th>Valor</th>
+      <th>Status</th>
+      <th>Ação</th>
+    </tr>
+  </thead>
 
-<tbody id="tabela"></tbody>
+  <tbody id="tabela"></tbody>
 </table>
 
 <script>
-const API = "https://pix-romer-art.onrender.com/pedidos";
-const MAKE_WEBHOOK = "https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa";
+const API = "https://pix-romer-art.onrender.com"; // ⚠️ SUA URL
 
-async function carregar() {
-  const res = await fetch(API);
+async function carregarPedidos() {
+  const res = await fetch(`${API}/pedidos`);
   const dados = await res.json();
 
   const tabela = document.getElementById("tabela");
   tabela.innerHTML = "";
 
   dados.forEach(p => {
-
-    const status = p["Status NF"] || "pendente";
-
-    const btn = status === "emitido"
-      ? `<button class="emitido">Emitido</button>`
-      : `<button onclick="emitirNota(${p["ID Pedido"]}, '${p.Nome}', '${p["CPF/CNPJ"]}', '${p.Email}', '${p.Servico}', '${p.Valor}', this)">Emitir Nota</button>`;
-
     tabela.innerHTML += `
       <tr>
-        <td>${p["ID Pedido"]}</td>
-        <td>${p.Nome}</td>
-        <td>${p["CPF/CNPJ"]}</td>
-        <td>${p.Email}</td>
-        <td>${p.Servico || "-"}</td>
-        <td>${p.Valor || "-"}</td>
-        <td>${status}</td>
-        <td>${btn}</td>
+        <td>${p["ID Pedido"] || "-"}</td>
+        <td>${p["Nome"] || "-"}</td>
+        <td>${p["CPF/CNPJ"] || "-"}</td>
+        <td>${p["Email"] || "-"}</td>
+        <td>${p["Servico"] || "-"}</td>
+        <td>${p["Valor"] || "-"}</td>
+        <td>${p["Status"] || "-"}</td>
+        <td>
+          <button onclick="emitirNota('${p["ID Pedido"]}')">
+            Emitir Nota
+          </button>
+        </td>
       </tr>
     `;
   });
 }
 
-function emitirNota(id, nome, cpf, email, servico, valor, botao) {
+async function emitirNota(id) {
+  try {
+    const res = await fetch(`${API}/emitir/${id}`, {
+      method: "POST"
+    });
 
-  fetch(MAKE_WEBHOOK, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      id_pedido: id,
-      nome,
-      cpf_cnpj: cpf,
-      email,
-      servico,
-      valor
-    })
-  })
-  .then(() => {
-    alert("✅ Nota enviada!");
+    const data = await res.json();
 
-    botao.innerText = "Emitido";
-    botao.classList.add("emitido");
-    botao.disabled = true;
+    if (data.sucesso) {
+      alert("Nota emitida com sucesso!");
+    } else {
+      alert("Erro ao emitir nota");
+    }
 
-  })
-  .catch(() => {
-    alert("❌ Erro ao enviar");
-  });
+  } catch (e) {
+    alert("Erro no servidor");
+  }
 }
 
-carregar();
+carregarPedidos();
 </script>
 
 </body>
