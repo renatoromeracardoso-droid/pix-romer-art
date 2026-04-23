@@ -35,10 +35,6 @@ button {
   color: white;
   cursor: pointer;
 }
-
-button:hover {
-  background: #16a34a;
-}
 </style>
 </head>
 
@@ -53,6 +49,8 @@ button:hover {
   <th>Cliente</th>
   <th>CPF/CNPJ</th>
   <th>Email</th>
+  <th>Serviço</th>
+  <th>Valor</th>
   <th>Ação</th>
 </tr>
 </thead>
@@ -75,12 +73,15 @@ async function carregarDados() {
 
     dados.forEach(item => {
 
-      console.log("DADO:", item); // debug
+      console.log("DADO REAL:", item);
 
-      const id = item["ID Pedido"] || item["ID"] || "-";
-      const nome = item["Nome"] || item["Cliente"] || "-";
-      const cpf = item["CPF/CNPJ"] || item["CPF"] || "-";
-      const email = item["Email"] || "-";
+      // 🔥 Inteligente: tenta vários nomes possíveis
+      const id = item["ID Pedido"] || item["id"] || item["Pedido"] || "-";
+      const nome = item["Nome"] || item["Cliente"] || item["cliente"] || "-";
+      const cpf = item["CPF/CNPJ"] || item["cpf"] || "-";
+      const email = item["Email"] || item["email"] || "-";
+      const servico = item["Serviço"] || item["Material"] || "-";
+      const valor = item["Valor"] || item["Preço"] || item["preco"] || "-";
 
       const linha = `
         <tr>
@@ -88,8 +89,10 @@ async function carregarDados() {
           <td>${nome}</td>
           <td>${cpf}</td>
           <td>${email}</td>
+          <td>${servico}</td>
+          <td>R$ ${valor}</td>
           <td>
-            <button onclick="emitirNota('${id}')">
+            <button onclick="emitirNota('${id}', '${nome}', '${cpf}', '${email}', '${servico}', '${valor}')">
               Emitir Nota
             </button>
           </td>
@@ -100,15 +103,36 @@ async function carregarDados() {
     });
 
   } catch (erro) {
-    console.error("Erro ao carregar dados:", erro);
-    alert("Erro ao carregar pedidos");
+    console.error("Erro:", erro);
+    alert("Erro ao carregar dados");
   }
 }
 
-function emitirNota(id) {
-  alert("Emitir nota para pedido: " + id);
+function emitirNota(id, nome, cpf, email, servico, valor) {
 
-  // Próximo nível: aqui vamos integrar com Make 🔥
+  const url = "https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa";
+
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      id_pedido: id,
+      nome: nome,
+      cpf_cnpj: cpf,
+      email: email,
+      servico: servico,
+      valor: valor
+    })
+  })
+  .then(() => {
+    alert("✅ Nota enviada!");
+  })
+  .catch(() => {
+    alert("❌ Erro ao enviar");
+  });
+
 }
 
 carregarDados();
