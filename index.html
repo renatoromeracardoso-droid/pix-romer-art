@@ -1,40 +1,130 @@
-<script>
-const API = "https://pix-romer-art.onrender.com";
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel de Notas</title>
 
-async function carregarPedidos() {
-  try {
-    const res = await fetch(`${API}/pedidos`);
-    const dados = await res.json();
-
-    console.log(dados);
-
-    const tabela = document.getElementById("tabela");
-    tabela.innerHTML = "";
-
-    dados.forEach(p => {
-      tabela.innerHTML += `
-        <tr>
-          <td>${p["ID Pedido"] || "-"}</td>
-          <td>${p["Nome"] || "-"}</td>
-          <td>${p["CPF/CNPJ"] || "-"}</td>
-          <td>${p["Email"] || "-"}</td>
-          <td>${p["Servico"] || "-"}</td>
-          <td>${p["Valor"] || "-"}</td>
-          <td>${p["Status"] || "-"}</td>
-          <td>
-            <button onclick="alert('Emitir nota')">
-              Emitir Nota
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-
-  } catch (err) {
-    console.error(err);
-    alert("Erro ao carregar dados");
-  }
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
 }
 
-carregarPedidos();
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1e293b;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #334155;
+}
+
+button {
+  padding: 8px 12px;
+  background: #22c55e;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+.emitido {
+  background: #64748b;
+  cursor: not-allowed;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Painel de Notas Fiscais</h1>
+
+<table>
+<thead>
+<tr>
+  <th>Pedido</th>
+  <th>Cliente</th>
+  <th>CPF/CNPJ</th>
+  <th>Email</th>
+  <th>Serviço</th>
+  <th>Valor</th>
+  <th>Status</th>
+  <th>Ação</th>
+</tr>
+</thead>
+
+<tbody id="tabela"></tbody>
+</table>
+
+<script>
+const API = "https://pix-romer-art.onrender.com/pedidos";
+const MAKE_WEBHOOK = "https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa";
+
+async function carregar() {
+  const res = await fetch(API);
+  const dados = await res.json();
+
+  const tabela = document.getElementById("tabela");
+  tabela.innerHTML = "";
+
+  dados.forEach(p => {
+
+    const status = p["Status NF"] || "pendente";
+
+    const btn = status === "emitido"
+      ? `<button class="emitido">Emitido</button>`
+      : `<button onclick="emitirNota(${p["ID Pedido"]}, '${p.Nome}', '${p["CPF/CNPJ"]}', '${p.Email}', '${p.Servico}', '${p.Valor}', this)">Emitir Nota</button>`;
+
+    tabela.innerHTML += `
+      <tr>
+        <td>${p["ID Pedido"]}</td>
+        <td>${p.Nome}</td>
+        <td>${p["CPF/CNPJ"]}</td>
+        <td>${p.Email}</td>
+        <td>${p.Servico || "-"}</td>
+        <td>${p.Valor || "-"}</td>
+        <td>${status}</td>
+        <td>${btn}</td>
+      </tr>
+    `;
+  });
+}
+
+function emitirNota(id, nome, cpf, email, servico, valor, botao) {
+
+  fetch(MAKE_WEBHOOK, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      id_pedido: id,
+      nome,
+      cpf_cnpj: cpf,
+      email,
+      servico,
+      valor
+    })
+  })
+  .then(() => {
+    alert("✅ Nota enviada!");
+
+    botao.innerText = "Emitido";
+    botao.classList.add("emitido");
+    botao.disabled = true;
+
+  })
+  .catch(() => {
+    alert("❌ Erro ao enviar");
+  });
+}
+
+carregar();
 </script>
+
+</body>
+</html>
