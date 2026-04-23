@@ -6,9 +6,9 @@
 
   <style>
     body {
+      background: #1e293b;
+      color: #fff;
       font-family: Arial;
-      background: #0f172a;
-      color: white;
       padding: 20px;
     }
 
@@ -19,30 +19,26 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      background: #1e293b;
+      background: #334155;
     }
 
     th, td {
       padding: 10px;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid #475569;
       text-align: left;
     }
 
     th {
-      background: #0ea5e9;
+      background: #1e293b;
     }
 
     button {
+      padding: 6px 10px;
       background: #22c55e;
       border: none;
-      padding: 6px 10px;
       color: white;
       cursor: pointer;
-      border-radius: 4px;
-    }
-
-    button:hover {
-      background: #16a34a;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -69,34 +65,16 @@
 </table>
 
 <script>
-const API = "https://pix-romer-art.onrender.com";
+
+const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
 
 async function carregarPedidos() {
   try {
-    const res = await fetch(API + "/pedidos");
-
-    if (!res.ok) {
-      throw new Error("API não respondeu");
-    }
-
+    const res = await fetch(API);
     const dados = await res.json();
-
-    console.log("DADOS:", dados);
 
     const tabela = document.getElementById("tabela");
     tabela.innerHTML = "";
-
-    // 👉 se vier erro do backend
-    if (!Array.isArray(dados)) {
-      alert("Erro vindo do backend");
-      console.log(dados);
-      return;
-    }
-
-    if (dados.length === 0) {
-      tabela.innerHTML = "<tr><td colspan='8'>Nenhum dado encontrado</td></tr>";
-      return;
-    }
 
     dados.forEach(p => {
       tabela.innerHTML += `
@@ -109,25 +87,26 @@ async function carregarPedidos() {
           <td>${p["Valor"] || "-"}</td>
           <td>${p["Status"] || "-"}</td>
           <td>
-            <button onclick="emitirNota('${p["ID Pedido"]}')">
-              Emitir Nota
+            <button onclick="emitir('${p["ID Pedido"]}')">
+              Emitir
             </button>
           </td>
         </tr>
       `;
     });
 
-  } catch (erro) {
-    console.error("ERRO:", erro);
+  } catch (err) {
     alert("Erro ao carregar dados");
+    console.error(err);
   }
 }
 
-function emitirNota(id) {
-  alert("Emitir nota do pedido: " + id);
+function emitir(id) {
+  alert("Emitindo nota do pedido " + id);
 }
 
 carregarPedidos();
+
 </script>
 
 </body>
