@@ -42,7 +42,7 @@
 
   .paid { background: #22c55e; }
   .pending { background: #facc15; color: #000; }
-  .cancel { background: #ef4444; }
+  .emitido { background: #3b82f6; }
 
   button {
     padding: 6px 10px;
@@ -88,47 +88,16 @@
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
 
+let pedidos = [];
+
 async function carregarPedidos() {
   try {
     const res = await fetch(API);
     const dados = await res.json();
 
-    const tabela = document.getElementById("tabela");
-    tabela.innerHTML = "";
+    pedidos = dados;
 
-    dados.forEach(p => {
-
-      const status = (p["Status NF"] || "").toLowerCase().trim();
-
-      const pago = status === "paid" || status === "pago";
-
-      let statusClass = "pending";
-      if (pago) statusClass = "paid";
-      else if (status.includes("cancel")) statusClass = "cancel";
-
-      tabela.innerHTML += `
-        <tr>
-          <td>${p["ID Pedido"] || "-"}</td>
-          <td>${p["Nome"] || "-"}</td>
-          <td>${p["CPF/CNPJ"] || "-"}</td>
-          <td>${p["Email"] || "-"}</td>
-          <td>${p["Serviço"] || "-"}</td>
-          <td>R$ ${p["Valor"] || "-"}</td>
-          <td>
-            <span class="status ${statusClass}">
-              ${status || "pendente"}
-            </span>
-          </td>
-          <td>
-            ${
-              pago
-                ? `<button onclick='emitir(${JSON.stringify(p)})'>Emitir</button>`
-                : `<span class="disabled">Aguardando</span>`
-            }
-          </td>
-        </tr>
-      `;
-    });
+    renderTabela();
 
   } catch (err) {
     alert("Erro ao carregar dados");
@@ -136,10 +105,63 @@ async function carregarPedidos() {
   }
 }
 
-function emitir(pedido) {
-  alert("Emitindo nota do pedido " + pedido["ID Pedido"]);
+function renderTabela() {
+  const tabela = document.getElementById("tabela");
+  tabela.innerHTML = "";
 
-  // aqui depois você pode integrar com emissão real
+  pedidos.forEach((p, index) => {
+
+    const status = (p["Status NF"] || "").toLowerCase().trim();
+    const emitido = p.emitido === true;
+
+    const pago = status === "paid" || status === "pago";
+
+    let statusTexto = status || "pendente";
+    let statusClasse = "pending";
+
+    if (emitido) {
+      statusTexto = "emitido";
+      statusClasse = "emitido";
+    } else if (pago) {
+      statusClasse = "paid";
+    }
+
+    tabela.innerHTML += `
+      <tr>
+        <td>${p["ID Pedido"] || "-"}</td>
+        <td>${p["Nome"] || "-"}</td>
+        <td>${p["CPF/CNPJ"] || "-"}</td>
+        <td>${p["Email"] || "-"}</td>
+        <td>${p["Serviço"] || "-"}</td>
+        <td>R$ ${p["Valor"] || "-"}</td>
+        <td>
+          <span class="status ${statusClasse}">
+            ${statusTexto}
+          </span>
+        </td>
+        <td>
+          ${
+            emitido
+              ? `<span class="disabled">Emitido</span>`
+              : pago
+                ? `<button onclick="emitir(${index})">Emitir</button>`
+                : `<span class="disabled">Aguardando</span>`
+          }
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function emitir(index) {
+  const pedido = pedidos[index];
+
+  alert("Nota emitida para pedido " + pedido["ID Pedido"]);
+
+  // marca como emitido localmente
+  pedidos[index].emitido = true;
+
+  renderTabela();
 }
 
 carregarPedidos();
