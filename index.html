@@ -83,9 +83,11 @@ button:disabled {
 
 <script>
 
+// 🔗 PLANILHA
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
 
-const API_EMITIR = "https://script.google.com/macros/s/AKfycbzOAL743JlLPl2F_GsLRCR0YWm0p7CUwpyisuqUBTBCM_RcO1TdN2UrdGtZ_1ASxihhLA/exec";
+// 🔗 SUA API NOVA (ATUALIZADA)
+const API_EMITIR = "https://script.google.com/macros/s/AKfycbzSnyWol8f3D2U1sapo5YTypaEcShDeyWnMJHS_v1J12-rltxkXxsI3fvzUrlzEmkDtcw/exec";
 
 let pedidos = [];
 
@@ -153,22 +155,32 @@ async function emitir(index) {
   try {
     const res = await fetch(API_EMITIR, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         id: pedido["ID Pedido"]
       })
     });
 
-    const data = await res.json();
+    const texto = await res.text();
 
-    if (data && data.ok) {
+    let data;
+    try {
+      data = JSON.parse(texto);
+    } catch {
+      throw new Error("Resposta inválida do servidor: " + texto);
+    }
+
+    if (data.ok) {
       alert("Nota emitida com sucesso!");
       carregarPedidos();
     } else {
-      alert("Erro: " + (data?.erro || "Erro desconhecido"));
+      alert("Erro: " + (data.erro || "Erro desconhecido"));
     }
 
   } catch (err) {
-    alert("Erro ao emitir nota");
+    alert("Erro real: " + err.message);
     console.error(err);
   }
 }
