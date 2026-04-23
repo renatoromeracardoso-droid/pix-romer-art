@@ -5,61 +5,58 @@
 <title>Painel de Notas Fiscais</title>
 
 <style>
-  body {
-    background: #1e293b;
-    color: #fff;
-    font-family: Arial;
-    padding: 20px;
-  }
+body {
+  background: #1e293b;
+  color: #fff;
+  font-family: Arial;
+  padding: 20px;
+}
 
-  h1 {
-    margin-bottom: 20px;
-  }
+h1 {
+  margin-bottom: 20px;
+}
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #334155;
-  }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #334155;
+}
 
-  th, td {
-    padding: 10px;
-    border-bottom: 1px solid #475569;
-    text-align: left;
-  }
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #475569;
+  text-align: left;
+}
 
-  th {
-    background: #1e293b;
-  }
+th {
+  background: #1e293b;
+}
 
-  .status {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
+.status {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
 
-  .paid { background: #22c55e; }
-  .pending { background: #facc15; color: #000; }
-  .emitido { background: #3b82f6; }
+.paid { background: #22c55e; }
+.pending { background: #facc15; color: #000; }
+.emitido { background: #3b82f6; }
 
-  button {
-    padding: 6px 10px;
-    background: #22c55e;
-    border: none;
-    color: white;
-    cursor: pointer;
-    border-radius: 5px;
-  }
+button {
+  padding: 6px 10px;
+  background: #22c55e;
+  border: none;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
 
-  button:hover {
-    opacity: 0.8;
-  }
-
-  .disabled {
-    opacity: 0.4;
-  }
+button:disabled {
+  background: #64748b;
+  cursor: not-allowed;
+}
 </style>
 </head>
 
@@ -68,37 +65,35 @@
 <h1>Painel de Notas Fiscais</h1>
 
 <table>
-  <thead>
-    <tr>
-      <th>Pedido</th>
-      <th>Cliente</th>
-      <th>CPF/CNPJ</th>
-      <th>Email</th>
-      <th>Serviço</th>
-      <th>Valor</th>
-      <th>Status NF</th>
-      <th>Ação</th>
-    </tr>
-  </thead>
+<thead>
+<tr>
+<th>Pedido</th>
+<th>Cliente</th>
+<th>CPF/CNPJ</th>
+<th>Email</th>
+<th>Serviço</th>
+<th>Valor</th>
+<th>Status NF</th>
+<th>Ação</th>
+</tr>
+</thead>
 
-  <tbody id="tabela"></tbody>
+<tbody id="tabela"></tbody>
 </table>
 
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
 
+const API_EMITIR = "https://script.google.com/macros/s/AKfycbzOAL743JlLPl2F_GsLRCR0YWm0p7CUwpyisuqUBTBCM_RcO1TdN2UrdGtZ_1ASxihhLA/exec";
+
 let pedidos = [];
 
 async function carregarPedidos() {
   try {
     const res = await fetch(API);
-    const dados = await res.json();
-
-    pedidos = dados;
-
+    pedidos = await res.json();
     renderTabela();
-
   } catch (err) {
     alert("Erro ao carregar dados");
     console.error(err);
@@ -112,40 +107,37 @@ function renderTabela() {
   pedidos.forEach((p, index) => {
 
     const status = (p["Status NF"] || "").toLowerCase().trim();
-    const emitido = p.emitido === true;
 
     const pago = status === "paid" || status === "pago";
+    const emitido = status === "emitido";
 
-    let statusTexto = status || "pendente";
-    let statusClasse = "pending";
+    let classe = "pending";
+    let texto = "pendente";
 
     if (emitido) {
-      statusTexto = "emitido";
-      statusClasse = "emitido";
+      classe = "emitido";
+      texto = "emitido";
     } else if (pago) {
-      statusClasse = "paid";
+      classe = "paid";
+      texto = "pago";
     }
 
     tabela.innerHTML += `
       <tr>
-        <td>${p["ID Pedido"] || "-"}</td>
-        <td>${p["Nome"] || "-"}</td>
-        <td>${p["CPF/CNPJ"] || "-"}</td>
-        <td>${p["Email"] || "-"}</td>
-        <td>${p["Serviço"] || "-"}</td>
-        <td>R$ ${p["Valor"] || "-"}</td>
-        <td>
-          <span class="status ${statusClasse}">
-            ${statusTexto}
-          </span>
-        </td>
+        <td>${p["ID Pedido"]}</td>
+        <td>${p["Nome"]}</td>
+        <td>${p["CPF/CNPJ"]}</td>
+        <td>${p["Email"]}</td>
+        <td>${p["Serviço"]}</td>
+        <td>R$ ${p["Valor"]}</td>
+        <td><span class="status ${classe}">${texto}</span></td>
         <td>
           ${
             emitido
-              ? `<span class="disabled">Emitido</span>`
-              : pago
-                ? `<button onclick="emitir(${index})">Emitir</button>`
-                : `<span class="disabled">Aguardando</span>`
+            ? "Emitido"
+            : pago
+              ? `<button onclick="emitir(${index})">Emitir</button>`
+              : "Aguardando"
           }
         </td>
       </tr>
@@ -153,15 +145,32 @@ function renderTabela() {
   });
 }
 
-function emitir(index) {
+async function emitir(index) {
   const pedido = pedidos[index];
 
-  alert("Nota emitida para pedido " + pedido["ID Pedido"]);
+  if (!confirm("Emitir nota do pedido " + pedido["ID Pedido"] + "?")) return;
 
-  // marca como emitido localmente
-  pedidos[index].emitido = true;
+  try {
+    const res = await fetch(API_EMITIR, {
+      method: "POST",
+      body: JSON.stringify({
+        id: pedido["ID Pedido"]
+      })
+    });
 
-  renderTabela();
+    const data = await res.json();
+
+    if (data.ok) {
+      alert("Nota emitida com sucesso!");
+      carregarPedidos();
+    } else {
+      alert("Erro: " + data.erro);
+    }
+
+  } catch (err) {
+    alert("Erro ao emitir nota");
+    console.error(err);
+  }
 }
 
 carregarPedidos();
