@@ -1,42 +1,50 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<title>Painel de Notas</title>
+  <meta charset="UTF-8">
+  <title>Painel de Notas Fiscais</title>
 
-<style>
-body {
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-  padding: 20px;
-}
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      padding: 20px;
+    }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #1e293b;
-}
+    h1 {
+      margin-bottom: 20px;
+    }
 
-th, td {
-  padding: 12px;
-  border-bottom: 1px solid #334155;
-}
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #1e293b;
+    }
 
-button {
-  padding: 8px 12px;
-  background: #22c55e;
-  border: none;
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-}
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #334155;
+      text-align: left;
+    }
 
-.emitido {
-  background: #64748b;
-  cursor: not-allowed;
-}
-</style>
+    th {
+      background: #0ea5e9;
+    }
+
+    button {
+      background: #22c55e;
+      border: none;
+      padding: 6px 10px;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+  </style>
 </head>
 
 <body>
@@ -44,86 +52,82 @@ button {
 <h1>Painel de Notas Fiscais</h1>
 
 <table>
-<thead>
-<tr>
-  <th>Pedido</th>
-  <th>Cliente</th>
-  <th>CPF/CNPJ</th>
-  <th>Email</th>
-  <th>Serviço</th>
-  <th>Valor</th>
-  <th>Status</th>
-  <th>Ação</th>
-</tr>
-</thead>
+  <thead>
+    <tr>
+      <th>Pedido</th>
+      <th>Cliente</th>
+      <th>CPF/CNPJ</th>
+      <th>Email</th>
+      <th>Serviço</th>
+      <th>Valor</th>
+      <th>Status</th>
+      <th>Ação</th>
+    </tr>
+  </thead>
 
-<tbody id="tabela"></tbody>
+  <tbody id="tabela"></tbody>
 </table>
 
 <script>
-const API = "https://pix-romer-art.onrender.com/pedidos";
-const MAKE_WEBHOOK = "https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa";
+const API = "https://pix-romer-art.onrender.com";
 
-async function carregar() {
-  const res = await fetch(API);
-  const dados = await res.json();
+async function carregarPedidos() {
+  try {
+    const res = await fetch(API + "/pedidos");
 
-  const tabela = document.getElementById("tabela");
-  tabela.innerHTML = "";
+    if (!res.ok) {
+      throw new Error("API não respondeu");
+    }
 
-  dados.forEach(p => {
+    const dados = await res.json();
 
-    const status = p["Status NF"] || "pendente";
+    console.log("DADOS:", dados);
 
-    const btn = status === "emitido"
-      ? `<button class="emitido">Emitido</button>`
-      : `<button onclick="emitirNota(${p["ID Pedido"]}, '${p.Nome}', '${p["CPF/CNPJ"]}', '${p.Email}', '${p.Servico}', '${p.Valor}', this)">Emitir Nota</button>`;
+    const tabela = document.getElementById("tabela");
+    tabela.innerHTML = "";
 
-    tabela.innerHTML += `
-      <tr>
-        <td>${p["ID Pedido"]}</td>
-        <td>${p.Nome}</td>
-        <td>${p["CPF/CNPJ"]}</td>
-        <td>${p.Email}</td>
-        <td>${p.Servico || "-"}</td>
-        <td>${p.Valor || "-"}</td>
-        <td>${status}</td>
-        <td>${btn}</td>
-      </tr>
-    `;
-  });
+    // 👉 se vier erro do backend
+    if (!Array.isArray(dados)) {
+      alert("Erro vindo do backend");
+      console.log(dados);
+      return;
+    }
+
+    if (dados.length === 0) {
+      tabela.innerHTML = "<tr><td colspan='8'>Nenhum dado encontrado</td></tr>";
+      return;
+    }
+
+    dados.forEach(p => {
+      tabela.innerHTML += `
+        <tr>
+          <td>${p["ID Pedido"] || "-"}</td>
+          <td>${p["Nome"] || "-"}</td>
+          <td>${p["CPF/CNPJ"] || "-"}</td>
+          <td>${p["Email"] || "-"}</td>
+          <td>${p["Servico"] || "-"}</td>
+          <td>${p["Valor"] || "-"}</td>
+          <td>${p["Status"] || "-"}</td>
+          <td>
+            <button onclick="emitirNota('${p["ID Pedido"]}')">
+              Emitir Nota
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+  } catch (erro) {
+    console.error("ERRO:", erro);
+    alert("Erro ao carregar dados");
+  }
 }
 
-function emitirNota(id, nome, cpf, email, servico, valor, botao) {
-
-  fetch(MAKE_WEBHOOK, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      id_pedido: id,
-      nome,
-      cpf_cnpj: cpf,
-      email,
-      servico,
-      valor
-    })
-  })
-  .then(() => {
-    alert("✅ Nota enviada!");
-
-    botao.innerText = "Emitido";
-    botao.classList.add("emitido");
-    botao.disabled = true;
-
-  })
-  .catch(() => {
-    alert("❌ Erro ao enviar");
-  });
+function emitirNota(id) {
+  alert("Emitir nota do pedido: " + id);
 }
 
-carregar();
+carregarPedidos();
 </script>
 
 </body>
