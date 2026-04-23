@@ -24,11 +24,17 @@ th, td {
 }
 
 button {
+  padding: 8px 12px;
   background: #22c55e;
   border: none;
-  padding: 8px 12px;
-  color: white;
   border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+.emitido {
+  background: #64748b;
+  cursor: not-allowed;
 }
 </style>
 </head>
@@ -44,6 +50,9 @@ button {
   <th>Cliente</th>
   <th>CPF/CNPJ</th>
   <th>Email</th>
+  <th>Serviço</th>
+  <th>Valor</th>
+  <th>Status</th>
   <th>Ação</th>
 </tr>
 </thead>
@@ -52,58 +61,69 @@ button {
 </table>
 
 <script>
+const API = "https://pix-romer-art.onrender.com/pedidos";
+const MAKE_WEBHOOK = "https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa";
 
-async function carregarPedidos() {
-
-  const url = "https://pix-romer-art.onrender.com/pedidos";
-
-  const resposta = await fetch(url);
-  const dados = await resposta.json();
+async function carregar() {
+  const res = await fetch(API);
+  const dados = await res.json();
 
   const tabela = document.getElementById("tabela");
   tabela.innerHTML = "";
 
   dados.forEach(p => {
 
+    const status = p["Status NF"] || "pendente";
+
+    const btn = status === "emitido"
+      ? `<button class="emitido">Emitido</button>`
+      : `<button onclick="emitirNota(${p["ID Pedido"]}, '${p.Nome}', '${p["CPF/CNPJ"]}', '${p.Email}', '${p.Servico}', '${p.Valor}', this)">Emitir Nota</button>`;
+
     tabela.innerHTML += `
       <tr>
-        <td>${p["ID Pedido"] || "-"}</td>
-        <td>${p["Nome"] || "-"}</td>
-        <td>${p["CPF/CNPJ"] || "-"}</td>
-        <td>${p["Email"] || "-"}</td>
-        <td>
-          <button onclick="emitirNota(
-            '${p["ID Pedido"]}',
-            '${p["Nome"]}',
-            '${p["CPF/CNPJ"]}',
-            '${p["Email"]}'
-          )">
-            Emitir Nota
-          </button>
-        </td>
+        <td>${p["ID Pedido"]}</td>
+        <td>${p.Nome}</td>
+        <td>${p["CPF/CNPJ"]}</td>
+        <td>${p.Email}</td>
+        <td>${p.Servico || "-"}</td>
+        <td>${p.Valor || "-"}</td>
+        <td>${status}</td>
+        <td>${btn}</td>
       </tr>
     `;
   });
 }
 
-function emitirNota(id, nome, cpf, email) {
+function emitirNota(id, nome, cpf, email, servico, valor, botao) {
 
-  fetch("https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa", {
+  fetch(MAKE_WEBHOOK, {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
       id_pedido: id,
       nome,
       cpf_cnpj: cpf,
-      email
+      email,
+      servico,
+      valor
     })
-  });
+  })
+  .then(() => {
+    alert("✅ Nota enviada!");
 
-  alert("Nota enviada!");
+    botao.innerText = "Emitido";
+    botao.classList.add("emitido");
+    botao.disabled = true;
+
+  })
+  .catch(() => {
+    alert("❌ Erro ao enviar");
+  });
 }
 
-carregarPedidos();
-
+carregar();
 </script>
 
 </body>
