@@ -1,79 +1,66 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Painel de Notas Fiscais</title>
+<meta charset="UTF-8">
+<title>Painel de Notas Fiscais</title>
 
-  <style>
-    body {
-      background: #1e293b;
-      color: #fff;
-      font-family: Arial;
-      padding: 20px;
-    }
+<style>
+  body {
+    background: #1e293b;
+    color: #fff;
+    font-family: Arial;
+    padding: 20px;
+  }
 
-    h1 {
-      margin-bottom: 20px;
-    }
+  h1 {
+    margin-bottom: 20px;
+  }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #334155;
-    }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #334155;
+  }
 
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #475569;
-      text-align: left;
-      max-width: 250px;
-      word-wrap: break-word;
-    }
+  th, td {
+    padding: 10px;
+    border-bottom: 1px solid #475569;
+    text-align: left;
+  }
 
-    th {
-      background: #1e293b;
-    }
+  th {
+    background: #1e293b;
+  }
 
-    button {
-      padding: 6px 10px;
-      background: #22c55e;
-      border: none;
-      color: white;
-      cursor: pointer;
-      border-radius: 5px;
-    }
+  .status {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
 
-    button:hover {
-      opacity: 0.8;
-    }
+  .paid { background: #22c55e; }
+  .pending { background: #facc15; color: #000; }
+  .cancel { background: #ef4444; }
 
-    /* STATUS */
-    .status {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
+  button {
+    padding: 6px 10px;
+    background: #22c55e;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+  }
 
-    .paid { background: #22c55e; }
-    .pending { background: #f59e0b; }
-    .cancel { background: #ef4444; }
-    .unknown { background: #64748b; }
+  button:hover {
+    opacity: 0.8;
+  }
 
-    /* TOAST */
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #22c55e;
-      padding: 12px 20px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      z-index: 999;
-    }
-  </style>
+  .disabled {
+    opacity: 0.4;
+  }
+</style>
 </head>
 
 <body>
@@ -109,16 +96,14 @@ async function carregarPedidos() {
     const tabela = document.getElementById("tabela");
     tabela.innerHTML = "";
 
-    // Mais recentes primeiro
-    dados.reverse();
-
     dados.forEach(p => {
 
-      const status = (p["Status"] || "").toLowerCase();
+      const status = (p["Status NF"] || "").toLowerCase().trim();
 
-      let statusClass = "unknown";
-      if (status.includes("paid")) statusClass = "paid";
-      else if (status.includes("pend")) statusClass = "pending";
+      const pago = status === "paid" || status === "pago";
+
+      let statusClass = "pending";
+      if (pago) statusClass = "paid";
       else if (status.includes("cancel")) statusClass = "cancel";
 
       tabela.innerHTML += `
@@ -131,14 +116,14 @@ async function carregarPedidos() {
           <td>R$ ${p["Valor"] || "-"}</td>
           <td>
             <span class="status ${statusClass}">
-              ${p["Status NF"] || "-"}
+              ${status || "pendente"}
             </span>
           </td>
           <td>
             ${
-              status.includes("paid")
+              pago
                 ? `<button onclick='emitir(${JSON.stringify(p)})'>Emitir</button>`
-                : `<span style="opacity:0.5;">Aguardando</span>`
+                : `<span class="disabled">Aguardando</span>`
             }
           </td>
         </tr>
@@ -146,39 +131,15 @@ async function carregarPedidos() {
     });
 
   } catch (err) {
-    mostrarToast("Erro ao carregar dados ❌");
+    alert("Erro ao carregar dados");
     console.error(err);
   }
 }
 
-function emitir(p) {
+function emitir(pedido) {
+  alert("Emitindo nota do pedido " + pedido["ID Pedido"]);
 
-  const msg = `
-📄 Nota Fiscal Disponível
-
-👤 Cliente: ${p["Nome"]}
-📦 Pedido: ${p["ID Pedido"]}
-💰 Valor: R$ ${p["Valor"]}
-
-Seu pedido foi processado com sucesso ✅
-`;
-
-  // Abre WhatsApp
-  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-
-  mostrarToast("Abrindo envio no WhatsApp 🚀");
-}
-
-function mostrarToast(msg) {
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.innerText = msg;
-
-  document.body.appendChild(toast);
-
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
+  // aqui depois você pode integrar com emissão real
 }
 
 carregarPedidos();
