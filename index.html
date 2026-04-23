@@ -12,6 +12,10 @@ body {
   padding: 20px;
 }
 
+h1 {
+  margin-bottom: 20px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -30,6 +34,10 @@ button {
   border-radius: 6px;
   color: white;
   cursor: pointer;
+}
+
+button:hover {
+  background: #16a34a;
 }
 </style>
 </head>
@@ -58,34 +66,49 @@ button {
 const API_URL = "https://pix-romer-art.onrender.com/pedidos";
 
 async function carregarDados() {
-  const resposta = await fetch(API_URL);
-  const dados = await resposta.json();
+  try {
+    const resposta = await fetch(API_URL);
+    const dados = await resposta.json();
 
-  const tabela = document.getElementById("tabela");
-  tabela.innerHTML = "";
+    const tabela = document.getElementById("tabela");
+    tabela.innerHTML = "";
 
-  dados.forEach(item => {
+    dados.forEach(item => {
 
-    const linha = `
-      <tr>
-        <td>${item["ID Pedido"] || "-"}</td>
-        <td>${item["Nome"] || item["Cliente"] || "-"}</td>
-        <td>${item["CPF/CNPJ"] || "-"}</td>
-        <td>${item["Email"] || "-"}</td>
-        <td>
-          <button onclick="emitirNota('${item["ID Pedido"]}')">
-            Emitir Nota
-          </button>
-        </td>
-      </tr>
-    `;
+      console.log("DADO:", item); // debug
 
-    tabela.innerHTML += linha;
-  });
+      const id = item["ID Pedido"] || item["ID"] || "-";
+      const nome = item["Nome"] || item["Cliente"] || "-";
+      const cpf = item["CPF/CNPJ"] || item["CPF"] || "-";
+      const email = item["Email"] || "-";
+
+      const linha = `
+        <tr>
+          <td>${id}</td>
+          <td>${nome}</td>
+          <td>${cpf}</td>
+          <td>${email}</td>
+          <td>
+            <button onclick="emitirNota('${id}')">
+              Emitir Nota
+            </button>
+          </td>
+        </tr>
+      `;
+
+      tabela.innerHTML += linha;
+    });
+
+  } catch (erro) {
+    console.error("Erro ao carregar dados:", erro);
+    alert("Erro ao carregar pedidos");
+  }
 }
 
 function emitirNota(id) {
   alert("Emitir nota para pedido: " + id);
+
+  // Próximo nível: aqui vamos integrar com Make 🔥
 }
 
 carregarDados();
