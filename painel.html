@@ -58,29 +58,50 @@
     </tr>
   </thead>
 
-  <tbody>
-    <tr>
-      <td>1234</td>
-      <td>Renato</td>
-      <td>2224433</td>
-      <td>rrerelk@fjkfkç</td>
-      <td>
-        <button onclick="emitirNota(
-          1234,
-          'Renato',
-          '2224433',
-          'rrerelk@fjkfkç',
-          'corte tamanho x11',
-          50
-        )">
-          Emitir Nota
-        </button>
-      </td>
-    </tr>
-  </tbody>
+  <tbody id="tabela"></tbody>
 </table>
 
 <script>
+
+const API_URL = "http://localhost:3000/pedidos";
+
+function carregarPedidos() {
+  fetch(API_URL)
+    .then(res => res.json())
+    .then(data => {
+
+      const tabela = document.getElementById("tabela");
+      tabela.innerHTML = "";
+
+      data.forEach(pedido => {
+        tabela.innerHTML += `
+          <tr>
+            <td>${pedido["ID Pedido"]}</td>
+            <td>${pedido["Nome"]}</td>
+            <td>${pedido["CPF/CNPJ"]}</td>
+            <td>${pedido["Email"]}</td>
+            <td>
+              <button onclick="emitirNota(
+                '${pedido["ID Pedido"]}',
+                '${pedido["Nome"]}',
+                '${pedido["CPF/CNPJ"]}',
+                '${pedido["Email"]}',
+                '${pedido["Servico"]}',
+                '${pedido["Valor"]}'
+              )">
+                Emitir Nota
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+    })
+    .catch(err => {
+      console.error("Erro ao carregar pedidos", err);
+    });
+}
+
 function emitirNota(id, nome, cpf, email, servico, valor) {
 
   const url = "https://hook.us2.make.com/nuq3e37vp5tkkpxtef51nqf51n63rssa";
@@ -100,7 +121,7 @@ function emitirNota(id, nome, cpf, email, servico, valor) {
     })
   })
   .then(response => {
-    alert("✅ Nota enviada para o Make!");
+    alert("✅ Nota enviada!");
   })
   .catch(error => {
     alert("❌ Erro ao enviar");
@@ -108,6 +129,10 @@ function emitirNota(id, nome, cpf, email, servico, valor) {
   });
 
 }
+
+// carrega automático
+carregarPedidos();
+
 </script>
 
 </body>
