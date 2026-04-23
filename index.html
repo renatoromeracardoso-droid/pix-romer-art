@@ -60,6 +60,19 @@
     .pending { background: #f59e0b; }
     .cancel { background: #ef4444; }
     .unknown { background: #64748b; }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #22c55e;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      z-index: 999;
+    }
   </style>
 </head>
 
@@ -96,7 +109,7 @@ async function carregarPedidos() {
     const tabela = document.getElementById("tabela");
     tabela.innerHTML = "";
 
-    // 🔥 mais recentes primeiro
+    // Mais recentes primeiro
     dados.reverse();
 
     dados.forEach(p => {
@@ -115,7 +128,7 @@ async function carregarPedidos() {
           <td>${p["CPF/CNPJ"] || "-"}</td>
           <td>${p["Email"] || "-"}</td>
           <td>${p["Serviço"] || "-"}</td>
-          <td>${p["Valor"] || "-"}</td>
+          <td>R$ ${p["Valor"] || "-"}</td>
           <td>
             <span class="status ${statusClass}">
               ${p["Status"] || "-"}
@@ -124,7 +137,7 @@ async function carregarPedidos() {
           <td>
             ${
               status.includes("paid")
-                ? `<button onclick="emitir('${p["ID Pedido"]}')">Emitir</button>`
+                ? `<button onclick='emitir(${JSON.stringify(p)})'>Emitir</button>`
                 : `<span style="opacity:0.5;">Aguardando</span>`
             }
           </td>
@@ -133,16 +146,39 @@ async function carregarPedidos() {
     });
 
   } catch (err) {
-    alert("Erro ao carregar dados");
+    mostrarToast("Erro ao carregar dados ❌");
     console.error(err);
   }
 }
 
-function emitir(id) {
-  alert("Emitindo nota do pedido " + id);
+function emitir(p) {
 
-  // 🚀 FUTURO:
-  // window.open(`https://seudominio.com/nota/${id}`);
+  const msg = `
+📄 Nota Fiscal Disponível
+
+👤 Cliente: ${p["Nome"]}
+📦 Pedido: ${p["ID Pedido"]}
+💰 Valor: R$ ${p["Valor"]}
+
+Seu pedido foi processado com sucesso ✅
+`;
+
+  // Abre WhatsApp
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+
+  mostrarToast("Abrindo envio no WhatsApp 🚀");
+}
+
+function mostrarToast(msg) {
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.innerText = msg;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
 }
 
 carregarPedidos();
