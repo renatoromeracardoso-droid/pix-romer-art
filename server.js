@@ -1,21 +1,26 @@
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+const path = require("path");
 
 const app = express();
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// 👉 COLE SEU ID AQUI (CONFIRMADO)
+// 🔥 SEU ID DA PLANILHA (CONFIRMADO)
 const SHEET_ID = "1rc7bmVFGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM";
 
-// 👉 FORÇA PRIMEIRA ABA (SEM ERRO DE NOME)
+// 🔥 USA SEMPRE A PRIMEIRA ABA
 const ABA = "0";
 
+// ✅ ROTA PRINCIPAL (CORRIGE "Cannot GET /")
+app.use(express.static(__dirname));
+
+// ✅ API
 app.get("/pedidos", async (req, res) => {
   try {
-    const url = https://opensheet.elk.sh/${SHEET_ID}/${ABA};
+    const url = `https://opensheet.elk.sh/${SHEET_ID}/${ABA}`;
 
     console.log("Buscando:", url);
 
@@ -24,19 +29,15 @@ app.get("/pedidos", async (req, res) => {
     res.json(response.data);
 
   } catch (error) {
-    console.error("ERRO:", error.message);
+    console.error("ERRO REAL:", error.response?.data || error.message);
 
     res.status(500).json({
       erro: "Erro ao buscar dados",
-      detalhe: error.message
+      detalhe: error.response?.data || error.message
     });
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("API rodando 🚀");
-});
-
 app.listen(PORT, () => {
-  console.log("Servidor rodando na porta " + PORT);
+  console.log("Rodando na porta " + PORT);
 });
