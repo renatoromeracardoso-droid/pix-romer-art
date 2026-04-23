@@ -124,12 +124,12 @@ function renderTabela() {
 
     tabela.innerHTML += `
       <tr>
-        <td>${p["ID Pedido"]}</td>
-        <td>${p["Nome"]}</td>
-        <td>${p["CPF/CNPJ"]}</td>
-        <td>${p["Email"]}</td>
-        <td>${p["Serviço"]}</td>
-        <td>R$ ${p["Valor"]}</td>
+        <td>${p["ID Pedido"] || "-"}</td>
+        <td>${p["Nome"] || "-"}</td>
+        <td>${p["CPF/CNPJ"] || "-"}</td>
+        <td>${p["Email"] || "-"}</td>
+        <td>${p["Serviço"] || "-"}</td>
+        <td>R$ ${p["Valor"] || "-"}</td>
         <td><span class="status ${classe}">${texto}</span></td>
         <td>
           ${
@@ -160,11 +160,11 @@ async function emitir(index) {
 
     const data = await res.json();
 
-    if (data.ok) {
+    if (data && data.ok) {
       alert("Nota emitida com sucesso!");
       carregarPedidos();
     } else {
-      alert("Erro: " + data.erro);
+      alert("Erro: " + (data?.erro || "Erro desconhecido"));
     }
 
   } catch (err) {
