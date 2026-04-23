@@ -1,4 +1,4 @@
-function emitirNota(id, nome, cpf, email, servico, valor) {
+function emitirNota(id, nome, cpf, email, serviço, valor) {
 
   const url = https://hook.us2.make.com/qwcebgltw3f2zljt8f25olpxtmnh8s72?pedido=${id}&nome=${nome}&cpf=${cpf}&email=${email}&servico=${servico}&valor=${valor};
 
