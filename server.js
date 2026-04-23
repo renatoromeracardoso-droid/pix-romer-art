@@ -7,25 +7,28 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// ⚠️ COLOCA SEU ID DA PLANILHA AQUI
-const SHEET_ID = "1rc7bmVFGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM";
-
-// ⚠️ NOME EXATO DA ABA
+const SHEET_ID = "COLE_SEU_ID_AQUI";
 const ABA = "Notas";
 
 app.get("/pedidos", async (req, res) => {
   try {
     const url = `https://opensheet.elk.sh/${SHEET_ID}/${encodeURIComponent(ABA)}`;
 
+    console.log("Buscando:", url);
+
     const response = await axios.get(url);
 
     res.json(response.data);
   } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ erro: "Erro ao buscar dados" });
+    console.error("ERRO REAL:", error.message);
+
+    res.status(500).json({
+      erro: "Erro ao buscar dados",
+      detalhe: error.message
+    });
   }
 });
 
 app.listen(PORT, () => {
-  console.log("Servidor rodando na porta " + PORT);
+  console.log("Rodando na porta " + PORT);
 });
