@@ -26,6 +26,8 @@
       padding: 10px;
       border-bottom: 1px solid #475569;
       text-align: left;
+      max-width: 250px;
+      word-wrap: break-word;
     }
 
     th {
@@ -40,6 +42,24 @@
       cursor: pointer;
       border-radius: 5px;
     }
+
+    button:hover {
+      opacity: 0.8;
+    }
+
+    /* STATUS */
+    .status {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .paid { background: #22c55e; }
+    .pending { background: #f59e0b; }
+    .cancel { background: #ef4444; }
+    .unknown { background: #64748b; }
   </style>
 </head>
 
@@ -76,7 +96,18 @@ async function carregarPedidos() {
     const tabela = document.getElementById("tabela");
     tabela.innerHTML = "";
 
+    // 🔥 mais recentes primeiro
+    dados.reverse();
+
     dados.forEach(p => {
+
+      const status = (p["Status"] || "").toLowerCase();
+
+      let statusClass = "unknown";
+      if (status.includes("paid")) statusClass = "paid";
+      else if (status.includes("pend")) statusClass = "pending";
+      else if (status.includes("cancel")) statusClass = "cancel";
+
       tabela.innerHTML += `
         <tr>
           <td>${p["ID Pedido"] || "-"}</td>
@@ -85,11 +116,17 @@ async function carregarPedidos() {
           <td>${p["Email"] || "-"}</td>
           <td>${p["Serviço"] || "-"}</td>
           <td>${p["Valor"] || "-"}</td>
-          <td>${p["Status"] || "-"}</td>
           <td>
-            <button onclick="emitir('${p["ID Pedido"]}')">
-              Emitir
-            </button>
+            <span class="status ${statusClass}">
+              ${p["Status"] || "-"}
+            </span>
+          </td>
+          <td>
+            ${
+              status.includes("paid")
+                ? `<button onclick="emitir('${p["ID Pedido"]}')">Emitir</button>`
+                : `<span style="opacity:0.5;">Aguardando</span>`
+            }
           </td>
         </tr>
       `;
@@ -103,6 +140,9 @@ async function carregarPedidos() {
 
 function emitir(id) {
   alert("Emitindo nota do pedido " + id);
+
+  // 🚀 FUTURO:
+  // window.open(`https://seudominio.com/nota/${id}`);
 }
 
 carregarPedidos();
