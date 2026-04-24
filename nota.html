@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Nota Fiscal</title>
+<title>DANFE NFC-e</title>
 
 <style>
 body {
@@ -15,18 +15,10 @@ body {
 
 .nota {
   background: white;
-  max-width: 350px;
+  max-width: 360px;
   margin: auto;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-/* 🔥 ESSENCIAL PARA PDF */
-@media print {
-  body {
-    background: white;
-    padding: 0;
-  }
+  padding: 15px;
+  border-radius: 6px;
 }
 
 .center { text-align: center; }
@@ -35,8 +27,10 @@ body {
 hr {
   border: none;
   border-top: 1px dashed #000;
-  margin: 10px 0;
+  margin: 8px 0;
 }
+
+.small { font-size: 12px; }
 </style>
 </head>
 
@@ -52,73 +46,105 @@ const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaG
 
 const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
-const autoPDF = params.get("pdf"); // 🔥 novo
+const autoPDF = params.get("pdf");
 
-async function carregarNota() {
+/* 🔥 cálculo tributo simples (IBPT médio) */
+function calcularTributo(valor){
+  return (valor * 0.068).toFixed(2); // ~6.8%
+}
+
+async function carregar(){
 
   const res = await fetch(API);
   const dados = await res.json();
 
   const p = dados.find(x => x["ID Pedido"] == id);
 
-  if (!p) {
+  if(!p){
     document.getElementById("nota").innerHTML = "Pedido não encontrado";
     return;
   }
 
+  const valor = parseFloat(p["Valor"] || 0);
+  const tributo = calcularTributo(valor);
+
   document.getElementById("nota").innerHTML = `
-    <div class="center bold">ROMER ART</div>
-    <div class="center">CNPJ: 66.252.416/0001-05</div>
-    <div class="center">São Paulo - SP</div>
 
-    <hr>
+<div class="center bold">ROMER ART</div>
+<div class="center small">CNPJ: 66.252.416/0001-05</div>
+<div class="center small">São Paulo - SP</div>
 
-    <div class="center bold">DANFE NFC-e</div>
-    <div class="center">Documento Auxiliar</div>
+<hr>
 
-    <hr>
+<div class="center bold">DANFE NFC-e</div>
+<div class="center small">
+Documento Auxiliar da Nota Fiscal<br>
+do Consumidor Eletrônica<br>
+Não permite aproveitamento de crédito de ICMS
+</div>
 
-    Pedido: ${id}<br>
-    Data da compra: ${p["Data"] || "-"}
+<hr>
 
-    <hr>
+Pedido: ${id}<br>
+Data da compra: ${p["Data"] || "-"}
 
-    ${p["Serviço"]}
+<hr>
 
-    <hr>
+ITEM  COD  DESCRIÇÃO<br>
+--------------------------------
 
-    VALOR TOTAL: <b>R$ ${p["Valor"]}</b>
+1   1   ${p["Serviço"]}
 
-    <hr>
+<hr>
 
-    FORMA DE PAGAMENTO<br>
-    PIX
+QTD TOTAL DE ITENS: 1<br>
+VALOR TOTAL: R$ ${valor.toFixed(2)}
 
-    <hr>
+<hr>
 
-    ${p["Nome"]}<br>
-    CPF: ${p["CPF/CNPJ"]}
+FORMA DE PAGAMENTO<br>
+PIX<br>
+VALOR PAGO: R$ ${valor.toFixed(2)}
 
-    <hr>
+<hr>
 
-    <div class="center">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}">
-    </div>
+Val aprox dos tributos: R$ ${tributo} (6.8%)
 
-    <hr>
+<hr>
 
-    <div class="center">Documento gerado automaticamente</div>
-  `;
+Emitido pelo software RomerArt<br>
+Versão 1.0.0<br>
+HOMOLOGAÇÃO - SEM VALOR FISCAL
 
-  /* 🔥 AUTO PDF */
-  if (autoPDF == "1") {
-    setTimeout(() => {
-      window.print();
-    }, 800);
+<hr>
+
+${p["Nome"]}<br>
+CPF/CNPJ: ${p["CPF/CNPJ"]}
+
+<hr>
+
+<div class="center">
+Consulta via QR Code
+<br><br>
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}">
+</div>
+
+<hr>
+
+<div class="center small">
+Documento gerado automaticamente<br>
+RomerArt SaaS
+</div>
+
+`;
+
+  /* 🔥 PDF automático */
+  if(autoPDF == "1"){
+    setTimeout(()=>window.print(), 700);
   }
 }
 
-carregarNota();
+carregar();
 
 </script>
 
