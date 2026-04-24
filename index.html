@@ -3,39 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {margin:0;font-family:'Segoe UI';background:#0f172a;color:#e2e8f0;}
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
 
 header {
-  background:#020617;
-  padding:15px;
+  background: #020617;
+  padding: 15px 20px;
   display:flex;
   justify-content:space-between;
   align-items:center;
+  font-weight:bold;
 }
 
 .btn-refresh {
-  background:#3b82f6;
-  padding:8px 14px;
-  border-radius:8px;
-  cursor:pointer;
+  background: #3b82f6;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
-.container {padding:15px;}
+.container {
+  padding: 15px;
+}
 
 .cards {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 10px;
 }
 
 .card {
-  background:#020617;
-  padding:15px;
-  border-radius:12px;
-  text-align:center;
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
 }
 
 .filtros {
@@ -48,15 +57,19 @@ input, select {
   width:100%;
   padding:10px;
   border-radius:8px;
+  border:none;
   background:#020617;
   color:white;
-  border:none;
+}
+
+.table-container {
+  margin-top:15px;
+  overflow-x:auto;
 }
 
 table {
   width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
+  border-collapse: collapse;
 }
 
 th, td {
@@ -65,14 +78,14 @@ th, td {
 }
 
 .badge {
-  padding:5px 10px;
+  padding:5px 12px;
   border-radius:999px;
   font-size:11px;
   font-weight:bold;
 }
 
-.emitido {background:#16a34a;}
-.pendente {background:#f59e0b;color:#000;}
+.emitido { background:#22c55e; }
+.pendente { background:#f59e0b; }
 
 .acoes button {
   background:#1e293b;
@@ -83,14 +96,14 @@ th, td {
 }
 
 .menu-popup {
-  position:absolute;
-  background:#020617;
-  border:1px solid #1e293b;
-  border-radius:10px;
-  padding:8px;
-  display:none;
-  flex-direction:column;
-  z-index:999;
+  position: absolute;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  z-index: 999;
 }
 
 .menu-popup button {
@@ -102,19 +115,19 @@ th, td {
 }
 
 .toast {
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#22c55e;
-  color:white;
-  padding:12px;
-  border-radius:10px;
-  opacity:0;
-  transition:0.3s;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22c55e;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: 0.3s;
 }
 
-.toast.show {opacity:1;}
+.toast.show { opacity: 1; }
 </style>
 </head>
 
@@ -143,7 +156,7 @@ th, td {
 </div>
 
 <div class="filtros">
-  <input id="busca" placeholder="Buscar cliente ou pedido...">
+  <input id="busca" placeholder="Buscar...">
   <select id="filtro">
     <option value="todos">Todos</option>
     <option value="pendente">Pendentes</option>
@@ -151,6 +164,7 @@ th, td {
   </select>
 </div>
 
+<div class="table-container">
 <table>
 <thead>
 <tr>
@@ -161,9 +175,9 @@ th, td {
 <th></th>
 </tr>
 </thead>
-
 <tbody id="tabela"></tbody>
 </table>
+</div>
 
 </div>
 
@@ -177,112 +191,129 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6N
 let pedidos = [];
 let menuAtual = null;
 
-/* STATUS */
-function statusNormalizado(s){
-  if(!s) return "pendente";
-  if(s.toLowerCase() == "emitido") return "emitido";
+function statusNormalizado(s) {
+  if (!s) return "pendente";
+  s = s.toLowerCase();
+  if (s === "emitido") return "emitido";
   return "pendente";
 }
 
-/* TOAST */
-function showToast(msg){
+function showToast(msg) {
   const t = document.getElementById("toast");
   t.innerText = msg;
   t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2500);
+  setTimeout(() => t.classList.remove("show"), 2500);
 }
 
-/* LOAD */
-async function carregar(){
+async function carregar() {
   const res = await fetch(API);
   pedidos = await res.json();
   atualizarCards();
   render();
 }
 
-/* ATUALIZAR */
-function atualizarManual(){
+function atualizarManual() {
+  const btn = document.querySelector(".btn-refresh");
+  btn.innerText = "Atualizando...";
   carregar();
-  showToast("Atualizado ✔");
+  setTimeout(() => btn.innerText = "Atualizar", 1000);
 }
 
-/* CARDS */
-function atualizarCards(){
+function atualizarCards() {
   document.getElementById("total").innerText = pedidos.length;
-
   document.getElementById("pendentes").innerText =
-    pedidos.filter(p => statusNormalizado(p["Status NF"]) == "pendente").length;
-
+    pedidos.filter(p => statusNormalizado(p["Status NF"]) === "pendente").length;
   document.getElementById("emitidos").innerText =
-    pedidos.filter(p => statusNormalizado(p["Status NF"]) == "emitido").length;
+    pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
 }
 
-/* RENDER */
-function render(){
+function render() {
   const tabela = document.getElementById("tabela");
   const busca = document.getElementById("busca").value.toLowerCase();
   const filtro = document.getElementById("filtro").value;
 
   tabela.innerHTML = "";
 
-  pedidos.forEach((p,i)=>{
+  pedidos
+  .filter(p => {
+    const nome = (p["Nome"] || "").toLowerCase();
+    const id = (p["ID Pedido"] || "").toString();
 
-    const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
-    if(!texto.includes(busca)) return;
+    const matchBusca = nome.includes(busca) || id.includes(busca);
 
     const status = statusNormalizado(p["Status NF"]);
-    if(filtro != "todos" && status != filtro) return;
+    const matchFiltro =
+      filtro === "todos" ||
+      (filtro === "pendente" && status === "pendente") ||
+      (filtro === "emitido" && status === "emitido");
+
+    return matchBusca && matchFiltro;
+  })
+  .forEach((p, i) => {
+
+    const status = statusNormalizado(p["Status NF"]);
 
     let badge = `<span class="badge pendente">PENDENTE</span>`;
-    if(status == "emitido") {
+    if (status === "emitido") {
       badge = `<span class="badge emitido">EMITIDO</span>`;
     }
 
     tabela.innerHTML += `
-    <tr>
-      <td>${p["ID Pedido"]}</td>
-      <td>${p["Nome"]}</td>
-      <td>R$ ${p["Valor"]}</td>
-      <td>${badge}</td>
-      <td><button onclick="abrirMenu(${i},this)">⋮</button></td>
-    </tr>`;
+      <tr>
+        <td>${p["ID Pedido"]}</td>
+        <td>${p["Nome"]}</td>
+        <td>R$ ${p["Valor"]}</td>
+        <td>${badge}</td>
+        <td>
+          <button onclick="abrirMenu(${i}, this)">⋮</button>
+        </td>
+      </tr>
+    `;
   });
 }
 
-/* MENU */
-function abrirMenu(i,el){
+function verNota(p) {
+  const url = `nota.html?id=${p["ID Pedido"]}&nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}&data=${p["Data"]}`;
+  window.open(url, "_blank");
+}
+
+function gerarPDF(id) {
+  window.open("nota.html?id=" + id, "_blank");
+}
+
+function gerarDeclaracao(p) {
+  const url = `declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
+  window.open(url, "_blank");
+}
+
+function abrirMenu(i, el) {
   fecharMenu();
 
   const p = pedidos[i];
   const menu = document.createElement("div");
   menu.className = "menu-popup";
 
-  if(statusNormalizado(p["Status NF"]) != "emitido"){
-    const emitirBtn = document.createElement("button");
-    emitirBtn.innerHTML = "📄 Emitir Nota";
-    emitirBtn.onclick = ()=>emitir(i);
-    menu.appendChild(emitirBtn);
+  if (statusNormalizado(p["Status NF"]) !== "emitido") {
+    const btnEmitir = document.createElement("button");
+    btnEmitir.innerHTML = "📄 Emitir Nota";
+    btnEmitir.onclick = () => emitir(i);
+    menu.appendChild(btnEmitir);
   }
 
   const ver = document.createElement("button");
   ver.innerHTML = "👁 Ver Nota";
-  ver.onclick = ()=>window.open("nota.html?id=" + p["ID Pedido"], "_blank");
+  ver.onclick = () => verNota(p);
   menu.appendChild(ver);
 
   const pdf = document.createElement("button");
   pdf.innerHTML = "📥 Gerar PDF";
-  pdf.onclick = ()=>gerarPDF(p["ID Pedido"]);
+  pdf.onclick = () => gerarPDF(p["ID Pedido"]);
   menu.appendChild(pdf);
 
-  const copiar = document.createElement("button");
-  copiar.innerHTML = "📋 Copiar Dados";
-  copiar.onclick = ()=>copiarDados(p);
-  menu.appendChild(copiar);
-
-  const zap = document.createElement("button");
-  zap.innerHTML = "📲 WhatsApp";
-  zap.onclick = ()=>enviarWhats(p);
-  menu.appendChild(zap);
+  const dec = document.createElement("button");
+  dec.innerHTML = "📦 Declaração de Conteúdo";
+  dec.onclick = () => gerarDeclaracao(p);
+  menu.appendChild(dec);
 
   document.body.appendChild(menu);
 
@@ -294,49 +325,32 @@ function abrirMenu(i,el){
   menuAtual = menu;
 }
 
-function fecharMenu(){
-  if(menuAtual) menuAtual.remove();
+function fecharMenu() {
+  if (menuAtual) menuAtual.remove();
 }
 
-document.addEventListener("click", e=>{
-  if(!e.target.closest("button")) fecharMenu();
+document.addEventListener("click", e => {
+  if (!e.target.closest("button")) fecharMenu();
 });
 
-/* EMITIR */
-async function emitir(i){
-  const p = pedidos[i];
+async function emitir(i) {
+  const pedido = pedidos[i];
 
-  p["Status NF"] = "emitido";
-  render();
+  pedido["Status NF"] = "emitido";
   atualizarCards();
-  showToast("Nota emitida ✔");
+  render();
+  showToast("Nota emitida com sucesso 🚀");
 
-  await fetch(API_EMITIR + "?id=" + p["ID Pedido"]);
+  try {
+    await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
+  } catch {
+    showToast("Erro ao enviar ❌");
+  }
 }
 
-/* PDF AUTOMÁTICO */
-function gerarPDF(id){
-  window.open("nota.html?id=" + id + "&pdf=1", "_blank");
-}
-
-/* COPIAR */
-function copiarDados(p){
-  const texto = `Pedido: ${p["ID Pedido"]}\nCliente: ${p["Nome"]}\nValor: R$ ${p["Valor"]}`;
-  navigator.clipboard.writeText(texto);
-  showToast("Copiado ✔");
-}
-
-/* WHATS */
-function enviarWhats(p){
-  const msg = `Olá ${p["Nome"]}, sua nota foi emitida ✔\nPedido: ${p["ID Pedido"]}\nValor: R$ ${p["Valor"]}`;
-  window.open("https://wa.me/?text=" + encodeURIComponent(msg));
-}
-
-/* EVENTOS */
 document.getElementById("busca").addEventListener("input", render);
 document.getElementById("filtro").addEventListener("change", render);
 
-/* START */
 carregar();
 
 </script>
