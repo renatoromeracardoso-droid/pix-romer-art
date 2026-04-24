@@ -19,19 +19,16 @@ body {
   font-size: 12px;
 }
 
-/* CENTRAL */
 .center {
   text-align: center;
 }
 
-/* LINHA */
 hr {
   border: none;
   border-top: 1px dashed #000;
   margin: 8px 0;
 }
 
-/* TABELA */
 table {
   width: 100%;
   font-size: 12px;
@@ -41,13 +38,11 @@ td {
   padding: 2px 0;
 }
 
-/* TOTAL */
 .total {
   font-size: 14px;
   font-weight: bold;
 }
 
-/* QR */
 .qr {
   text-align:center;
   margin-top:10px;
@@ -81,7 +76,7 @@ td {
 
   <div>
     Pedido: <span id="pedido"></span><br>
-    Data: <span id="data"></span>
+    Data da compra: <span id="data"></span>
   </div>
 
   <hr>
@@ -149,18 +144,21 @@ const pedido = params.get("id");
 const nome = params.get("nome");
 const servico = params.get("servico");
 const valor = params.get("valor");
+const dataCompra = params.get("data");
 
+/* DADOS */
 document.getElementById("pedido").innerText = pedido;
+document.getElementById("cliente").innerText = nome;
+
+/* DATA CORRETA DA PLANILHA */
 document.getElementById("data").innerText =
-  new Date().toLocaleString("pt-BR");
+  dataCompra ? dataCompra : new Date().toLocaleDateString("pt-BR");
 
+/* VALORES */
 document.getElementById("servico").innerText = servico;
-
 document.getElementById("valor").innerText = "R$ " + valor;
 document.getElementById("valorTotal").innerText = "R$ " + valor;
 document.getElementById("valorPago").innerText = "R$ " + valor;
-
-document.getElementById("cliente").innerText = nome;
 
 </script>
 
