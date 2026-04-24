@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Nota Fiscal</title>
+
+<style>
+body {
+  font-family: Arial;
+  background:#f1f5f9;
+  padding:20px;
+}
+
+.nota {
+  background:white;
+  max-width:600px;
+  margin:auto;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+  margin:0;
+  color:#2563eb;
+}
+
+.info {
+  margin-top:10px;
+}
+
+.label {
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="nota">
+  <h1>Nota Fiscal</h1>
+
+  <div class="info"><span class="label">Pedido:</span> <span id="pedido"></span></div>
+  <div class="info"><span class="label">Cliente:</span> <span id="cliente"></span></div>
+  <div class="info"><span class="label">CPF/CNPJ:</span> <span id="cpf"></span></div>
+  <div class="info"><span class="label">Serviço:</span> <span id="servico"></span></div>
+  <div class="info"><span class="label">Valor:</span> <span id="valor"></span></div>
+  <div class="info"><span class="label">Data:</span> <span id="data"></span></div>
+
+</div>
+
+<script>
+
+const params = new URLSearchParams(window.location.search);
+
+document.getElementById("pedido").innerText = params.get("id");
+document.getElementById("cliente").innerText = params.get("nome");
+document.getElementById("cpf").innerText = params.get("cpf");
+document.getElementById("servico").innerText = params.get("servico");
+document.getElementById("valor").innerText = "R$ " + params.get("valor");
+document.getElementById("data").innerText = new Date().toLocaleDateString();
+
+</script>
+
+</body>
+</html>
