@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>RomerArt • Sistema NF</title>
 
 <style>
@@ -73,6 +72,7 @@ table {
 th, td {
   padding:10px;
   border-bottom:1px solid #1e293b;
+  font-size:13px;
 }
 
 .badge {
@@ -83,7 +83,7 @@ th, td {
 }
 
 .emitido { background:#22c55e; }
-.pendente { background:#f59e0b; }
+.pendente { background:#f59e0b; color:#000; }
 
 .menu-popup {
   position: absolute;
@@ -102,6 +102,7 @@ th, td {
   color:white;
   padding:10px;
   text-align:left;
+  cursor:pointer;
 }
 
 .toast {
@@ -162,9 +163,11 @@ th, td {
 <th>Cliente</th>
 <th>Valor</th>
 <th>Status</th>
+<th>Rastreio</th>
 <th></th>
 </tr>
 </thead>
+
 <tbody id="tabela"></tbody>
 </table>
 </div>
@@ -180,9 +183,6 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6N
 
 let pedidos = [];
 let menuAtual = null;
-
-/* 🔥 RASTREIO TEMPORÁRIO */
-let rastreiosTemp = {};
 
 function statusNormalizado(s) {
   if (!s) return "pendente";
@@ -206,16 +206,16 @@ async function carregar() {
 }
 
 function atualizarManual() {
-  const btn = document.querySelector(".btn-refresh");
-  btn.innerText = "Atualizando...";
   carregar();
-  setTimeout(() => btn.innerText = "Atualizar", 1000);
+  showToast("Atualizado ✔");
 }
 
 function atualizarCards() {
   document.getElementById("total").innerText = pedidos.length;
+
   document.getElementById("pendentes").innerText =
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "pendente").length;
+
   document.getElementById("emitidos").innerText =
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
 }
@@ -257,6 +257,7 @@ function render() {
         <td>${p["Nome"]}</td>
         <td>R$ ${p["Valor"]}</td>
         <td>${badge}</td>
+        <td>${p["Rastreio"] || "-"}</td>
         <td>
           <button onclick="abrirMenu(${i}, this)">⋮</button>
         </td>
@@ -267,37 +268,33 @@ function render() {
 
 /* NOTA */
 function verNota(p) {
-  const url = `nota.html?id=${p["ID Pedido"]}&nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
+  const url = `nota.html?id=${p["ID Pedido"]}`;
   window.open(url, "_blank");
 }
 
+/* PDF */
 function gerarPDF(id) {
-  window.open("nota.html?id=" + id, "_blank");
+  window.open("nota.html?id=" + id + "&pdf=1", "_blank");
 }
 
+/* DECLARAÇÃO */
 function gerarDeclaracao(p) {
   const url = `declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
   window.open(url, "_blank");
 }
 
-/* 🔥 RASTREIO */
-function adicionarRastreio(p){
-  const codigo = prompt("Digite o código de rastreio:");
-  if(!codigo) return;
-
-  rastreiosTemp[p["ID Pedido"]] = codigo;
-  showToast("Rastreio adicionado 🚚");
-}
-
+/* RASTREIO */
 function abrirRastreio(p){
-  const codigo = rastreiosTemp[p["ID Pedido"]];
 
-  if(!codigo){
-    showToast("Nenhum rastreio informado");
+  const codigo = p["Rastreio"];
+
+  if(!codigo || codigo === ""){
+    showToast("Sem código de rastreio");
     return;
   }
 
   const url = "https://rastreamento.correios.com.br/app/index.php?objetos=" + codigo;
+
   window.open(url, "_blank");
 }
 
@@ -332,14 +329,9 @@ function abrirMenu(i, el) {
   menu.appendChild(dec);
 
   const rast = document.createElement("button");
-  rast.innerHTML = "📦 Inserir Rastreio";
-  rast.onclick = () => adicionarRastreio(p);
+  rast.innerHTML = "🚚 Rastrear Pedido";
+  rast.onclick = () => abrirRastreio(p);
   menu.appendChild(rast);
-
-  const verR = document.createElement("button");
-  verR.innerHTML = "🚚 Rastrear Pedido";
-  verR.onclick = () => abrirRastreio(p);
-  menu.appendChild(verR);
 
   document.body.appendChild(menu);
 
