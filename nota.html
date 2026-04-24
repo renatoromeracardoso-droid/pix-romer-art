@@ -144,14 +144,14 @@ const pedido = params.get("id");
 const nome = params.get("nome");
 const servico = params.get("servico");
 const valor = params.get("valor");
-const dataCompra = params.get("Data");
+const dataCompra = params.get("data");
 
 /* DADOS */
 document.getElementById("pedido").innerText = pedido;
 document.getElementById("cliente").innerText = nome;
 
 /* DATA CORRETA DA PLANILHA */
-document.getElementById("Data").innerText =
+document.getElementById("data").innerText =
   dataCompra ? dataCompra : new Date().toLocaleDateString("pt-BR");
 
 /* VALORES */
