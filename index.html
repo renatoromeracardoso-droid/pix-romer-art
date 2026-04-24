@@ -7,23 +7,114 @@
 
 <style>
 body {margin:0;font-family:'Segoe UI';background:#0f172a;color:#e2e8f0;}
-header {background:#020617;padding:15px;display:flex;justify-content:space-between;}
-.btn-refresh{background:#3b82f6;padding:8px 14px;border-radius:8px;cursor:pointer;}
-.container{padding:15px;}
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.card{background:#020617;padding:15px;border-radius:12px;text-align:center;}
-.filtros{margin-top:15px;display:flex;gap:10px;}
-input,select{width:100%;padding:10px;border-radius:8px;background:#020617;color:white;border:none;}
-table{width:100%;border-collapse:collapse;margin-top:10px;}
-th,td{padding:10px;border-bottom:1px solid #1e293b;}
-.badge{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:bold;}
-.emitido{background:#16a34a;}
-.pendente{background:#f59e0b;color:#000;}
-.acoes button{background:#1e293b;color:white;border:none;padding:6px 10px;border-radius:6px;}
-.menu-popup{position:absolute;background:#020617;border:1px solid #1e293b;border-radius:10px;padding:8px;display:none;flex-direction:column;z-index:999;}
-.menu-popup button{background:none;border:none;color:white;padding:10px;text-align:left;}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:12px;border-radius:10px;opacity:0;transition:0.3s;}
-.toast.show{opacity:1;}
+
+header {
+  background:#020617;
+  padding:15px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.btn-refresh {
+  background:#3b82f6;
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.container {padding:15px;}
+
+.cards {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.card {
+  background:#020617;
+  padding:15px;
+  border-radius:12px;
+  text-align:center;
+}
+
+.filtros {
+  margin-top:15px;
+  display:flex;
+  gap:10px;
+}
+
+input, select {
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  background:#020617;
+  color:white;
+  border:none;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid #1e293b;
+}
+
+.badge {
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:bold;
+}
+
+.emitido {background:#16a34a;}
+.pendente {background:#f59e0b;color:#000;}
+
+.acoes button {
+  background:#1e293b;
+  color:white;
+  border:none;
+  padding:6px 10px;
+  border-radius:6px;
+}
+
+.menu-popup {
+  position:absolute;
+  background:#020617;
+  border:1px solid #1e293b;
+  border-radius:10px;
+  padding:8px;
+  display:none;
+  flex-direction:column;
+  z-index:999;
+}
+
+.menu-popup button {
+  background:none;
+  border:none;
+  color:white;
+  padding:10px;
+  text-align:left;
+}
+
+.toast {
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#22c55e;
+  color:white;
+  padding:12px;
+  border-radius:10px;
+  opacity:0;
+  transition:0.3s;
+}
+
+.toast.show {opacity:1;}
 </style>
 </head>
 
@@ -37,24 +128,40 @@ th,td{padding:10px;border-bottom:1px solid #1e293b;}
 <div class="container">
 
 <div class="cards">
-<div class="card"><h2 id="total">0</h2>Total</div>
-<div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
-<div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
+  <div class="card">
+    <h2 id="total">0</h2>
+    <span>Total</span>
+  </div>
+  <div class="card">
+    <h2 id="pendentes">0</h2>
+    <span>Pendentes</span>
+  </div>
+  <div class="card">
+    <h2 id="emitidos">0</h2>
+    <span>Emitidos</span>
+  </div>
 </div>
 
 <div class="filtros">
-<input id="busca" placeholder="Buscar...">
-<select id="filtro">
-<option value="todos">Todos</option>
-<option value="pendente">Pendentes</option>
-<option value="emitido">Emitidos</option>
-</select>
+  <input id="busca" placeholder="Buscar cliente ou pedido...">
+  <select id="filtro">
+    <option value="todos">Todos</option>
+    <option value="pendente">Pendentes</option>
+    <option value="emitido">Emitidos</option>
+  </select>
 </div>
 
 <table>
 <thead>
-<tr><th>Pedido</th><th>Cliente</th><th>Valor</th><th>Status</th><th></th></tr>
+<tr>
+<th>Pedido</th>
+<th>Cliente</th>
+<th>Valor</th>
+<th>Status</th>
+<th></th>
+</tr>
 </thead>
+
 <tbody id="tabela"></tbody>
 </table>
 
@@ -70,148 +177,166 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6N
 let pedidos = [];
 let menuAtual = null;
 
+/* STATUS */
 function statusNormalizado(s){
-if(!s) return "pendente";
-if(s.toLowerCase()=="emitido") return "emitido";
-return "pendente";
+  if(!s) return "pendente";
+  if(s.toLowerCase() == "emitido") return "emitido";
+  return "pendente";
 }
 
+/* TOAST */
 function showToast(msg){
-const t=document.getElementById("toast");
-t.innerText=msg;
-t.classList.add("show");
-setTimeout(()=>t.classList.remove("show"),2500);
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2500);
 }
 
+/* LOAD */
 async function carregar(){
-const res=await fetch(API);
-pedidos=await res.json();
-atualizarCards();
-render();
+  const res = await fetch(API);
+  pedidos = await res.json();
+  atualizarCards();
+  render();
 }
 
+/* ATUALIZAR */
 function atualizarManual(){
-carregar();
-showToast("Atualizado ✔");
+  carregar();
+  showToast("Atualizado ✔");
 }
 
+/* CARDS */
 function atualizarCards(){
-document.getElementById("total").innerText=pedidos.length;
-document.getElementById("pendentes").innerText=pedidos.filter(p=>statusNormalizado(p["Status NF"])=="pendente").length;
-document.getElementById("emitidos").innerText=pedidos.filter(p=>statusNormalizado(p["Status NF"])=="emitido").length;
+  document.getElementById("total").innerText = pedidos.length;
+
+  document.getElementById("pendentes").innerText =
+    pedidos.filter(p => statusNormalizado(p["Status NF"]) == "pendente").length;
+
+  document.getElementById("emitidos").innerText =
+    pedidos.filter(p => statusNormalizado(p["Status NF"]) == "emitido").length;
 }
 
+/* RENDER */
 function render(){
-const tabela=document.getElementById("tabela");
-const busca=document.getElementById("busca").value.toLowerCase();
-const filtro=document.getElementById("filtro").value;
+  const tabela = document.getElementById("tabela");
+  const busca = document.getElementById("busca").value.toLowerCase();
+  const filtro = document.getElementById("filtro").value;
 
-tabela.innerHTML="";
+  tabela.innerHTML = "";
 
-pedidos.forEach((p,i)=>{
+  pedidos.forEach((p,i)=>{
 
-const texto=(p["Nome"]+p["ID Pedido"]).toLowerCase();
-if(!texto.includes(busca)) return;
+    const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
+    if(!texto.includes(busca)) return;
 
-const status=statusNormalizado(p["Status NF"]);
-if(filtro!="todos" && status!=filtro) return;
+    const status = statusNormalizado(p["Status NF"]);
+    if(filtro != "todos" && status != filtro) return;
 
-let badge=`<span class="badge pendente">PENDENTE</span>`;
-if(status=="emitido") badge=`<span class="badge emitido">EMITIDO</span>`;
+    let badge = `<span class="badge pendente">PENDENTE</span>`;
+    if(status == "emitido") {
+      badge = `<span class="badge emitido">EMITIDO</span>`;
+    }
 
-tabela.innerHTML+=`
-<tr>
-<td>${p["ID Pedido"]}</td>
-<td>${p["Nome"]}</td>
-<td>R$ ${p["Valor"]}</td>
-<td>${badge}</td>
-<td><button onclick="abrirMenu(${i},this)">⋮</button></td>
-</tr>`;
-});
+    tabela.innerHTML += `
+    <tr>
+      <td>${p["ID Pedido"]}</td>
+      <td>${p["Nome"]}</td>
+      <td>R$ ${p["Valor"]}</td>
+      <td>${badge}</td>
+      <td><button onclick="abrirMenu(${i},this)">⋮</button></td>
+    </tr>`;
+  });
 }
 
 /* MENU */
 function abrirMenu(i,el){
-fecharMenu();
-const p=pedidos[i];
-const menu=document.createElement("div");
-menu.className="menu-popup";
+  fecharMenu();
 
-/* emitir */
-if(statusNormalizado(p["Status NF"])!="emitido"){
-const emitirBtn=document.createElement("button");
-emitirBtn.innerHTML="📄 Emitir Nota";
-emitirBtn.onclick=()=>emitir(i);
-menu.appendChild(emitirBtn);
+  const p = pedidos[i];
+  const menu = document.createElement("div");
+  menu.className = "menu-popup";
+
+  if(statusNormalizado(p["Status NF"]) != "emitido"){
+    const emitirBtn = document.createElement("button");
+    emitirBtn.innerHTML = "📄 Emitir Nota";
+    emitirBtn.onclick = ()=>emitir(i);
+    menu.appendChild(emitirBtn);
+  }
+
+  const ver = document.createElement("button");
+  ver.innerHTML = "👁 Ver Nota";
+  ver.onclick = ()=>window.open("nota.html?id=" + p["ID Pedido"], "_blank");
+  menu.appendChild(ver);
+
+  const pdf = document.createElement("button");
+  pdf.innerHTML = "📥 Gerar PDF";
+  pdf.onclick = ()=>gerarPDF(p["ID Pedido"]);
+  menu.appendChild(pdf);
+
+  const copiar = document.createElement("button");
+  copiar.innerHTML = "📋 Copiar Dados";
+  copiar.onclick = ()=>copiarDados(p);
+  menu.appendChild(copiar);
+
+  const zap = document.createElement("button");
+  zap.innerHTML = "📲 WhatsApp";
+  zap.onclick = ()=>enviarWhats(p);
+  menu.appendChild(zap);
+
+  document.body.appendChild(menu);
+
+  const rect = el.getBoundingClientRect();
+  menu.style.top = rect.bottom + "px";
+  menu.style.left = rect.left + "px";
+  menu.style.display = "flex";
+
+  menuAtual = menu;
 }
 
-/* ver nota */
-const ver=document.createElement("button");
-ver.innerHTML="👁 Ver Nota";
-ver.onclick=()=>window.open("nota.html?id="+p["ID Pedido"],"_blank");
-menu.appendChild(ver);
-
-/* pdf */
-const pdf=document.createElement("button");
-pdf.innerHTML="📥 Gerar PDF";
-pdf.onclick=()=>gerarPDF(p["ID Pedido"]);
-menu.appendChild(pdf);
-
-/* copiar */
-const copiar=document.createElement("button");
-copiar.innerHTML="📋 Copiar Dados";
-copiar.onclick=()=>copiarDados(p);
-menu.appendChild(copiar);
-
-/* whatsapp */
-const zap=document.createElement("button");
-zap.innerHTML="📲 WhatsApp";
-zap.onclick=()=>enviarWhats(p);
-menu.appendChild(zap);
-
-document.body.appendChild(menu);
-const rect=el.getBoundingClientRect();
-menu.style.top=rect.bottom+"px";
-menu.style.left=rect.left+"px";
-menu.style.display="flex";
-menuAtual=menu;
+function fecharMenu(){
+  if(menuAtual) menuAtual.remove();
 }
 
-function fecharMenu(){if(menuAtual)menuAtual.remove();}
-document.addEventListener("click",e=>{if(!e.target.closest("button"))fecharMenu();});
+document.addEventListener("click", e=>{
+  if(!e.target.closest("button")) fecharMenu();
+});
 
-/* emitir */
+/* EMITIR */
 async function emitir(i){
-const p=pedidos[i];
-p["Status NF"]="emitido";
-render();
-atualizarCards();
-showToast("Nota emitida ✔");
+  const p = pedidos[i];
 
-await fetch(API_EMITIR+"?id="+p["ID Pedido"]);
+  p["Status NF"] = "emitido";
+  render();
+  atualizarCards();
+  showToast("Nota emitida ✔");
+
+  await fetch(API_EMITIR + "?id=" + p["ID Pedido"]);
 }
 
-/* PDF */
+/* PDF AUTOMÁTICO */
 function gerarPDF(id){
-window.open("nota.html?id="+id,"_blank");
+  window.open("nota.html?id=" + id + "&pdf=1", "_blank");
 }
 
-/* copiar */
+/* COPIAR */
 function copiarDados(p){
-const texto=`Pedido: ${p["ID Pedido"]}\nCliente: ${p["Nome"]}\nCPF: ${p["CPF/CNPJ"]}\nValor: R$ ${p["Valor"]}`;
-navigator.clipboard.writeText(texto);
-showToast("Copiado ✔");
+  const texto = `Pedido: ${p["ID Pedido"]}\nCliente: ${p["Nome"]}\nValor: R$ ${p["Valor"]}`;
+  navigator.clipboard.writeText(texto);
+  showToast("Copiado ✔");
 }
 
-/* whatsapp */
+/* WHATS */
 function enviarWhats(p){
-const msg=`Olá ${p["Nome"]}, sua nota foi emitida ✔\nPedido: ${p["ID Pedido"]}\nValor: R$ ${p["Valor"]}`;
-window.open("https://wa.me/?text="+encodeURIComponent(msg));
+  const msg = `Olá ${p["Nome"]}, sua nota foi emitida ✔\nPedido: ${p["ID Pedido"]}\nValor: R$ ${p["Valor"]}`;
+  window.open("https://wa.me/?text=" + encodeURIComponent(msg));
 }
 
-document.getElementById("busca").addEventListener("input",render);
-document.getElementById("filtro").addEventListener("change",render);
+/* EVENTOS */
+document.getElementById("busca").addEventListener("input", render);
+document.getElementById("filtro").addEventListener("change", render);
 
+/* START */
 carregar();
 
 </script>
