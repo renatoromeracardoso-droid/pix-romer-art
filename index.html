@@ -178,22 +178,29 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbzSnyWol8f3D2U1sapo5
 
 let pedidos = [];
 
+// 🔥 NORMALIZA STATUS
 function statusNormalizado(s) {
-  if (!s) return "";
-  s = s.toLowerCase().trim();
+  if (!s) return "pendente";
 
-  if (s === "paid") return "pago";
+  s = s.toString().toLowerCase().trim();
+
+  if (s === "paid" || s === "pago") return "pago";
   if (s === "emitido") return "emitido";
 
-  return s;
+  return "pendente";
 }
 
 async function carregar() {
-  const res = await fetch(API);
-  pedidos = await res.json();
+  try {
+    const res = await fetch(API);
+    pedidos = await res.json();
 
-  atualizarCards();
-  render();
+    atualizarCards();
+    render();
+  } catch (err) {
+    alert("Erro ao carregar dados");
+    console.error(err);
+  }
 }
 
 function atualizarCards() {
@@ -215,14 +222,13 @@ function render() {
 
   pedidos.forEach((p, i) => {
 
-    const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
+    const texto = ((p["Nome"] || "") + (p["ID Pedido"] || "")).toLowerCase();
     if (!texto.includes(busca)) return;
 
     const status = statusNormalizado(p["Status NF"]);
-
     if (filtro !== "todos" && status !== filtro) return;
 
-    let badge = `<span class="badge pendente">-</span>`;
+    let badge = `<span class="badge pendente">PENDENTE</span>`;
     let btn = `<button class="btn-disabled">Aguardando</button>`;
 
     if (status === "pago") {
@@ -237,12 +243,12 @@ function render() {
 
     tabela.innerHTML += `
       <tr>
-        <td>${p["ID Pedido"]}</td>
-        <td>${p["Nome"]}</td>
-        <td>${p["CPF/CNPJ"]}</td>
-        <td>${p["Email"]}</td>
-        <td>${p["Serviço"]}</td>
-        <td>R$ ${p["Valor"]}</td>
+        <td>${p["ID Pedido"] || "-"}</td>
+        <td>${p["Nome"] || "-"}</td>
+        <td>${p["CPF/CNPJ"] || "-"}</td>
+        <td>${p["Email"] || "-"}</td>
+        <td>${p["Serviço"] || "-"}</td>
+        <td>R$ ${p["Valor"] || "-"}</td>
         <td>${badge}</td>
         <td>${btn}</td>
       </tr>
@@ -254,6 +260,7 @@ async function emitir(i, btn) {
   const pedido = pedidos[i];
 
   btn.innerText = "Emitindo...";
+  btn.disabled = true;
 
   try {
     const res = await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
@@ -263,13 +270,15 @@ async function emitir(i, btn) {
       carregar();
     } else {
       alert(data.erro || "Erro ao emitir");
+      btn.innerText = "Emitir";
+      btn.disabled = false;
     }
 
   } catch (e) {
     alert("Erro real: " + e.message);
+    btn.innerText = "Emitir";
+    btn.disabled = false;
   }
-
-  btn.innerText = "Emitir";
 }
 
 document.getElementById("busca").addEventListener("input", render);
