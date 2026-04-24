@@ -3,163 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-header {
-  background: #020617;
-  padding: 15px 20px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-weight:bold;
-}
-
-.btn-refresh {
-  background: #3b82f6;
-  padding: 8px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.container { padding: 15px; }
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 10px;
-}
-
-.card {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.filtros {
-  margin-top:15px;
-  display:flex;
-  gap:10px;
-}
-
-input, select {
-  width:100%;
-  padding:10px;
-  border-radius:8px;
-  border:none;
-  background:#020617;
-  color:white;
-}
-
-.table-container {
-  margin-top:15px;
-  overflow-x:auto;
-}
-
-table { width:100%; border-collapse: collapse; }
-
-th, td {
-  padding:10px;
-  border-bottom:1px solid #1e293b;
-}
-
-.badge {
-  padding:5px 10px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:bold;
-}
-
-.emitido { background:#22c55e; color:black; }
-.pendente { background:#f59e0b; color:black; }
-
-.acoes button {
-  background:#1e293b;
-  color:white;
-  border:none;
-  padding:6px 10px;
-  border-radius:6px;
-}
-
-.menu-popup {
-  position: absolute;
-  background: #020617;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 8px;
-  display: none;
-  flex-direction: column;
-  z-index: 999;
-}
-
-.menu-popup button {
-  background:none;
-  border:none;
-  color:white;
-  padding:10px;
-  text-align:left;
-}
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #22c55e;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 10px;
-  opacity: 0;
-  transition: 0.3s;
-}
-
-.toast.show { opacity: 1; }
+body{margin:0;font-family:Segoe UI;background:#0f172a;color:#e2e8f0;}
+header{background:#020617;padding:15px;display:flex;justify-content:space-between;}
+.btn{background:#3b82f6;padding:8px 14px;border-radius:8px;cursor:pointer;}
+.container{padding:15px;}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.card{background:#020617;padding:15px;border-radius:12px;text-align:center;}
+.badge{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:bold;}
+.emitido{background:#22c55e;color:#000;}
+.pendente{background:#f59e0b;color:#000;}
+table{width:100%;margin-top:10px;border-collapse:collapse;}
+td,th{padding:10px;border-bottom:1px solid #1e293b;}
+.menu-popup{position:absolute;background:#020617;border-radius:10px;padding:8px;display:none;z-index:999;}
+.menu-popup button{background:none;border:none;color:white;padding:10px;width:100%;text-align:left;}
 </style>
 </head>
 
 <body>
 
 <header>
-🚀 Sistema SaaS • Notas
-<div class="btn-refresh" onclick="carregar()">Atualizar</div>
+🚀 Sistema Notas
+<div class="btn" onclick="carregar()">Atualizar</div>
 </header>
 
 <div class="container">
 
 <div class="cards">
-  <div class="card">
-    <h2 id="total">0</h2>
-    <span>Total</span>
-  </div>
-  <div class="card">
-    <h2 id="pendentes">0</h2>
-    <span>Pendentes</span>
-  </div>
-  <div class="card">
-    <h2 id="emitidos">0</h2>
-    <span>Emitidos</span>
-  </div>
+<div class="card"><h2 id="total">0</h2>Total</div>
+<div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
+<div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
 </div>
 
-<div class="filtros">
-  <input id="busca" placeholder="Buscar...">
-  <select id="filtro">
-    <option value="todos">Todos</option>
-    <option value="pendente">Pendentes</option>
-    <option value="emitido">Emitidos</option>
-  </select>
-</div>
-
-<div class="table-container">
 <table>
 <thead>
 <tr>
@@ -172,156 +49,136 @@ th, td {
 </thead>
 <tbody id="tabela"></tbody>
 </table>
-</div>
 
 </div>
-
-<div id="toast" class="toast"></div>
 
 <script>
 
-const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
+const API="https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
+let pedidos=[],menuAtual=null;
 
-let pedidos = [];
-let menuAtual = null;
-
-function showToast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2500);
-}
-
-function statusNormalizado(s){
-  return (s || "").toLowerCase() === "emitido" ? "emitido" : "pendente";
-}
+function status(s){return (s||"").toLowerCase()=="emitido"?"emitido":"pendente";}
 
 async function carregar(){
-  const res = await fetch(API);
-  pedidos = await res.json();
-  atualizarCards();
-  render();
+ const res=await fetch(API);
+ pedidos=await res.json();
+ render();cards();
 }
 
-function atualizarCards(){
-  document.getElementById("total").innerText = pedidos.length;
-  document.getElementById("pendentes").innerText =
-    pedidos.filter(p => statusNormalizado(p["Status NF"])==="pendente").length;
-  document.getElementById("emitidos").innerText =
-    pedidos.filter(p => statusNormalizado(p["Status NF"])==="emitido").length;
+function cards(){
+ total.innerText=pedidos.length;
+ pendentes.innerText=pedidos.filter(p=>status(p["Status NF"])=="pendente").length;
+ emitidos.innerText=pedidos.filter(p=>status(p["Status NF"])=="emitido").length;
 }
 
 function render(){
-  const tabela = document.getElementById("tabela");
-  tabela.innerHTML = "";
-
-  const busca = document.getElementById("busca").value.toLowerCase();
-  const filtro = document.getElementById("filtro").value;
-
-  pedidos.forEach((p,i)=>{
-
-    const status = statusNormalizado(p["Status NF"]);
-
-    if(filtro !== "todos" && status !== filtro) return;
-    if(busca && !p["Nome"].toLowerCase().includes(busca)) return;
-
-    const badge = status==="emitido"
-      ? `<span class="badge emitido">EMITIDO</span>`
-      : `<span class="badge pendente">PENDENTE</span>`;
-
-    tabela.innerHTML += `
-      <tr>
-        <td>${p["ID Pedido"]}</td>
-        <td>${p["Nome"]}</td>
-        <td>R$ ${p["Valor"]}</td>
-        <td>${badge}</td>
-        <td><button onclick="abrirMenu(${i}, this)">⋮</button></td>
-      </tr>
-    `;
-  });
+ tabela.innerHTML="";
+ pedidos.forEach((p,i)=>{
+ const st=status(p["Status NF"]);
+ tabela.innerHTML+=`
+ <tr>
+ <td>${p["ID Pedido"]}</td>
+ <td>${p["Nome"]}</td>
+ <td>R$ ${p["Valor"]}</td>
+ <td><span class="badge ${st}">${st.toUpperCase()}</span></td>
+ <td><button onclick="menu(${i},this)">⋮</button></td>
+ </tr>`;
+ });
 }
 
-/* 🔥 GERAR LINK AUTOMÁTICO */
-function gerarLinkNota(chave){
-  return `https://www.nfse.gov.br/EmissorNacional/Notas/Visualizar/Index/${chave}`;
+/* 🔥 NOTA INTERNA */
+function verNota(p){
+ const url=`nota.html?nome=${encodeURIComponent(p["Nome"])}&valor=${p["Valor"]}&servico=${encodeURIComponent(p["Serviço"])}`;
+ window.open(url,"_blank");
 }
 
-/* 🔥 ABRIR NOTA */
-function abrirNotaReal(p){
-  if(p["Chave NF"]){
-    window.open(gerarLinkNota(p["Chave NF"]), "_blank");
-  } else {
-    showToast("Sem chave da nota");
-  }
+/* 🔥 NOTA OFICIAL */
+function notaOficial(p){
+ if(p["Link Nota"]) return window.open(p["Link Nota"]);
+ if(p["Chave NF"]) return window.open(`https://www.nfse.gov.br/EmissorNacional/Notas/Visualizar/Index/${p["Chave NF"]}`);
+ alert("Sem nota vinculada");
 }
 
-/* 🔥 DECLARAÇÃO DE CONTEÚDO */
+/* 🔥 DECLARAÇÃO BONITA + PDF */
 function declaracao(p){
-  const texto = `
-DECLARAÇÃO DE CONTEÚDO
 
-Remetente:
-ROMER ART
-CNPJ: 66.252.416/0001-05
+const html=`
+<html>
+<head>
+<style>
+body{font-family:Arial;padding:20px}
+.box{border:2px solid #000;padding:20px;max-width:600px;margin:auto}
+h2{text-align:center}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+td,th{border:1px solid #000;padding:8px}
+</style>
+</head>
+<body>
 
-Destinatário:
-${p["Nome"]}
+<div class="box">
+<h2>DECLARAÇÃO DE CONTEÚDO</h2>
 
-Conteúdo:
-${p["Serviço"]}
+<p><b>Remetente:</b> RomerArt<br>
+CNPJ: 66.252.416/0001-05</p>
 
-Valor: R$ ${p["Valor"]}
+<p><b>Destinatário:</b> ${p["Nome"]}</p>
 
-Declaro que o conteúdo não é proibido e está de acordo com as normas dos Correios.
+<table>
+<tr><th>Descrição</th><th>Valor</th></tr>
+<tr><td>${p["Serviço"]}</td><td>R$ ${p["Valor"]}</td></tr>
+</table>
+
+<p><b>Total:</b> R$ ${p["Valor"]}</p>
+
+<br><br>
+_________________________<br>
+Assinatura
+
+</div>
+
+<script>window.print()<\/script>
+
+</body>
+</html>
 `;
 
-  const w = window.open();
-  w.document.write("<pre>"+texto+"</pre>");
+const w=window.open("");
+w.document.write(html);
+}
+
+/* 🔥 EMITIR */
+function emitir(i){
+ pedidos[i]["Status NF"]="emitido";
+ render();cards();
+ alert("Nota marcada como emitida");
 }
 
 /* MENU */
-function abrirMenu(i, el){
-  fecharMenu();
+function menu(i,el){
+ if(menuAtual) menuAtual.remove();
 
-  const p = pedidos[i];
-  const menu = document.createElement("div");
-  menu.className = "menu-popup";
+ const p=pedidos[i];
+ const m=document.createElement("div");
+ m.className="menu-popup";
 
-  const emitir = document.createElement("button");
-  emitir.innerHTML = "📄 Emitir Nota";
-  emitir.onclick = () => showToast("Emitir manual no portal");
-  menu.appendChild(emitir);
+ m.innerHTML=`
+ <button onclick="emitir(${i})">📄 Emitir</button>
+ <button onclick='verNota(${JSON.stringify(p)})'>👁 Nota Sistema</button>
+ <button onclick='notaOficial(${JSON.stringify(p)})'>🧾 Nota Oficial</button>
+ <button onclick='declaracao(${JSON.stringify(p)})'>📦 Declaração</button>
+ `;
 
-  const ver = document.createElement("button");
-  ver.innerHTML = "👁 Ver Nota";
-  ver.onclick = () => abrirNotaReal(p);
-  menu.appendChild(ver);
-
-  const declar = document.createElement("button");
-  declar.innerHTML = "📦 Declaração Conteúdo";
-  declar.onclick = () => declaracao(p);
-  menu.appendChild(declar);
-
-  document.body.appendChild(menu);
-
-  const rect = el.getBoundingClientRect();
-  menu.style.top = rect.bottom+"px";
-  menu.style.left = rect.left+"px";
-  menu.style.display = "flex";
-
-  menuAtual = menu;
+ document.body.appendChild(m);
+ const r=el.getBoundingClientRect();
+ m.style.top=r.bottom+"px";
+ m.style.left=r.left+"px";
+ m.style.display="block";
+ menuAtual=m;
 }
 
-function fecharMenu(){
-  if(menuAtual) menuAtual.remove();
-}
-
-document.addEventListener("click", e=>{
-  if(!e.target.closest("button")) fecharMenu();
+document.addEventListener("click",e=>{
+ if(!e.target.closest("button")) if(menuAtual) menuAtual.remove();
 });
-
-document.getElementById("busca").addEventListener("input", render);
-document.getElementById("filtro").addEventListener("change", render);
 
 carregar();
 
