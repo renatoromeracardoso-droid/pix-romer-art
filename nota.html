@@ -2,90 +2,59 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Nota Fiscal</title>
+<title>NFC-e</title>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
-  background: #e5e7eb;
-  margin: 0;
-  padding: 20px;
+  font-family: monospace;
+  background: #ddd;
+  display:flex;
+  justify-content:center;
 }
 
 .nota {
+  width: 320px;
   background: #fff;
-  max-width: 800px;
-  margin: auto;
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
+  padding: 15px;
+  font-size: 12px;
 }
 
-/* HEADER */
-.topo {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 2px solid #000;
-  padding-bottom: 10px;
+/* CENTRAL */
+.center {
+  text-align: center;
 }
 
-.empresa {
-  font-size: 14px;
-}
-
-.nf-box {
-  text-align: right;
-}
-
-.nf-num {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-/* CLIENTE */
-.bloco {
-  margin-top: 15px;
-  border: 1px solid #000;
-  padding: 10px;
-}
-
-.titulo {
-  font-weight: bold;
-  margin-bottom: 5px;
-  font-size: 13px;
+/* LINHA */
+hr {
+  border: none;
+  border-top: 1px dashed #000;
+  margin: 8px 0;
 }
 
 /* TABELA */
 table {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
+  font-size: 12px;
 }
 
-th, td {
-  border: 1px solid #000;
-  padding: 8px;
-  font-size: 13px;
-}
-
-th {
-  background: #f3f4f6;
+td {
+  padding: 2px 0;
 }
 
 /* TOTAL */
 .total {
-  text-align: right;
-  margin-top: 10px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
 }
 
-/* RODAPÉ */
-.footer {
-  margin-top: 20px;
-  font-size: 12px;
-  text-align: center;
-  color: #555;
+/* QR */
+.qr {
+  text-align:center;
+  margin-top:10px;
+}
+
+.qr img {
+  width:150px;
 }
 </style>
 </head>
@@ -94,56 +63,80 @@ th {
 
 <div class="nota">
 
-  <!-- CABEÇALHO -->
-  <div class="topo">
-    <div class="empresa">
-      <strong>ROMER ART</strong><br>
-      CNPJ: 00.000.000/0001-00<br>
-      São Paulo - SP
-    </div>
-
-    <div class="nf-box">
-      <div>NOTA FISCAL</div>
-      <div class="nf-num" id="pedido"></div>
-      <div id="data"></div>
-    </div>
+  <div class="center">
+    <b>ROMER ART</b><br>
+    CNPJ: 66.252.416/0001-05<br>
+    São Paulo - SP
   </div>
 
-  <!-- CLIENTE -->
-  <div class="bloco">
-    <div class="titulo">DADOS DO CLIENTE</div>
-    <div><b>Nome:</b> <span id="cliente"></span></div>
-    <div><b>CPF/CNPJ:</b> <span id="cpf"></span></div>
+  <hr>
+
+  <div class="center">
+    DANFE NFC-e<br>
+    Documento Auxiliar da Nota Fiscal<br>
+    do Consumidor Eletrônica
   </div>
 
-  <!-- SERVIÇO -->
-  <div class="bloco">
-    <div class="titulo">DESCRIÇÃO DOS SERVIÇOS</div>
+  <hr>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Descrição</th>
-          <th>Valor</th>
-        </tr>
-      </thead>
+  <div>
+    Pedido: <span id="pedido"></span><br>
+    Data: <span id="data"></span>
+  </div>
 
-      <tbody>
-        <tr>
-          <td id="servico"></td>
-          <td id="valor"></td>
-        </tr>
-      </tbody>
-    </table>
+  <hr>
 
+  <table>
+    <tr>
+      <td><b>Descrição</b></td>
+      <td align="right"><b>Valor</b></td>
+    </tr>
+
+    <tr>
+      <td id="servico"></td>
+      <td align="right" id="valor"></td>
+    </tr>
+  </table>
+
+  <hr>
+
+  <div>
+    QTD TOTAL DE ITENS: 1<br>
     <div class="total">
-      Total: <span id="valorTotal"></span>
+      VALOR TOTAL: <span id="valorTotal"></span>
     </div>
   </div>
 
-  <!-- RODAPÉ -->
-  <div class="footer">
-    Documento gerado automaticamente • RomerArt Sistema SaaS
+  <hr>
+
+  <div>
+    FORMA DE PAGAMENTO<br>
+    PIX<br>
+    VALOR PAGO: <span id="valorPago"></span>
+  </div>
+
+  <hr>
+
+  <div class="center">
+    CONSUMIDOR<br>
+    <span id="cliente"></span>
+  </div>
+
+  <hr>
+
+  <div class="center">
+    Consulte pela chave de acesso
+  </div>
+
+  <div class="qr">
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=nota" />
+  </div>
+
+  <hr>
+
+  <div class="center">
+    Documento gerado automaticamente<br>
+    RomerArt SaaS
   </div>
 
 </div>
@@ -154,20 +147,20 @@ const params = new URLSearchParams(window.location.search);
 
 const pedido = params.get("id");
 const nome = params.get("nome");
-const cpf = params.get("cpf");
 const servico = params.get("servico");
 const valor = params.get("valor");
 
-document.getElementById("pedido").innerText = "NF-" + pedido;
-document.getElementById("cliente").innerText = nome;
-document.getElementById("cpf").innerText = cpf;
+document.getElementById("pedido").innerText = pedido;
+document.getElementById("data").innerText =
+  new Date().toLocaleString("pt-BR");
+
 document.getElementById("servico").innerText = servico;
 
 document.getElementById("valor").innerText = "R$ " + valor;
 document.getElementById("valorTotal").innerText = "R$ " + valor;
+document.getElementById("valorPago").innerText = "R$ " + valor;
 
-document.getElementById("data").innerText =
-  new Date().toLocaleDateString("pt-BR");
+document.getElementById("cliente").innerText = nome;
 
 </script>
 
