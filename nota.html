@@ -2,163 +2,120 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>NFC-e</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Nota Fiscal</title>
 
 <style>
 body {
   font-family: monospace;
-  background: #ddd;
-  display:flex;
-  justify-content:center;
+  background: #e5e7eb;
+  padding: 20px;
 }
 
 .nota {
-  width: 320px;
-  background: #fff;
-  padding: 15px;
-  font-size: 12px;
+  background: white;
+  max-width: 350px;
+  margin: auto;
+  padding: 20px;
+  border-radius: 8px;
 }
 
-.center {
-  text-align: center;
-}
+.center { text-align: center; }
+.bold { font-weight: bold; }
 
 hr {
   border: none;
   border-top: 1px dashed #000;
-  margin: 8px 0;
+  margin: 10px 0;
 }
 
-table {
-  width: 100%;
-  font-size: 12px;
-}
-
-td {
-  padding: 2px 0;
-}
-
-.total {
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.qr {
-  text-align:center;
-  margin-top:10px;
-}
-
-.qr img {
-  width:150px;
+.qrcode {
+  text-align: center;
+  margin-top: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="nota">
-
-  <div class="center">
-    <b>ROMER ART</b><br>
-    CNPJ: 66.252.416/0001-05<br>
-    São Paulo - SP
-  </div>
-
-  <hr>
-
-  <div class="center">
-    DANFE NFC-e<br>
-    Documento Auxiliar da Nota Fiscal<br>
-    do Consumidor Eletrônica
-  </div>
-
-  <hr>
-
-  <div>
-    Pedido: <span id="pedido"></span><br>
-    Data da compra: <span id="data"></span>
-  </div>
-
-  <hr>
-
-  <table>
-    <tr>
-      <td><b>Descrição</b></td>
-      <td align="right"><b>Valor</b></td>
-    </tr>
-
-    <tr>
-      <td id="servico"></td>
-      <td align="right" id="valor"></td>
-    </tr>
-  </table>
-
-  <hr>
-
-  <div>
-    QTD TOTAL DE ITENS: 1<br>
-    <div class="total">
-      VALOR TOTAL: <span id="valorTotal"></span>
-    </div>
-  </div>
-
-  <hr>
-
-  <div>
-    FORMA DE PAGAMENTO<br>
-    PIX<br>
-    VALOR PAGO: <span id="valorPago"></span>
-  </div>
-
-  <hr>
-
-  <div class="center">
-    CONSUMIDOR<br>
-    <span id="cliente"></span>
-  </div>
-
-  <hr>
-
-  <div class="center">
-    Consulte pela chave de acesso
-  </div>
-
-  <div class="qr">
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=nota" />
-  </div>
-
-  <hr>
-
-  <div class="center">
-    Documento gerado automaticamente<br>
-    RomerArt SaaS
-  </div>
-
+<div class="nota" id="nota">
+Carregando...
 </div>
 
 <script>
 
+const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
+
 const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
 
-const pedido = params.get("id");
-const nome = params.get("nome");
-const servico = params.get("servico");
-const valor = params.get("valor");
-const dataCompra = params.get("data");
+async function carregarNota() {
 
-/* DADOS */
-document.getElementById("pedido").innerText = pedido;
-document.getElementById("cliente").innerText = nome;
+  const res = await fetch(API);
+  const dados = await res.json();
 
-/* DATA CORRETA DA PLANILHA */
-document.getElementById("data").innerText =
-  dataCompra ? dataCompra : new Date().toLocaleDateString("pt-BR");
+  const pedido = dados.find(p => p["ID Pedido"] == id);
 
-/* VALORES */
-document.getElementById("servico").innerText = servico;
-document.getElementById("valor").innerText = "R$ " + valor;
-document.getElementById("valorTotal").innerText = "R$ " + valor;
-document.getElementById("valorPago").innerText = "R$ " + valor;
+  if (!pedido) {
+    document.getElementById("nota").innerHTML = "Pedido não encontrado";
+    return;
+  }
+
+  const nome = pedido["Nome"];
+  const cpf = pedido["CPF/CNPJ"];
+  const servico = pedido["Serviço"];
+  const valor = pedido["Valor"];
+  const data = pedido["Data"] || "-";
+
+  document.getElementById("nota").innerHTML = `
+    <div class="center bold">ROMER ART</div>
+    <div class="center">CNPJ: 66.252.416/0001-05</div>
+    <div class="center">São Paulo - SP</div>
+
+    <hr>
+
+    <div class="center bold">DANFE NFC-e</div>
+    <div class="center">Documento Auxiliar</div>
+
+    <hr>
+
+    Pedido: ${id}<br>
+    Data da compra: ${data}
+
+    <hr>
+
+    <div class="bold">Descrição</div>
+    ${servico}
+
+    <hr>
+
+    VALOR TOTAL: <b>R$ ${valor}</b>
+
+    <hr>
+
+    FORMA DE PAGAMENTO<br>
+    PIX
+
+    <hr>
+
+    <div class="center">CONSUMIDOR</div>
+    ${nome}<br>
+    CPF: ${cpf}
+
+    <hr>
+
+    <div class="qrcode">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}">
+    </div>
+
+    <hr>
+
+    <div class="center">Documento gerado automaticamente</div>
+  `;
+}
+
+carregarNota();
 
 </script>
 
