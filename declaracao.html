@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Declaração de Conteúdo</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f1f5f9;
+  padding: 20px;
+}
+
+.box {
+  background: white;
+  padding: 20px;
+  max-width: 500px;
+  margin: auto;
+  border: 1px solid #000;
+}
+
+h2 {
+  text-align: center;
+}
+
+.linha {
+  display:flex;
+  justify-content:space-between;
+  margin:5px 0;
+}
+
+table {
+  width:100%;
+  border-collapse: collapse;
+  margin-top:10px;
+}
+
+td, th {
+  border:1px solid black;
+  padding:6px;
+  font-size:12px;
+}
+
+.btn {
+  margin-top:15px;
+  padding:10px;
+  width:100%;
+  background:black;
+  color:white;
+  border:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box" id="doc">
+
+<h2>DECLARAÇÃO DE CONTEÚDO</h2>
+
+<div class="linha"><b>Remetente:</b> Romer Art</div>
+<div class="linha"><b>CNPJ:</b> 66.252.416/0001-05</div>
+
+<hr>
+
+<div class="linha"><b>Destinatário:</b> <span id="nome"></span></div>
+<div class="linha"><b>CPF/CNPJ:</b> <span id="cpf"></span></div>
+
+<hr>
+
+<table>
+<tr>
+<th>Descrição</th>
+<th>Valor</th>
+</tr>
+<tr>
+<td id="produto"></td>
+<td id="valor"></td>
+</tr>
+</table>
+
+<br>
+
+<b>Total:</b> <span id="total"></span>
+
+<br><br>
+
+Declaro que não se trata de conteúdo ilícito.
+
+<br><br>
+
+_____________________________________<br>
+Assinatura do remetente
+
+<button class="btn" onclick="window.print()">📄 Gerar PDF</button>
+
+</div>
+
+<script>
+
+const url = new URLSearchParams(window.location.search);
+
+document.getElementById("nome").innerText = url.get("nome");
+document.getElementById("cpf").innerText = url.get("cpf");
+document.getElementById("produto").innerText = url.get("servico");
+
+const valor = url.get("valor");
+document.getElementById("valor").innerText = "R$ " + valor;
+document.getElementById("total").innerText = "R$ " + valor;
+
+</script>
+
+</body>
+</html>
