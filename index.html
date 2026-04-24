@@ -115,6 +115,32 @@ th, td {
   flex-direction: column;
   z-index: 999;
 }
+
+.menu-popup button {
+  background:none;
+  border:none;
+  color:white;
+  padding:10px;
+  text-align:left;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22c55e;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: 0.3s;
+}
+
+.toast.show {
+  opacity: 1;
+}
 </style>
 </head>
 
@@ -169,6 +195,8 @@ th, td {
 
 </div>
 
+<div id="toast" class="toast"></div>
+
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
@@ -185,6 +213,17 @@ function statusNormalizado(s) {
   return "pendente";
 }
 
+/* TOAST */
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.classList.add("show");
+
+  setTimeout(() => {
+    t.classList.remove("show");
+  }, 2500);
+}
+
 /* CARREGAR */
 async function carregar() {
   const res = await fetch(API);
@@ -193,7 +232,7 @@ async function carregar() {
   render();
 }
 
-/* ATUALIZAR BOTÃO */
+/* ATUALIZAR */
 function atualizarManual() {
   const btn = document.querySelector(".btn-refresh");
   btn.innerText = "Atualizando...";
@@ -255,19 +294,19 @@ function abrirMenu(i, el) {
 
   if (statusNormalizado(p["Status NF"]) !== "emitido") {
     const btnEmitir = document.createElement("button");
-    btnEmitir.innerText = "Emitir Nota";
+    btnEmitir.innerHTML = "📄 Emitir Nota";
     btnEmitir.onclick = () => emitir(i);
     menu.appendChild(btnEmitir);
   }
 
   const ver = document.createElement("button");
-  ver.innerText = "Ver Nota";
+  ver.innerHTML = "👁 Ver Nota";
   ver.onclick = () => window.open(p["Link NF"] || "#");
   menu.appendChild(ver);
 
   const pdf = document.createElement("button");
-  pdf.innerText = "Gerar PDF";
-  pdf.onclick = () => alert("PDF em breve");
+  pdf.innerHTML = "📥 Gerar PDF";
+  pdf.onclick = () => gerarPDF(p["ID Pedido"]);
   menu.appendChild(pdf);
 
   document.body.appendChild(menu);
@@ -288,24 +327,27 @@ document.addEventListener("click", e => {
   if (!e.target.closest(".acoes")) fecharMenu();
 });
 
-/* EMITIR COM UX PREMIUM */
+/* EMITIR */
 async function emitir(i) {
   const pedido = pedidos[i];
 
-  // 🔥 Atualiza visual na hora
   pedido["Status NF"] = "emitido";
   render();
   atualizarCards();
 
+  showToast("Nota emitida com sucesso 🚀");
+
   try {
     await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
-
-    // 🔄 sincroniza com planilha depois
     setTimeout(() => carregar(), 1500);
-
   } catch (e) {
-    alert("Erro ao emitir");
+    showToast("Erro ao emitir ❌");
   }
+}
+
+/* PDF */
+function gerarPDF(id) {
+  showToast("Gerando PDF...");
 }
 
 /* INIT */
