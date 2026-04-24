@@ -84,8 +84,9 @@ th, td {
   font-weight:bold;
 }
 
-.emitido { background:#2563eb; }
-.pendente { background:#475569; }
+/* 🔥 CORES PROFISSIONAIS */
+.emitido { background:#16a34a; }
+.pendente { background:#f59e0b; color:#000; }
 
 .acoes button {
   background:#1e293b;
@@ -228,13 +229,22 @@ function atualizarCards() {
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
 }
 
+/* 🔥 RENDER COM FILTRO + BUSCA */
 function render() {
   const tabela = document.getElementById("tabela");
+  const busca = document.getElementById("busca").value.toLowerCase();
+  const filtro = document.getElementById("filtro").value;
+
   tabela.innerHTML = "";
 
   pedidos.forEach((p, i) => {
 
+    const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
+    if (!texto.includes(busca)) return;
+
     const status = statusNormalizado(p["Status NF"]);
+
+    if (filtro !== "todos" && status !== filtro) return;
 
     let badge = `<span class="badge pendente">PENDENTE</span>`;
     if (status === "emitido") {
@@ -257,9 +267,15 @@ function render() {
   });
 }
 
-/* 🔥 NOVO: VER NOTA REAL */
+/* 🔥 VER NOTA */
 function verNota(p) {
-  const url = `nota.html?id=${p["ID Pedido"]}&nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
+  const url = "nota.html?id=" + p["ID Pedido"]
+  + "&nome=" + encodeURIComponent(p["Nome"])
+  + "&cpf=" + p["CPF/CNPJ"]
+  + "&servico=" + encodeURIComponent(p["Serviço"])
+  + "&valor=" + p["Valor"]
+  + "&data=" + encodeURIComponent(p["Data"]);
+
   window.open(url, "_blank");
 }
 
@@ -306,7 +322,7 @@ document.addEventListener("click", e => {
   if (!e.target.closest(".acoes")) fecharMenu();
 });
 
-/* EMITIR */
+/* 🔥 EMITIR COM ATUALIZAÇÃO AUTOMÁTICA */
 async function emitir(i) {
   const pedido = pedidos[i];
 
@@ -317,7 +333,7 @@ async function emitir(i) {
 
   try {
     await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
-    setTimeout(() => carregar(), 1500);
+    setTimeout(() => carregar(), 1200);
   } catch {
     showToast("Erro ao emitir ❌");
   }
