@@ -14,7 +14,6 @@ body {
   color: #e2e8f0;
 }
 
-/* HEADER */
 header {
   background: #020617;
   padding: 15px 20px;
@@ -24,7 +23,6 @@ header {
   font-weight:bold;
 }
 
-/* BOTÃO */
 .btn-refresh {
   background: #3b82f6;
   padding: 8px 14px;
@@ -32,12 +30,10 @@ header {
   cursor: pointer;
 }
 
-/* CONTAINER */
 .container {
   padding: 15px;
 }
 
-/* CARDS */
 .cards {
   display: grid;
   grid-template-columns: repeat(3,1fr);
@@ -51,9 +47,6 @@ header {
   text-align: center;
 }
 
-.card h2 { margin:0 }
-
-/* FILTROS */
 .filtros {
   margin-top:15px;
   display:flex;
@@ -69,7 +62,6 @@ input, select {
   color:white;
 }
 
-/* TABELA */
 .table-container {
   margin-top:15px;
   overflow-x:auto;
@@ -85,7 +77,6 @@ th, td {
   border-bottom:1px solid #1e293b;
 }
 
-/* BADGES */
 .badge {
   padding:5px 10px;
   border-radius:999px;
@@ -96,7 +87,6 @@ th, td {
 .emitido { background:#2563eb; }
 .pendente { background:#475569; }
 
-/* MENU */
 .acoes button {
   background:#1e293b;
   color:white;
@@ -124,7 +114,6 @@ th, td {
   text-align:left;
 }
 
-/* TOAST */
 .toast {
   position: fixed;
   bottom: 20px;
@@ -138,9 +127,7 @@ th, td {
   transition: 0.3s;
 }
 
-.toast.show {
-  opacity: 1;
-}
+.toast.show { opacity: 1; }
 </style>
 </head>
 
@@ -205,7 +192,6 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6N
 let pedidos = [];
 let menuAtual = null;
 
-/* STATUS */
 function statusNormalizado(s) {
   if (!s) return "pendente";
   s = s.toLowerCase();
@@ -213,18 +199,13 @@ function statusNormalizado(s) {
   return "pendente";
 }
 
-/* TOAST */
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.innerText = msg;
   t.classList.add("show");
-
-  setTimeout(() => {
-    t.classList.remove("show");
-  }, 2500);
+  setTimeout(() => t.classList.remove("show"), 2500);
 }
 
-/* CARREGAR */
 async function carregar() {
   const res = await fetch(API);
   pedidos = await res.json();
@@ -232,29 +213,21 @@ async function carregar() {
   render();
 }
 
-/* ATUALIZAR */
 function atualizarManual() {
   const btn = document.querySelector(".btn-refresh");
   btn.innerText = "Atualizando...";
   carregar();
-
-  setTimeout(() => {
-    btn.innerText = "Atualizar";
-  }, 1000);
+  setTimeout(() => btn.innerText = "Atualizar", 1000);
 }
 
-/* CARDS */
 function atualizarCards() {
   document.getElementById("total").innerText = pedidos.length;
-
   document.getElementById("pendentes").innerText =
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "pendente").length;
-
   document.getElementById("emitidos").innerText =
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
 }
 
-/* RENDER */
 function render() {
   const tabela = document.getElementById("tabela");
   tabela.innerHTML = "";
@@ -284,6 +257,12 @@ function render() {
   });
 }
 
+/* 🔥 NOVO: VER NOTA REAL */
+function verNota(p) {
+  const url = `nota.html?id=${p["ID Pedido"]}&nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
+  window.open(url, "_blank");
+}
+
 /* MENU */
 function abrirMenu(i, el) {
   fecharMenu();
@@ -301,7 +280,7 @@ function abrirMenu(i, el) {
 
   const ver = document.createElement("button");
   ver.innerHTML = "👁 Ver Nota";
-  ver.onclick = () => window.open(p["Link NF"] || "#");
+  ver.onclick = () => verNota(p);
   menu.appendChild(ver);
 
   const pdf = document.createElement("button");
@@ -334,23 +313,23 @@ async function emitir(i) {
   pedido["Status NF"] = "emitido";
   render();
   atualizarCards();
-
   showToast("Nota emitida com sucesso 🚀");
 
   try {
     await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
     setTimeout(() => carregar(), 1500);
-  } catch (e) {
+  } catch {
     showToast("Erro ao emitir ❌");
   }
 }
 
-/* PDF */
 function gerarPDF(id) {
-  showToast("Gerando PDF...");
+  showToast("PDF em breve...");
 }
 
-/* INIT */
+document.getElementById("busca").addEventListener("input", render);
+document.getElementById("filtro").addEventListener("change", render);
+
 carregar();
 
 </script>
