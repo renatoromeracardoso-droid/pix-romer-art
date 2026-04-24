@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>RomerArt • Sistema NF</title>
 
 <style>
@@ -30,9 +29,7 @@ header {
   cursor: pointer;
 }
 
-.container {
-  padding: 15px;
-}
+.container { padding: 15px; }
 
 .cards {
   display: grid;
@@ -51,10 +48,10 @@ header {
   margin-top:15px;
   display:flex;
   gap:10px;
-  flex-wrap: wrap;
 }
 
 input, select {
+  width:100%;
   padding:10px;
   border-radius:8px;
   border:none;
@@ -75,26 +72,18 @@ table {
 th, td {
   padding:10px;
   border-bottom:1px solid #1e293b;
+  font-size:13px;
 }
 
 .badge {
-  padding:5px 10px;
+  padding:5px 12px;
   border-radius:999px;
   font-size:11px;
   font-weight:bold;
-  color:#000;
 }
 
 .emitido { background:#22c55e; }
-.pendente { background:#f59e0b; }
-
-.acoes button {
-  background:#1e293b;
-  color:white;
-  border:none;
-  padding:6px 10px;
-  border-radius:6px;
-}
+.pendente { background:#f59e0b; color:#000; }
 
 .menu-popup {
   position: absolute;
@@ -113,6 +102,7 @@ th, td {
   color:white;
   padding:10px;
   text-align:left;
+  cursor:pointer;
 }
 
 .toast {
@@ -158,14 +148,11 @@ th, td {
 
 <div class="filtros">
   <input id="busca" placeholder="Buscar...">
-  
   <select id="filtro">
     <option value="todos">Todos</option>
     <option value="pendente">Pendentes</option>
     <option value="emitido">Emitidos</option>
   </select>
-
-  <input type="date" id="dataFiltro">
 </div>
 
 <div class="table-container">
@@ -176,6 +163,7 @@ th, td {
 <th>Cliente</th>
 <th>Valor</th>
 <th>Status</th>
+<th>Rastreio</th>
 <th></th>
 </tr>
 </thead>
@@ -210,36 +198,16 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2500);
 }
 
-/* CACHE */
 async function carregar() {
-  const cache = localStorage.getItem("dados_nf");
-
-  if (cache) {
-    pedidos = JSON.parse(cache);
-    atualizarCards();
-    render();
-  }
-
-  try {
-    const res = await fetch(API);
-    const data = await res.json();
-
-    pedidos = data;
-    localStorage.setItem("dados_nf", JSON.stringify(data));
-
-    atualizarCards();
-    render();
-
-  } catch {
-    showToast("Erro ao atualizar");
-  }
+  const res = await fetch(API);
+  pedidos = await res.json();
+  atualizarCards();
+  render();
 }
 
 function atualizarManual() {
-  const btn = document.querySelector(".btn-refresh");
-  btn.innerText = "Atualizando...";
   carregar();
-  setTimeout(() => btn.innerText = "Atualizar", 1000);
+  showToast("Atualizado ✔");
 }
 
 function atualizarCards() {
@@ -252,60 +220,82 @@ function atualizarCards() {
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
 }
 
-/* FILTRO */
 function render() {
   const tabela = document.getElementById("tabela");
-  tabela.innerHTML = "";
-
   const busca = document.getElementById("busca").value.toLowerCase();
   const filtro = document.getElementById("filtro").value;
-  const dataFiltro = document.getElementById("dataFiltro").value;
+
+  tabela.innerHTML = "";
 
   pedidos
-    .filter(p => {
-      const status = statusNormalizado(p["Status NF"]);
+  .filter(p => {
+    const nome = (p["Nome"] || "").toLowerCase();
+    const id = (p["ID Pedido"] || "").toString();
 
-      const matchBusca =
-        (p["Nome"] || "").toLowerCase().includes(busca) ||
-        (p["ID Pedido"] || "").includes(busca);
+    const matchBusca = nome.includes(busca) || id.includes(busca);
 
-      const matchStatus =
-        filtro === "todos" ||
-        (filtro === "pendente" && status === "pendente") ||
-        (filtro === "emitido" && status === "emitido");
+    const status = statusNormalizado(p["Status NF"]);
+    const matchFiltro =
+      filtro === "todos" ||
+      (filtro === "pendente" && status === "pendente") ||
+      (filtro === "emitido" && status === "emitido");
 
-      let matchData = true;
+    return matchBusca && matchFiltro;
+  })
+  .forEach((p, i) => {
 
-      if (dataFiltro && p["Data"]) {
-        const dataPlanilha = new Date(p["Data"]).toISOString().slice(0,10);
-        matchData = dataPlanilha === dataFiltro;
-      }
+    const status = statusNormalizado(p["Status NF"]);
 
-      return matchBusca && matchStatus && matchData;
-    })
-    .forEach((p, i) => {
+    let badge = `<span class="badge pendente">PENDENTE</span>`;
+    if (status === "emitido") {
+      badge = `<span class="badge emitido">EMITIDO</span>`;
+    }
 
-      const status = statusNormalizado(p["Status NF"]);
+    tabela.innerHTML += `
+      <tr>
+        <td>${p["ID Pedido"]}</td>
+        <td>${p["Nome"]}</td>
+        <td>R$ ${p["Valor"]}</td>
+        <td>${badge}</td>
+        <td>${p["Rastreio"] || "-"}</td>
+        <td>
+          <button onclick="abrirMenu(${i}, this)">⋮</button>
+        </td>
+      </tr>
+    `;
+  });
+}
 
-      const badge =
-        status === "emitido"
-          ? `<span class="badge emitido">EMITIDO</span>`
-          : `<span class="badge pendente">PENDENTE</span>`;
+/* NOTA */
+function verNota(p) {
+  const url = `nota.html?id=${p["ID Pedido"]}`;
+  window.open(url, "_blank");
+}
 
-      tabela.innerHTML += `
-        <tr>
-          <td>${p["ID Pedido"]}</td>
-          <td>${p["Nome"]}</td>
-          <td>R$ ${p["Valor"]}</td>
-          <td>${badge}</td>
-          <td>
-            <div class="acoes">
-              <button onclick="abrirMenu(${pedidos.indexOf(p)}, this)">⋮</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    });
+/* PDF */
+function gerarPDF(id) {
+  window.open("nota.html?id=" + id + "&pdf=1", "_blank");
+}
+
+/* DECLARAÇÃO */
+function gerarDeclaracao(p) {
+  const url = `declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
+  window.open(url, "_blank");
+}
+
+/* RASTREIO */
+function abrirRastreio(p){
+
+  const codigo = p["Rastreio"];
+
+  if(!codigo || codigo === ""){
+    showToast("Sem código de rastreio");
+    return;
+  }
+
+  const url = "https://rastreamento.correios.com.br/app/index.php?objetos=" + codigo;
+
+  window.open(url, "_blank");
 }
 
 /* MENU */
@@ -313,7 +303,6 @@ function abrirMenu(i, el) {
   fecharMenu();
 
   const p = pedidos[i];
-
   const menu = document.createElement("div");
   menu.className = "menu-popup";
 
@@ -334,6 +323,16 @@ function abrirMenu(i, el) {
   pdf.onclick = () => gerarPDF(p["ID Pedido"]);
   menu.appendChild(pdf);
 
+  const dec = document.createElement("button");
+  dec.innerHTML = "📦 Declaração";
+  dec.onclick = () => gerarDeclaracao(p);
+  menu.appendChild(dec);
+
+  const rast = document.createElement("button");
+  rast.innerHTML = "🚚 Rastrear Pedido";
+  rast.onclick = () => abrirRastreio(p);
+  menu.appendChild(rast);
+
   document.body.appendChild(menu);
 
   const rect = el.getBoundingClientRect();
@@ -349,44 +348,28 @@ function fecharMenu() {
 }
 
 document.addEventListener("click", e => {
-  if (!e.target.closest(".acoes")) fecharMenu();
+  if (!e.target.closest("button")) fecharMenu();
 });
 
-/* AÇÕES */
-function verNota(p) {
-  const url = `nota.html?id=${p["ID Pedido"]}`;
-  window.open(url, "_blank");
-}
-
-function gerarPDF(id) {
-  window.open("nota.html?id=" + id, "_blank");
-}
-
+/* EMITIR */
 async function emitir(i) {
   const pedido = pedidos[i];
 
   pedido["Status NF"] = "emitido";
-  render();
   atualizarCards();
+  render();
   showToast("Nota emitida com sucesso 🚀");
 
   try {
     await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
-    setTimeout(() => carregar(), 1500);
   } catch {
-    showToast("Erro ao emitir ❌");
+    showToast("Erro ao enviar ❌");
   }
 }
 
-/* EVENTOS */
 document.getElementById("busca").addEventListener("input", render);
 document.getElementById("filtro").addEventListener("change", render);
-document.getElementById("dataFiltro").addEventListener("change", render);
 
-/* AUTO UPDATE */
-setInterval(carregar, 30000);
-
-/* START */
 carregar();
 
 </script>
