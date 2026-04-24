@@ -30,9 +30,7 @@ header {
   cursor: pointer;
 }
 
-.container {
-  padding: 15px;
-}
+.container { padding: 15px; }
 
 .cards {
   display: grid;
@@ -86,14 +84,6 @@ th, td {
 
 .emitido { background:#22c55e; }
 .pendente { background:#f59e0b; }
-
-.acoes button {
-  background:#1e293b;
-  color:white;
-  border:none;
-  padding:6px 10px;
-  border-radius:6px;
-}
 
 .menu-popup {
   position: absolute;
@@ -191,6 +181,9 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6N
 let pedidos = [];
 let menuAtual = null;
 
+/* 🔥 RASTREIO TEMPORÁRIO */
+let rastreiosTemp = {};
+
 function statusNormalizado(s) {
   if (!s) return "pendente";
   s = s.toLowerCase();
@@ -272,8 +265,9 @@ function render() {
   });
 }
 
+/* NOTA */
 function verNota(p) {
-  const url = `nota.html?id=${p["ID Pedido"]}&nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}&data=${p["Data"]}`;
+  const url = `nota.html?id=${p["ID Pedido"]}&nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
   window.open(url, "_blank");
 }
 
@@ -286,6 +280,28 @@ function gerarDeclaracao(p) {
   window.open(url, "_blank");
 }
 
+/* 🔥 RASTREIO */
+function adicionarRastreio(p){
+  const codigo = prompt("Digite o código de rastreio:");
+  if(!codigo) return;
+
+  rastreiosTemp[p["ID Pedido"]] = codigo;
+  showToast("Rastreio adicionado 🚚");
+}
+
+function abrirRastreio(p){
+  const codigo = rastreiosTemp[p["ID Pedido"]];
+
+  if(!codigo){
+    showToast("Nenhum rastreio informado");
+    return;
+  }
+
+  const url = "https://rastreamento.correios.com.br/app/index.php?objetos=" + codigo;
+  window.open(url, "_blank");
+}
+
+/* MENU */
 function abrirMenu(i, el) {
   fecharMenu();
 
@@ -311,9 +327,19 @@ function abrirMenu(i, el) {
   menu.appendChild(pdf);
 
   const dec = document.createElement("button");
-  dec.innerHTML = "📦 Declaração de Conteúdo";
+  dec.innerHTML = "📦 Declaração";
   dec.onclick = () => gerarDeclaracao(p);
   menu.appendChild(dec);
+
+  const rast = document.createElement("button");
+  rast.innerHTML = "📦 Inserir Rastreio";
+  rast.onclick = () => adicionarRastreio(p);
+  menu.appendChild(rast);
+
+  const verR = document.createElement("button");
+  verR.innerHTML = "🚚 Rastrear Pedido";
+  verR.onclick = () => abrirRastreio(p);
+  menu.appendChild(verR);
 
   document.body.appendChild(menu);
 
@@ -333,6 +359,7 @@ document.addEventListener("click", e => {
   if (!e.target.closest("button")) fecharMenu();
 });
 
+/* EMITIR */
 async function emitir(i) {
   const pedido = pedidos[i];
 
