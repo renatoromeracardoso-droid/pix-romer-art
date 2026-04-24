@@ -4,101 +4,136 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>RomerArt • Sistema SaaS</title>
+<title>RomerArt • SaaS</title>
 
 <style>
 body {
   margin:0;
-  font-family:'Segoe UI',sans-serif;
-  background:#0f172a;
-  color:#e2e8f0;
+  font-family:'Inter',sans-serif;
+  background:#0b1220;
+  color:#e5e7eb;
 }
 
 /* HEADER */
 header {
-  background:#020617;
-  padding:15px 20px;
   display:flex;
   justify-content:space-between;
   align-items:center;
+  padding:16px 24px;
+  background:#020617;
   border-bottom:1px solid #1e293b;
 }
 
 .btn-top {
-  background:#2563eb;
-  color:white;
-  padding:8px 14px;
-  border-radius:8px;
+  background:linear-gradient(135deg,#3b82f6,#2563eb);
+  padding:10px 16px;
+  border-radius:10px;
+  color:#fff;
   border:none;
   cursor:pointer;
 }
 
 /* CONTAINER */
-.container { padding:20px; }
+.container {
+  padding:20px;
+  max-width:1200px;
+  margin:auto;
+}
 
 /* CARDS */
 .cards {
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  gap:15px;
+  gap:16px;
   margin-bottom:20px;
 }
 
 .card {
   background:#020617;
-  padding:20px;
-  border-radius:12px;
+  padding:22px;
+  border-radius:16px;
   text-align:center;
+  box-shadow:0 0 0 1px #1e293b;
 }
 
-.card h2 { margin:0; }
+.card h2 {
+  margin:0;
+  font-size:28px;
+}
 
 /* FILTROS */
 .filtros {
   display:flex;
-  gap:10px;
-  margin-bottom:15px;
+  gap:12px;
+  margin-bottom:20px;
 }
 
 input, select {
-  padding:10px;
-  border-radius:8px;
-  border:none;
+  flex:1;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #1e293b;
   background:#020617;
-  color:white;
+  color:#fff;
 }
 
 /* TABELA */
+.table-box {
+  background:#020617;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid #1e293b;
+}
+
 table {
   width:100%;
   border-collapse:collapse;
+}
+
+thead {
   background:#020617;
-  border-radius:10px;
 }
 
-th, td {
-  padding:10px;
-  border-bottom:1px solid #1e293b;
+th {
+  text-align:left;
+  padding:14px;
+  font-size:12px;
+  color:#94a3b8;
 }
 
-/* BADGES */
+td {
+  padding:14px;
+  border-top:1px solid #1e293b;
+}
+
+tr:hover {
+  background:#0f172a;
+}
+
+/* STATUS */
 .badge {
-  padding:5px 12px;
+  padding:6px 12px;
   border-radius:999px;
-  font-size:11px;
-  font-weight:bold;
+  font-size:12px;
+  font-weight:600;
 }
 
 .pago { background:#16a34a; }
 .emitido { background:#2563eb; }
 .pendente { background:#475569; }
 
-/* BOTÕES */
+/* AÇÕES */
+.acoes {
+  display:flex;
+  gap:8px;
+}
+
 button {
   border:none;
-  padding:6px 10px;
-  border-radius:6px;
+  padding:8px 12px;
+  border-radius:8px;
   cursor:pointer;
+  font-size:12px;
 }
 
 .btn-emitir { background:#22c55e; color:white; }
@@ -107,26 +142,28 @@ button {
 .btn-view { background:#0ea5e9; color:white; }
 .btn-pdf { background:#a855f7; color:white; }
 
-/* TOAST */
-.toast {
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  background:#22c55e;
-  color:white;
-  padding:12px 18px;
-  border-radius:10px;
-  opacity:0;
-  transition:0.3s;
+/* RESPONSIVO */
+@media(max-width:768px){
+  .cards {
+    grid-template-columns:1fr;
+  }
+
+  .filtros {
+    flex-direction:column;
+  }
+
+  td:nth-child(3),
+  th:nth-child(3) {
+    display:none;
+  }
 }
-.toast.show { opacity:1; }
 </style>
 </head>
 
 <body>
 
 <header>
-  🚀 Sistema SaaS • Notas Fiscais
+  🚀 Sistema SaaS • Notas
   <button class="btn-top" onclick="carregar()">🔄 Atualizar</button>
 </header>
 
@@ -147,6 +184,7 @@ button {
   </select>
 </div>
 
+<div class="table-box">
 <table>
 <thead>
 <tr>
@@ -159,36 +197,24 @@ button {
 </thead>
 <tbody id="tabela"></tbody>
 </table>
+</div>
 
 </div>
 
-<div id="toast" class="toast"></div>
-
 <script>
-
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
 const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6NMQBFd2-Ud-sPn7sVjaKXL8kdJw8joJlAv9uPpzEy72e8duBEg/exec";
 
 let pedidos = [];
 
-/* TOAST */
-function toast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.classList.add("show");
-  setTimeout(()=> t.classList.remove("show"),2000);
-}
-
-/* STATUS */
 function statusNormalizado(s){
   if(!s) return "";
-  s = s.toLowerCase().trim();
-  if(s === "paid") return "pago";
-  if(s === "emitido") return "emitido";
+  s=s.toLowerCase();
+  if(s==="paid") return "pago";
+  if(s==="emitido") return "emitido";
   return "pendente";
 }
 
-/* CARREGAR */
 async function carregar(){
   const res = await fetch(API);
   pedidos = await res.json();
@@ -196,7 +222,6 @@ async function carregar(){
   render();
 }
 
-/* CARDS */
 function atualizarCards(){
   document.getElementById("total").innerText = pedidos.length;
 
@@ -207,17 +232,16 @@ function atualizarCards(){
   document.getElementById("emitidos").innerText = emitidos;
 }
 
-/* RENDER */
 function render(){
   const tabela = document.getElementById("tabela");
   const busca = document.getElementById("busca").value.toLowerCase();
   const filtro = document.getElementById("filtro").value;
 
-  tabela.innerHTML = "";
+  tabela.innerHTML="";
 
   pedidos.forEach((p,i)=>{
 
-    const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
+    const texto=(p["Nome"]+p["ID Pedido"]).toLowerCase();
     if(!texto.includes(busca)) return;
 
     const status = statusNormalizado(p["Status NF"]);
@@ -226,16 +250,16 @@ function render(){
     if(filtro==="emitido" && status!=="emitido") return;
 
     let badge = `<span class="badge pendente">PENDENTE</span>`;
-    let btnEmitir = `<button class="btn-disabled">Aguardando</button>`;
+    let btn = `<button class="btn-disabled">Aguardando</button>`;
 
     if(status==="pago" || status==="pendente"){
       badge = `<span class="badge pago">PAGO</span>`;
-      btnEmitir = `<button class="btn-emitir" onclick="emitir(${i},this)">Emitir</button>`;
+      btn = `<button class="btn-emitir" onclick="emitir(${i},this)">Emitir</button>`;
     }
 
     if(status==="emitido"){
       badge = `<span class="badge emitido">EMITIDO</span>`;
-      btnEmitir = `<button class="btn-disabled">Emitido</button>`;
+      btn = `<button class="btn-disabled">Emitido</button>`;
     }
 
     tabela.innerHTML += `
@@ -245,67 +269,43 @@ function render(){
       <td>R$ ${p["Valor"]}</td>
       <td>${badge}</td>
       <td>
-        ${btnEmitir}
-        <button class="btn-view" onclick="verNota('${p["Link NF"]}')">👁</button>
-        <button class="btn-pdf" onclick="gerarPDF('${p["ID Pedido"]}')">PDF</button>
+        <div class="acoes">
+          ${btn}
+          <button class="btn-view" onclick="verNota('${p["Link NF"]}')">👁</button>
+          <button class="btn-pdf" onclick="gerarPDF('${p["ID Pedido"]}')">PDF</button>
+        </div>
       </td>
     </tr>`;
   });
 }
 
-/* EMITIR */
 async function emitir(i,btn){
   const pedido = pedidos[i];
+  btn.innerText="Emitindo...";
+  btn.disabled=true;
 
-  btn.innerText = "Emitindo...";
-  btn.disabled = true;
+  const res = await fetch(API_EMITIR+"?id="+pedido["ID Pedido"]);
+  const data = await res.json();
 
-  try{
-    const res = await fetch(API_EMITIR+"?id="+pedido["ID Pedido"]);
-    const data = await res.json();
-
-    if(data.ok){
-
-      pedido["Status NF"] = "emitido";
-      pedido["Link NF"] = data.link || ("NF-"+pedido["ID Pedido"]);
-
-      render();
-      atualizarCards();
-
-      toast("✅ Nota emitida com sucesso!");
-
-    }else{
-      toast("Erro ao emitir");
-      btn.disabled=false;
-      btn.innerText="Emitir";
-    }
-
-  }catch(e){
-    toast("Erro: "+e.message);
-    btn.disabled=false;
-    btn.innerText="Emitir";
+  if(data.ok){
+    pedido["Status NF"]="emitido";
+    render();
+    atualizarCards();
   }
 }
 
-/* OUTROS */
 function verNota(link){
-  if(!link){ toast("Nota não disponível"); return; }
-  window.open(link,"_blank");
+  if(link) window.open(link);
 }
 
-function gerarPDF(id){
-  toast("📄 Gerando PDF em breve...");
+function gerarPDF(){
+  alert("PDF em breve");
 }
 
-/* EVENTOS */
 document.getElementById("busca").addEventListener("input",render);
 document.getElementById("filtro").addEventListener("change",render);
 
-/* AUTO REFRESH */
-setInterval(carregar,30000);
-
 carregar();
-
 </script>
 
 </body>
