@@ -165,7 +165,6 @@ th, td {
     <option value="emitido">Emitidos</option>
   </select>
 
-  <!-- 🔥 NOVO FILTRO DE DATA -->
   <input type="date" id="dataFiltro">
 </div>
 
@@ -211,9 +210,8 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2500);
 }
 
-/* 🚀 CACHE + PERFORMANCE */
+/* CACHE */
 async function carregar() {
-
   const cache = localStorage.getItem("dados_nf");
 
   if (cache) {
@@ -254,9 +252,8 @@ function atualizarCards() {
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
 }
 
-/* 🔥 FILTROS COMPLETOS */
+/* FILTRO */
 function render() {
-
   const tabela = document.getElementById("tabela");
   tabela.innerHTML = "";
 
@@ -266,7 +263,6 @@ function render() {
 
   pedidos
     .filter(p => {
-
       const status = statusNormalizado(p["Status NF"]);
 
       const matchBusca =
@@ -286,7 +282,6 @@ function render() {
       }
 
       return matchBusca && matchStatus && matchData;
-
     })
     .forEach((p, i) => {
 
@@ -311,6 +306,76 @@ function render() {
         </tr>
       `;
     });
+}
+
+/* MENU */
+function abrirMenu(i, el) {
+  fecharMenu();
+
+  const p = pedidos[i];
+
+  const menu = document.createElement("div");
+  menu.className = "menu-popup";
+
+  if (statusNormalizado(p["Status NF"]) !== "emitido") {
+    const btnEmitir = document.createElement("button");
+    btnEmitir.innerHTML = "📄 Emitir Nota";
+    btnEmitir.onclick = () => emitir(i);
+    menu.appendChild(btnEmitir);
+  }
+
+  const ver = document.createElement("button");
+  ver.innerHTML = "👁 Ver Nota";
+  ver.onclick = () => verNota(p);
+  menu.appendChild(ver);
+
+  const pdf = document.createElement("button");
+  pdf.innerHTML = "📥 Gerar PDF";
+  pdf.onclick = () => gerarPDF(p["ID Pedido"]);
+  menu.appendChild(pdf);
+
+  document.body.appendChild(menu);
+
+  const rect = el.getBoundingClientRect();
+  menu.style.top = rect.bottom + "px";
+  menu.style.left = rect.left + "px";
+  menu.style.display = "flex";
+
+  menuAtual = menu;
+}
+
+function fecharMenu() {
+  if (menuAtual) menuAtual.remove();
+}
+
+document.addEventListener("click", e => {
+  if (!e.target.closest(".acoes")) fecharMenu();
+});
+
+/* AÇÕES */
+function verNota(p) {
+  const url = `nota.html?id=${p["ID Pedido"]}`;
+  window.open(url, "_blank");
+}
+
+function gerarPDF(id) {
+  window.open("nota.html?id=" + id, "_blank");
+}
+
+async function emitir(i) {
+  const pedido = pedidos[i];
+
+  pedido["Status NF"] = "emitido";
+  render();
+  atualizarCards();
+  showToast("Nota emitida com sucesso 🚀");
+
+  try {
+    await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
+    setTimeout(() => carregar(), 1500);
+  } catch {
+    showToast("Erro ao emitir ❌");
+  }
 }
 
 /* EVENTOS */
