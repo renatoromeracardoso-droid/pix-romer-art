@@ -259,7 +259,17 @@ function render() {
 
 /* 🔥 NOVO: VER NOTA REAL */
 function verNota(p) {
-  const url = `nota.html?id=${p["ID Pedido"]}&nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
+
+  const url = `
+  nota.html
+  ?id=${p["ID Pedido"]}
+  &nome=${encodeURIComponent(p["Nome"])}
+  &cpf=${p["CPF/CNPJ"]}
+  &servico=${encodeURIComponent(p["Serviço"])}
+  &valor=${p["Valor"]}
+  &data=${encodeURIComponent(p["Data"])}
+  `;
+
   window.open(url, "_blank");
 }
 
