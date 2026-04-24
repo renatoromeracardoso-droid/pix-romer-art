@@ -14,7 +14,6 @@ body {
   color: #e2e8f0;
 }
 
-/* HEADER */
 header {
   background: #020617;
   padding: 15px 20px;
@@ -23,12 +22,10 @@ header {
   border-bottom: 1px solid #1e293b;
 }
 
-/* CONTAINER */
 .container {
   padding: 20px;
 }
 
-/* CARDS */
 .cards {
   display: grid;
   grid-template-columns: repeat(3,1fr);
@@ -48,7 +45,6 @@ header {
   font-size: 26px;
 }
 
-/* FILTROS */
 .filtros {
   display: flex;
   gap: 10px;
@@ -63,7 +59,6 @@ input, select {
   color: white;
 }
 
-/* TABELA */
 .table-container {
   overflow-x: auto;
 }
@@ -87,7 +82,6 @@ th {
   color: #94a3b8;
 }
 
-/* BADGES */
 .badge {
   padding: 4px 10px;
   border-radius: 999px;
@@ -99,7 +93,6 @@ th {
 .emitido { background: #2563eb; }
 .pendente { background: #475569; }
 
-/* BOTÕES */
 button {
   padding: 6px 12px;
   border-radius: 6px;
@@ -132,8 +125,8 @@ button {
     <span>Total</span>
   </div>
   <div class="card">
-    <h2 id="pagos">0</h2>
-    <span>Pagos</span>
+    <h2 id="pendentes">0</h2>
+    <span>Pendentes</span>
   </div>
   <div class="card">
     <h2 id="emitidos">0</h2>
@@ -174,42 +167,44 @@ button {
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
+
+// 🔥 NOVO LINK CORRETO
 const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6NMQBFd2-Ud-sPn7sVjaKXL8kdJw8joJlAv9uPpzEy72e8duBEg/exec";
 
 let pedidos = [];
 
-// 🔥 NORMALIZA STATUS
 function statusNormalizado(s) {
-  if (!s) return "pendente";
+  if (!s) return "";
+  s = s.toLowerCase().trim();
 
-  s = s.toString().toLowerCase().trim();
-
-  if (s === "paid" || s === "pago") return "pago";
+  if (s === "paid") return "pago";
   if (s === "emitido") return "emitido";
 
-  return "pendente";
+  return s;
 }
 
 async function carregar() {
-  try {
-    const res = await fetch(API);
-    pedidos = await res.json();
+  const res = await fetch(API);
+  pedidos = await res.json();
 
-    atualizarCards();
-    render();
-  } catch (err) {
-    alert("Erro ao carregar dados");
-    console.error(err);
-  }
+  atualizarCards();
+  render();
 }
 
 function atualizarCards() {
+
   document.getElementById("total").innerText = pedidos.length;
 
-  const pagos = pedidos.filter(p => statusNormalizado(p["Status NF"]) === "pago").length;
-  const emitidos = pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
+  const pendentes = pedidos.filter(p => {
+    const status = statusNormalizado(p["Status NF"]);
+    return status !== "emitido";
+  }).length;
 
-  document.getElementById("pagos").innerText = pagos;
+  const emitidos = pedidos.filter(p => 
+    statusNormalizado(p["Status NF"]) === "emitido"
+  ).length;
+
+  document.getElementById("pendentes").innerText = pendentes;
   document.getElementById("emitidos").innerText = emitidos;
 }
 
@@ -222,13 +217,14 @@ function render() {
 
   pedidos.forEach((p, i) => {
 
-    const texto = ((p["Nome"] || "") + (p["ID Pedido"] || "")).toLowerCase();
+    const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
     if (!texto.includes(busca)) return;
 
     const status = statusNormalizado(p["Status NF"]);
+
     if (filtro !== "todos" && status !== filtro) return;
 
-    let badge = `<span class="badge pendente">PENDENTE</span>`;
+    let badge = `<span class="badge pendente">-</span>`;
     let btn = `<button class="btn-disabled">Aguardando</button>`;
 
     if (status === "pago") {
@@ -243,12 +239,12 @@ function render() {
 
     tabela.innerHTML += `
       <tr>
-        <td>${p["ID Pedido"] || "-"}</td>
-        <td>${p["Nome"] || "-"}</td>
-        <td>${p["CPF/CNPJ"] || "-"}</td>
-        <td>${p["Email"] || "-"}</td>
-        <td>${p["Serviço"] || "-"}</td>
-        <td>R$ ${p["Valor"] || "-"}</td>
+        <td>${p["ID Pedido"]}</td>
+        <td>${p["Nome"]}</td>
+        <td>${p["CPF/CNPJ"]}</td>
+        <td>${p["Email"]}</td>
+        <td>${p["Serviço"]}</td>
+        <td>R$ ${p["Valor"]}</td>
         <td>${badge}</td>
         <td>${btn}</td>
       </tr>
@@ -260,7 +256,6 @@ async function emitir(i, btn) {
   const pedido = pedidos[i];
 
   btn.innerText = "Emitindo...";
-  btn.disabled = true;
 
   try {
     const res = await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
@@ -270,15 +265,13 @@ async function emitir(i, btn) {
       carregar();
     } else {
       alert(data.erro || "Erro ao emitir");
-      btn.innerText = "Emitir";
-      btn.disabled = false;
     }
 
   } catch (e) {
     alert("Erro real: " + e.message);
-    btn.innerText = "Emitir";
-    btn.disabled = false;
   }
+
+  btn.innerText = "Emitir";
 }
 
 document.getElementById("busca").addEventListener("input", render);
