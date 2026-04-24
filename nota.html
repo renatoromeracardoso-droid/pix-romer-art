@@ -21,6 +21,14 @@ body {
   border-radius: 8px;
 }
 
+/* 🔥 ESSENCIAL PARA PDF */
+@media print {
+  body {
+    background: white;
+    padding: 0;
+  }
+}
+
 .center { text-align: center; }
 .bold { font-weight: bold; }
 
@@ -28,11 +36,6 @@ hr {
   border: none;
   border-top: 1px dashed #000;
   margin: 10px 0;
-}
-
-.qrcode {
-  text-align: center;
-  margin-top: 10px;
 }
 </style>
 </head>
@@ -49,24 +52,19 @@ const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaG
 
 const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
+const autoPDF = params.get("pdf"); // 🔥 novo
 
 async function carregarNota() {
 
   const res = await fetch(API);
   const dados = await res.json();
 
-  const pedido = dados.find(p => p["ID Pedido"] == id);
+  const p = dados.find(x => x["ID Pedido"] == id);
 
-  if (!pedido) {
+  if (!p) {
     document.getElementById("nota").innerHTML = "Pedido não encontrado";
     return;
   }
-
-  const nome = pedido["Nome"];
-  const cpf = pedido["CPF/CNPJ"];
-  const servico = pedido["Serviço"];
-  const valor = pedido["Valor"];
-  const data = pedido["Data"] || "-";
 
   document.getElementById("nota").innerHTML = `
     <div class="center bold">ROMER ART</div>
@@ -81,16 +79,15 @@ async function carregarNota() {
     <hr>
 
     Pedido: ${id}<br>
-    Data da compra: ${data}
+    Data da compra: ${p["Data"] || "-"}
 
     <hr>
 
-    <div class="bold">Descrição</div>
-    ${servico}
+    ${p["Serviço"]}
 
     <hr>
 
-    VALOR TOTAL: <b>R$ ${valor}</b>
+    VALOR TOTAL: <b>R$ ${p["Valor"]}</b>
 
     <hr>
 
@@ -99,13 +96,12 @@ async function carregarNota() {
 
     <hr>
 
-    <div class="center">CONSUMIDOR</div>
-    ${nome}<br>
-    CPF: ${cpf}
+    ${p["Nome"]}<br>
+    CPF: ${p["CPF/CNPJ"]}
 
     <hr>
 
-    <div class="qrcode">
+    <div class="center">
       <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}">
     </div>
 
@@ -113,6 +109,13 @@ async function carregarNota() {
 
     <div class="center">Documento gerado automaticamente</div>
   `;
+
+  /* 🔥 AUTO PDF */
+  if (autoPDF == "1") {
+    setTimeout(() => {
+      window.print();
+    }, 800);
+  }
 }
 
 carregarNota();
