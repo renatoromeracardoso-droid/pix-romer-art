@@ -2,143 +2,173 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Painel de Notas Fiscais</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel NF</title>
 
 <style>
 body {
-  background: #1e293b;
-  color: #fff;
-  font-family: Arial;
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/* HEADER */
+header {
+  background: #020617;
+  padding: 15px 20px;
+  font-size: 18px;
+  font-weight: bold;
+  border-bottom: 1px solid #1e293b;
+  position: sticky;
+  top: 0;
+}
+
+/* CONTAINER */
+.container {
   padding: 20px;
 }
 
-h1 {
-  margin-bottom: 20px;
+/* CARD */
+.card {
+  background: #020617;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.4);
 }
 
+/* TABELA */
 table {
   width: 100%;
   border-collapse: collapse;
-  background: #334155;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #475569;
-  text-align: left;
 }
 
 th {
-  background: #0f172a;
-}
-
-.badge {
-  padding: 4px 8px;
-  border-radius: 6px;
+  text-align: left;
+  padding: 12px;
   font-size: 12px;
+  color: #94a3b8;
 }
 
-.pago {
-  background: #16a34a;
+td {
+  padding: 12px;
+  border-top: 1px solid #1e293b;
+  font-size: 14px;
 }
 
-.emitido {
-  background: #2563eb;
+/* BADGES */
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: bold;
 }
 
+.pago { background: #16a34a; }
+.emitido { background: #2563eb; }
+.pendente { background: #475569; }
+
+/* BOTÕES */
 button {
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: none;
-  color: white;
+  border-radius: 8px;
   cursor: pointer;
-  border-radius: 5px;
+  font-size: 12px;
 }
 
 .btn-emitir {
   background: #22c55e;
+  color: white;
+}
+
+.btn-emitir:hover {
+  background: #16a34a;
 }
 
 .btn-disabled {
-  background: #64748b;
+  background: #334155;
+  color: #94a3b8;
   cursor: not-allowed;
+}
+
+/* LOADING */
+.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+  }
 }
 </style>
 </head>
 
 <body>
 
-<h1>Painel de Notas Fiscais</h1>
+<header>📄 Painel de Notas Fiscais</header>
 
-<table>
-<thead>
-<tr>
-  <th>Pedido</th>
-  <th>Cliente</th>
-  <th>CPF/CNPJ</th>
-  <th>Email</th>
-  <th>Serviço</th>
-  <th>Valor</th>
-  <th>Status</th>
-  <th>Ação</th>
-</tr>
-</thead>
-
-<tbody id="tabela"></tbody>
-</table>
+<div class="container">
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Pedido</th>
+          <th>Cliente</th>
+          <th>Valor</th>
+          <th>Status</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody id="tabela"></tbody>
+    </table>
+  </div>
+</div>
 
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
-
-// SUA API DO GOOGLE SCRIPT (ATUALIZADA)
 const API_EMITIR = "https://script.google.com/macros/s/AKfycbzSnyWol8f3D2U1sapo5YTypaEcShDeyWnMJHS_v1J12-rltxkXxsI3fvzUrlzEmkDtcw/exec";
 
 let pedidos = [];
 
 async function carregarPedidos() {
+  const tabela = document.getElementById("tabela");
+  tabela.innerHTML = "<tr><td colspan='5'>Carregando...</td></tr>";
+
   try {
     const res = await fetch(API);
     const dados = await res.json();
-
     pedidos = dados;
 
-    const tabela = document.getElementById("tabela");
     tabela.innerHTML = "";
 
     dados.forEach((p, index) => {
 
       const status = (p["Status NF"] || "").toLowerCase();
-      const pago = status === "pago" || status === "paid";
-      const emitido = status === "emitido";
 
-      let badge = `<span class="badge">${status || "-"}</span>`;
-
-      if (pago) {
-        badge = `<span class="badge pago">PAGO</span>`;
-      }
-
-      if (emitido) {
-        badge = `<span class="badge emitido">EMITIDO</span>`;
-      }
-
+      let badge = `<span class="badge pendente">-</span>`;
       let botao = `<button class="btn-disabled">Aguardando</button>`;
 
-      if (pago && !emitido) {
-        botao = `<button class="btn-emitir" onclick="emitir(${index})">Emitir</button>`;
+      if (status === "pago" || status === "paid") {
+        badge = `<span class="badge pago">PAGO</span>`;
+        botao = `<button class="btn-emitir" onclick="emitir(${index}, this)">Emitir</button>`;
       }
 
-      if (emitido) {
+      if (status === "emitido") {
+        badge = `<span class="badge emitido">EMITIDO</span>`;
         botao = `<button class="btn-disabled">Emitido</button>`;
       }
 
       tabela.innerHTML += `
         <tr>
-          <td>${p["ID Pedido"] || "-"}</td>
-          <td>${p["Nome"] || "-"}</td>
-          <td>${p["CPF/CNPJ"] || "-"}</td>
-          <td>${p["Email"] || "-"}</td>
-          <td>${p["Serviço"] || "-"}</td>
-          <td>R$ ${p["Valor"] || "-"}</td>
+          <td>${p["ID Pedido"]}</td>
+          <td>${p["Nome"]}</td>
+          <td>R$ ${p["Valor"]}</td>
           <td>${badge}</td>
           <td>${botao}</td>
         </tr>
@@ -146,34 +176,36 @@ async function carregarPedidos() {
     });
 
   } catch (err) {
-    alert("Erro ao carregar dados");
-    console.error(err);
+    tabela.innerHTML = "<tr><td colspan='5'>Erro ao carregar</td></tr>";
   }
 }
 
-async function emitir(index) {
+async function emitir(index, btn) {
   const pedido = pedidos[index];
 
-  if (!confirm("Emitir nota do pedido " + pedido["ID Pedido"] + "?")) return;
+  if (!confirm("Emitir nota " + pedido["ID Pedido"] + "?")) return;
+
+  btn.innerText = "Emitindo...";
+  btn.classList.add("loading");
 
   try {
-
-    const url = API_EMITIR + "?id=" + pedido["ID Pedido"];
-
-    const res = await fetch(url);
+    const res = await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
     const data = await res.json();
 
     if (data.ok) {
-      alert("Nota emitida com sucesso!");
+      btn.innerText = "Emitido ✔";
       carregarPedidos();
     } else {
-      alert("Erro: " + (data.erro || "Erro desconhecido"));
+      alert(data.erro || "Erro");
+      btn.innerText = "Emitir";
     }
 
   } catch (err) {
-    alert("Erro real: " + err.message);
-    console.error(err);
+    alert("Erro: " + err.message);
+    btn.innerText = "Emitir";
   }
+
+  btn.classList.remove("loading");
 }
 
 carregarPedidos();
