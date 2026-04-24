@@ -31,8 +31,14 @@ hr {
 }
 
 .small { font-size: 12px; }
+
+.chave {
+  word-break: break-all;
+  font-size: 11px;
+}
+
 .barcode {
-  margin-top:10px;
+  margin-top: 10px;
 }
 </style>
 </head>
@@ -43,7 +49,6 @@ hr {
 Carregando...
 </div>
 
-<!-- 🔥 biblioteca de código de barras -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
 <script>
@@ -54,6 +59,14 @@ const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
 const autoPDF = params.get("pdf");
 
+/* 🔥 FORMATA DATA */
+function formatarData(data){
+  if(!data) return "-";
+  const d = new Date(data);
+  return d.toLocaleString("pt-BR");
+}
+
+/* 🔥 TRIBUTO */
 function calcularTributo(valor){
   return (valor * 0.068).toFixed(2);
 }
@@ -73,7 +86,10 @@ async function carregar(){
   const valor = parseFloat(p["Valor"] || 0);
   const tributo = calcularTributo(valor);
 
-  /* 🔥 pega a chave da coluna T */
+  /* 🔥 NOVO: MÉTODO PAGAMENTO */
+  const pagamento = p["Método pagamento"] || "PIX";
+
+  /* 🔥 CHAVE NF */
   const chave = p["Número chave"] || p["Chave NF"] || "";
 
   const linkConsulta = chave
@@ -97,7 +113,7 @@ Prefeitura da Cidade de São Paulo
 <hr>
 
 Pedido: ${id}<br>
-Data da compra: ${p["Data"] || "-"}
+Data da compra: ${formatarData(p["Data"])}
 
 <hr>
 
@@ -110,12 +126,13 @@ VALOR TOTAL: R$ ${valor.toFixed(2)}
 
 <hr>
 
-PIX<br>
+FORMA DE PAGAMENTO<br>
+${pagamento}<br>
 VALOR PAGO: R$ ${valor.toFixed(2)}
 
 <hr>
 
-Tributos aprox: R$ ${tributo}
+Tributos aprox: R$ ${tributo} (6.8%)
 
 <hr>
 
@@ -124,8 +141,8 @@ CPF/CNPJ: ${p["CPF/CNPJ"]}
 
 <hr>
 
-<div class="center small">
-Chave NFS-e:<br>
+<div class="center chave">
+<b>Chave NFS-e:</b><br>
 ${chave || "Não informada"}
 </div>
 
@@ -138,9 +155,16 @@ ${chave ? `
 <hr>
 
 <div class="center">
-QR Code
-<br><br>
+Consulta via QR Code<br><br>
 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${linkConsulta}">
+</div>
+
+<hr>
+
+<div class="center small">
+Consulte esta nota pelo QR Code acima<br>
+ou pela chave de acesso<br><br>
+www.nfse.gov.br
 </div>
 
 <hr>
@@ -151,17 +175,18 @@ Emitido pelo sistema RomerArt
 
 `;
 
-  /* 🔥 gera código de barras */
+  /* 🔥 GERA CÓDIGO DE BARRAS */
   if(chave){
     JsBarcode("#barcode", chave, {
       format: "CODE128",
-      width: 1.5,
+      width: 1,
       height: 40,
-      displayValue: false
+      displayValue: false,
+      margin: 0
     });
   }
 
-  /* 🔥 PDF automático */
+  /* 🔥 PDF AUTOMÁTICO */
   if(autoPDF == "1"){
     setTimeout(()=>window.print(), 700);
   }
