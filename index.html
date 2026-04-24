@@ -17,105 +17,92 @@ body {
 header {
   background: #020617;
   padding: 15px 20px;
-  font-size: 18px;
-  font-weight: bold;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
   border-bottom: 1px solid #1e293b;
 }
 
-.container {
-  padding: 20px;
+button {
+  border:none;
+  border-radius:6px;
+  padding:6px 10px;
+  cursor:pointer;
 }
 
+.btn-top {
+  background:#2563eb;
+  color:#fff;
+}
+
+.container { padding:20px; }
+
 .cards {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 15px;
-  margin-bottom: 20px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:15px;
+  margin-bottom:20px;
 }
 
 .card {
-  background: #020617;
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.card h2 {
-  margin: 0;
-  font-size: 26px;
+  background:#020617;
+  padding:20px;
+  border-radius:12px;
+  text-align:center;
 }
 
 .filtros {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
+  display:flex;
+  gap:10px;
+  margin-bottom:15px;
 }
 
 input, select {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #020617;
-  color: white;
-}
-
-.table-container {
-  overflow-x: auto;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  background:#020617;
+  color:white;
 }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #020617;
-  border-radius: 10px;
-  overflow: hidden;
+  width:100%;
+  border-collapse:collapse;
+  background:#020617;
+  border-radius:10px;
 }
 
 th, td {
-  padding: 12px;
-  border-bottom: 1px solid #1e293b;
-  font-size: 13px;
-}
-
-th {
-  text-align: left;
-  color: #94a3b8;
+  padding:10px;
+  border-bottom:1px solid #1e293b;
+  font-size:13px;
 }
 
 .badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: bold;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:bold;
 }
 
-.pago { background: #16a34a; }
-.emitido { background: #2563eb; }
-.pendente { background: #475569; }
+.pago { background:#16a34a; }
+.emitido { background:#2563eb; }
+.pendente { background:#475569; }
 
-button {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-}
+.btn-emitir { background:#22c55e; color:white; }
+.btn-disabled { background:#334155; color:#94a3b8; }
 
-.btn-emitir {
-  background: #22c55e;
-  color: white;
-}
-
-.btn-disabled {
-  background: #334155;
-  color: #94a3b8;
-  cursor: not-allowed;
-}
+.btn-view { background:#0ea5e9; color:white; }
+.btn-pdf { background:#a855f7; color:white; }
 </style>
 </head>
 
 <body>
 
-<header>🚀 Sistema SaaS • Notas Fiscais</header>
+<header>
+  🚀 Sistema SaaS • Notas Fiscais
+  <button class="btn-top" onclick="carregar()">🔄 Atualizar</button>
+</header>
 
 <div class="container">
 
@@ -136,146 +123,141 @@ button {
 
 <div class="filtros">
   <input type="text" id="busca" placeholder="Buscar cliente ou pedido...">
+
   <select id="filtro">
     <option value="todos">Todos</option>
-    <option value="pago">Pagos</option>
+    <option value="pendente">Pendentes</option>
     <option value="emitido">Emitidos</option>
   </select>
 </div>
 
-<div class="table-container">
 <table>
 <thead>
 <tr>
   <th>Pedido</th>
   <th>Cliente</th>
-  <th>CPF/CNPJ</th>
-  <th>Email</th>
-  <th>Serviço</th>
   <th>Valor</th>
   <th>Status</th>
-  <th>Ação</th>
+  <th>Ações</th>
 </tr>
 </thead>
-
 <tbody id="tabela"></tbody>
 </table>
-</div>
 
 </div>
 
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
-
-// 🔥 NOVO LINK CORRETO
 const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6NMQBFd2-Ud-sPn7sVjaKXL8kdJw8joJlAv9uPpzEy72e8duBEg/exec";
 
 let pedidos = [];
 
-function statusNormalizado(s) {
-  if (!s) return "";
+function statusNormalizado(s){
+  if(!s) return "";
   s = s.toLowerCase().trim();
-
-  if (s === "paid") return "pago";
-  if (s === "emitido") return "emitido";
-
-  return s;
+  if(s === "paid") return "pago";
+  if(s === "emitido") return "emitido";
+  return "pendente";
 }
 
-async function carregar() {
+async function carregar(){
   const res = await fetch(API);
   pedidos = await res.json();
-
   atualizarCards();
   render();
 }
 
-function atualizarCards() {
-
+function atualizarCards(){
   document.getElementById("total").innerText = pedidos.length;
 
-  const pendentes = pedidos.filter(p => {
-    const status = statusNormalizado(p["Status NF"]);
-    return status !== "emitido";
-  }).length;
-
-  const emitidos = pedidos.filter(p => 
-    statusNormalizado(p["Status NF"]) === "emitido"
-  ).length;
+  const pendentes = pedidos.filter(p => statusNormalizado(p["Status NF"]) !== "emitido").length;
+  const emitidos = pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
 
   document.getElementById("pendentes").innerText = pendentes;
   document.getElementById("emitidos").innerText = emitidos;
 }
 
-function render() {
+function render(){
   const tabela = document.getElementById("tabela");
   const busca = document.getElementById("busca").value.toLowerCase();
   const filtro = document.getElementById("filtro").value;
 
   tabela.innerHTML = "";
 
-  pedidos.forEach((p, i) => {
+  pedidos.forEach((p,i)=>{
 
     const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
-    if (!texto.includes(busca)) return;
+    if(!texto.includes(busca)) return;
 
     const status = statusNormalizado(p["Status NF"]);
 
-    if (filtro !== "todos" && status !== filtro) return;
+    if(filtro === "pendente" && status === "emitido") return;
+    if(filtro === "emitido" && status !== "emitido") return;
 
-    let badge = `<span class="badge pendente">-</span>`;
-    let btn = `<button class="btn-disabled">Aguardando</button>`;
+    let badge = `<span class="badge pendente">PENDENTE</span>`;
+    let btnEmitir = `<button class="btn-disabled">Aguardando</button>`;
 
-    if (status === "pago") {
+    if(status === "pago" || status === "pendente"){
       badge = `<span class="badge pago">PAGO</span>`;
-      btn = `<button class="btn-emitir" onclick="emitir(${i}, this)">Emitir</button>`;
+      btnEmitir = `<button class="btn-emitir" onclick="emitir(${i}, this)">Emitir</button>`;
     }
 
-    if (status === "emitido") {
+    if(status === "emitido"){
       badge = `<span class="badge emitido">EMITIDO</span>`;
-      btn = `<button class="btn-disabled">Emitido</button>`;
+      btnEmitir = `<button class="btn-disabled">Emitido</button>`;
     }
 
     tabela.innerHTML += `
-      <tr>
-        <td>${p["ID Pedido"]}</td>
-        <td>${p["Nome"]}</td>
-        <td>${p["CPF/CNPJ"]}</td>
-        <td>${p["Email"]}</td>
-        <td>${p["Serviço"]}</td>
-        <td>R$ ${p["Valor"]}</td>
-        <td>${badge}</td>
-        <td>${btn}</td>
-      </tr>
-    `;
+    <tr>
+      <td>${p["ID Pedido"]}</td>
+      <td>${p["Nome"]}</td>
+      <td>R$ ${p["Valor"]}</td>
+      <td>${badge}</td>
+      <td>
+        ${btnEmitir}
+        <button class="btn-view" onclick="verNota('${p["Link NF"]}')">👁</button>
+        <button class="btn-pdf" onclick="gerarPDF('${p["ID Pedido"]}')">PDF</button>
+      </td>
+    </tr>`;
   });
 }
 
-async function emitir(i, btn) {
+async function emitir(i,btn){
   const pedido = pedidos[i];
+  btn.innerText="Emitindo...";
 
-  btn.innerText = "Emitindo...";
-
-  try {
-    const res = await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
+  try{
+    const res = await fetch(API_EMITIR+"?id="+pedido["ID Pedido"]);
     const data = await res.json();
 
-    if (data.ok) {
+    if(data.ok){
       carregar();
-    } else {
-      alert(data.erro || "Erro ao emitir");
+    }else{
+      alert("Erro ao emitir");
     }
 
-  } catch (e) {
-    alert("Erro real: " + e.message);
+  }catch(e){
+    alert("Erro: "+e.message);
   }
 
-  btn.innerText = "Emitir";
+  btn.innerText="Emitir";
 }
 
-document.getElementById("busca").addEventListener("input", render);
-document.getElementById("filtro").addEventListener("change", render);
+function verNota(link){
+  if(!link){
+    alert("Nota ainda não gerada");
+    return;
+  }
+  window.open(link, "_blank");
+}
+
+function gerarPDF(id){
+  alert("🚧 Em breve: geração automática de PDF para pedido "+id);
+}
+
+document.getElementById("busca").addEventListener("input",render);
+document.getElementById("filtro").addEventListener("change",render);
 
 carregar();
 
