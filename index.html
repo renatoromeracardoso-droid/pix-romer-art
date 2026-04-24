@@ -18,14 +18,13 @@ body {
 header {
   background: #020617;
   padding: 15px 20px;
-  font-size: 18px;
-  font-weight: bold;
   display:flex;
   justify-content:space-between;
   align-items:center;
+  font-weight:bold;
 }
 
-/* BOTÃO ATUALIZAR */
+/* BOTÃO */
 .btn-refresh {
   background: #3b82f6;
   padding: 8px 14px;
@@ -52,9 +51,7 @@ header {
   text-align: center;
 }
 
-.card h2 {
-  margin: 0;
-}
+.card h2 { margin:0 }
 
 /* FILTROS */
 .filtros {
@@ -86,7 +83,6 @@ table {
 th, td {
   padding:10px;
   border-bottom:1px solid #1e293b;
-  font-size:13px;
 }
 
 /* BADGES */
@@ -97,11 +93,10 @@ th, td {
   font-weight:bold;
 }
 
-.pago { background:#16a34a; }
 .emitido { background:#2563eb; }
 .pendente { background:#475569; }
 
-/* MENU AÇÕES */
+/* MENU */
 .acoes button {
   background:#1e293b;
   color:white;
@@ -110,7 +105,6 @@ th, td {
   border-radius:6px;
 }
 
-/* MENU POPUP */
 .menu-popup {
   position: absolute;
   background: #020617;
@@ -119,16 +113,7 @@ th, td {
   padding: 8px;
   display: none;
   flex-direction: column;
-  gap: 5px;
   z-index: 999;
-}
-
-.menu-popup button {
-  background:none;
-  border:none;
-  color:white;
-  padding:10px;
-  text-align:left;
 }
 </style>
 </head>
@@ -137,7 +122,7 @@ th, td {
 
 <header>
 🚀 Sistema SaaS • Notas
-<div class="btn-refresh" onclick="carregar()">Atualizar</div>
+<div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </header>
 
 <div class="container">
@@ -192,14 +177,15 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6N
 let pedidos = [];
 let menuAtual = null;
 
+/* STATUS */
 function statusNormalizado(s) {
   if (!s) return "pendente";
   s = s.toLowerCase();
   if (s === "emitido") return "emitido";
-  if (s === "paid" || s === "pago") return "pendente";
   return "pendente";
 }
 
+/* CARREGAR */
 async function carregar() {
   const res = await fetch(API);
   pedidos = await res.json();
@@ -207,14 +193,29 @@ async function carregar() {
   render();
 }
 
+/* ATUALIZAR BOTÃO */
+function atualizarManual() {
+  const btn = document.querySelector(".btn-refresh");
+  btn.innerText = "Atualizando...";
+  carregar();
+
+  setTimeout(() => {
+    btn.innerText = "Atualizar";
+  }, 1000);
+}
+
+/* CARDS */
 function atualizarCards() {
   document.getElementById("total").innerText = pedidos.length;
+
   document.getElementById("pendentes").innerText =
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "pendente").length;
+
   document.getElementById("emitidos").innerText =
     pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
 }
 
+/* RENDER */
 function render() {
   const tabela = document.getElementById("tabela");
   tabela.innerHTML = "";
@@ -224,7 +225,9 @@ function render() {
     const status = statusNormalizado(p["Status NF"]);
 
     let badge = `<span class="badge pendente">PENDENTE</span>`;
-    if (status === "emitido") badge = `<span class="badge emitido">EMITIDO</span>`;
+    if (status === "emitido") {
+      badge = `<span class="badge emitido">EMITIDO</span>`;
+    }
 
     tabela.innerHTML += `
       <tr>
@@ -247,13 +250,10 @@ function abrirMenu(i, el) {
   fecharMenu();
 
   const p = pedidos[i];
-
   const menu = document.createElement("div");
   menu.className = "menu-popup";
 
-  const status = statusNormalizado(p["Status NF"]);
-
-  if (status !== "emitido") {
+  if (statusNormalizado(p["Status NF"]) !== "emitido") {
     const btnEmitir = document.createElement("button");
     btnEmitir.innerText = "Emitir Nota";
     btnEmitir.onclick = () => emitir(i);
@@ -288,13 +288,24 @@ document.addEventListener("click", e => {
   if (!e.target.closest(".acoes")) fecharMenu();
 });
 
-/* EMITIR */
+/* EMITIR COM UX PREMIUM */
 async function emitir(i) {
   const pedido = pedidos[i];
 
-  await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
+  // 🔥 Atualiza visual na hora
+  pedido["Status NF"] = "emitido";
+  render();
+  atualizarCards();
 
-  carregar(); // ATUALIZA AUTOMÁTICO
+  try {
+    await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
+
+    // 🔄 sincroniza com planilha depois
+    setTimeout(() => carregar(), 1500);
+
+  } catch (e) {
+    alert("Erro ao emitir");
+  }
 }
 
 /* INIT */
