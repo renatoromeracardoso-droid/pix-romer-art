@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>RomerArt • Sistema NF</title>
 
 <style>
@@ -19,39 +20,38 @@ header {
   display:flex;
   justify-content:space-between;
   align-items:center;
-  font-weight:bold;
 }
 
 .btn-refresh {
-  background: #3b82f6;
-  padding: 8px 14px;
-  border-radius: 8px;
-  cursor: pointer;
+  background:#3b82f6;
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
 }
 
-.container { padding: 15px; }
+.container { padding:15px; }
 
 .cards {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 10px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
 }
 
 .card {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
+  background:#020617;
+  padding:15px;
+  border-radius:12px;
+  text-align:center;
 }
 
 .filtros {
   margin-top:15px;
   display:flex;
   gap:10px;
+  flex-wrap:wrap;
 }
 
 input, select {
-  width:100%;
   padding:10px;
   border-radius:8px;
   border:none;
@@ -59,41 +59,37 @@ input, select {
   color:white;
 }
 
-.table-container {
-  margin-top:15px;
-  overflow-x:auto;
-}
-
 table {
   width:100%;
-  border-collapse: collapse;
+  border-collapse:collapse;
+  margin-top:10px;
 }
 
 th, td {
   padding:10px;
   border-bottom:1px solid #1e293b;
-  font-size:13px;
 }
 
 .badge {
-  padding:5px 12px;
+  padding:5px 10px;
   border-radius:999px;
   font-size:11px;
   font-weight:bold;
+  color:#000;
 }
 
 .emitido { background:#22c55e; }
-.pendente { background:#f59e0b; color:#000; }
+.pendente { background:#f59e0b; }
 
 .menu-popup {
-  position: absolute;
-  background: #020617;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 8px;
-  display: none;
-  flex-direction: column;
-  z-index: 999;
+  position:absolute;
+  background:#020617;
+  border:1px solid #1e293b;
+  border-radius:10px;
+  padding:8px;
+  display:none;
+  flex-direction:column;
+  z-index:999;
 }
 
 .menu-popup button {
@@ -102,23 +98,21 @@ th, td {
   color:white;
   padding:10px;
   text-align:left;
-  cursor:pointer;
 }
 
 .toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #22c55e;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 10px;
-  opacity: 0;
-  transition: 0.3s;
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#22c55e;
+  color:white;
+  padding:12px;
+  border-radius:10px;
+  opacity:0;
 }
 
-.toast.show { opacity: 1; }
+.toast.show { opacity:1; }
 </style>
 </head>
 
@@ -126,36 +120,27 @@ th, td {
 
 <header>
 🚀 Sistema SaaS • Notas
-<div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
+<div class="btn-refresh" onclick="carregar()">Atualizar</div>
 </header>
 
 <div class="container">
 
 <div class="cards">
-  <div class="card">
-    <h2 id="total">0</h2>
-    <span>Total</span>
-  </div>
-  <div class="card">
-    <h2 id="pendentes">0</h2>
-    <span>Pendentes</span>
-  </div>
-  <div class="card">
-    <h2 id="emitidos">0</h2>
-    <span>Emitidos</span>
-  </div>
+<div class="card"><h2 id="total">0</h2>Total</div>
+<div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
+<div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
 </div>
 
 <div class="filtros">
-  <input id="busca" placeholder="Buscar...">
-  <select id="filtro">
-    <option value="todos">Todos</option>
-    <option value="pendente">Pendentes</option>
-    <option value="emitido">Emitidos</option>
-  </select>
+<input id="busca" placeholder="Buscar...">
+<select id="filtro">
+<option value="todos">Todos</option>
+<option value="pendente">Pendentes</option>
+<option value="emitido">Emitidos</option>
+</select>
+<input type="date" id="dataFiltro">
 </div>
 
-<div class="table-container">
 <table>
 <thead>
 <tr>
@@ -163,14 +148,11 @@ th, td {
 <th>Cliente</th>
 <th>Valor</th>
 <th>Status</th>
-<th>Rastreio</th>
 <th></th>
 </tr>
 </thead>
-
 <tbody id="tabela"></tbody>
 </table>
-</div>
 
 </div>
 
@@ -184,191 +166,209 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6N
 let pedidos = [];
 let menuAtual = null;
 
-function statusNormalizado(s) {
-  if (!s) return "pendente";
-  s = s.toLowerCase();
-  if (s === "emitido") return "emitido";
-  return "pendente";
+/* STATUS */
+function statusNormalizado(s){
+if(!s) return "pendente";
+return s.toLowerCase()=="emitido"?"emitido":"pendente";
 }
 
-function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2500);
+/* TOAST */
+function showToast(msg){
+const t=document.getElementById("toast");
+t.innerText=msg;
+t.classList.add("show");
+setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-async function carregar() {
-  const res = await fetch(API);
-  pedidos = await res.json();
-  atualizarCards();
-  render();
+/* CACHE + LOAD */
+async function carregar(){
+
+const cache = localStorage.getItem("dados_nf");
+
+if(cache){
+pedidos = JSON.parse(cache);
+render();
+atualizarCards();
 }
 
-function atualizarManual() {
-  carregar();
-  showToast("Atualizado ✔");
+const res = await fetch(API);
+const data = await res.json();
+
+pedidos = data;
+localStorage.setItem("dados_nf", JSON.stringify(data));
+
+render();
+atualizarCards();
 }
 
-function atualizarCards() {
-  document.getElementById("total").innerText = pedidos.length;
-
-  document.getElementById("pendentes").innerText =
-    pedidos.filter(p => statusNormalizado(p["Status NF"]) === "pendente").length;
-
-  document.getElementById("emitidos").innerText =
-    pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
+/* CARDS */
+function atualizarCards(){
+document.getElementById("total").innerText=pedidos.length;
+document.getElementById("pendentes").innerText=
+pedidos.filter(p=>statusNormalizado(p["Status NF"])=="pendente").length;
+document.getElementById("emitidos").innerText=
+pedidos.filter(p=>statusNormalizado(p["Status NF"])=="emitido").length;
 }
 
-function render() {
-  const tabela = document.getElementById("tabela");
-  const busca = document.getElementById("busca").value.toLowerCase();
-  const filtro = document.getElementById("filtro").value;
+/* RENDER */
+function render(){
 
-  tabela.innerHTML = "";
+const tabela=document.getElementById("tabela");
+tabela.innerHTML="";
 
-  pedidos
-  .filter(p => {
-    const nome = (p["Nome"] || "").toLowerCase();
-    const id = (p["ID Pedido"] || "").toString();
+const busca=document.getElementById("busca").value.toLowerCase();
+const filtro=document.getElementById("filtro").value;
+const dataFiltro=document.getElementById("dataFiltro").value;
 
-    const matchBusca = nome.includes(busca) || id.includes(busca);
+pedidos
+.filter(p=>{
 
-    const status = statusNormalizado(p["Status NF"]);
-    const matchFiltro =
-      filtro === "todos" ||
-      (filtro === "pendente" && status === "pendente") ||
-      (filtro === "emitido" && status === "emitido");
+const nome=(p["Nome"]||"").toLowerCase();
+const id=(p["ID Pedido"]||"").toString();
 
-    return matchBusca && matchFiltro;
-  })
-  .forEach((p, i) => {
+const matchBusca=nome.includes(busca)||id.includes(busca);
 
-    const status = statusNormalizado(p["Status NF"]);
+const status=statusNormalizado(p["Status NF"]);
 
-    let badge = `<span class="badge pendente">PENDENTE</span>`;
-    if (status === "emitido") {
-      badge = `<span class="badge emitido">EMITIDO</span>`;
-    }
+const matchStatus=
+filtro=="todos"||
+(filtro=="pendente"&&status=="pendente")||
+(filtro=="emitido"&&status=="emitido");
 
-    tabela.innerHTML += `
-      <tr>
-        <td>${p["ID Pedido"]}</td>
-        <td>${p["Nome"]}</td>
-        <td>R$ ${p["Valor"]}</td>
-        <td>${badge}</td>
-        <td>${p["Rastreio"] || "-"}</td>
-        <td>
-          <button onclick="abrirMenu(${i}, this)">⋮</button>
-        </td>
-      </tr>
-    `;
-  });
+let matchData=true;
+
+if(dataFiltro && p["Data"]){
+const dataPlanilha=new Date(p["Data"]).toISOString().slice(0,10);
+matchData=dataPlanilha===dataFiltro;
 }
 
-/* NOTA */
-function verNota(p) {
-  const url = `nota.html?id=${p["ID Pedido"]}`;
-  window.open(url, "_blank");
-}
+return matchBusca && matchStatus && matchData;
 
-/* PDF */
-function gerarPDF(id) {
-  window.open("nota.html?id=" + id + "&pdf=1", "_blank");
-}
+})
+.forEach(p=>{
 
-/* DECLARAÇÃO */
-function gerarDeclaracao(p) {
-  const url = `declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`;
-  window.open(url, "_blank");
-}
+const status=statusNormalizado(p["Status NF"]);
 
-/* RASTREIO */
-function abrirRastreio(p){
+const badge=status=="emitido"
+?'<span class="badge emitido">EMITIDO</span>'
+:'<span class="badge pendente">PENDENTE</span>';
 
-  const codigo = p["Rastreio"];
-
-  if(!codigo || codigo === ""){
-    showToast("Sem código de rastreio");
-    return;
-  }
-
-  const url = "https://rastreamento.correios.com.br/app/index.php?objetos=" + codigo;
-
-  window.open(url, "_blank");
+tabela.innerHTML+=`
+<tr>
+<td>${p["ID Pedido"]}</td>
+<td>${p["Nome"]}</td>
+<td>R$ ${p["Valor"]}</td>
+<td>${badge}</td>
+<td><button onclick="abrirMenu('${p["ID Pedido"]}', this)">⋮</button></td>
+</tr>`;
+});
 }
 
 /* MENU */
-function abrirMenu(i, el) {
-  fecharMenu();
+function abrirMenu(id, el){
 
-  const p = pedidos[i];
-  const menu = document.createElement("div");
-  menu.className = "menu-popup";
+fecharMenu();
 
-  if (statusNormalizado(p["Status NF"]) !== "emitido") {
-    const btnEmitir = document.createElement("button");
-    btnEmitir.innerHTML = "📄 Emitir Nota";
-    btnEmitir.onclick = () => emitir(i);
-    menu.appendChild(btnEmitir);
-  }
+const p=pedidos.find(x=>x["ID Pedido"]==id);
+if(!p) return;
 
-  const ver = document.createElement("button");
-  ver.innerHTML = "👁 Ver Nota";
-  ver.onclick = () => verNota(p);
-  menu.appendChild(ver);
+const menu=document.createElement("div");
+menu.className="menu-popup";
 
-  const pdf = document.createElement("button");
-  pdf.innerHTML = "📥 Gerar PDF";
-  pdf.onclick = () => gerarPDF(p["ID Pedido"]);
-  menu.appendChild(pdf);
-
-  const dec = document.createElement("button");
-  dec.innerHTML = "📦 Declaração";
-  dec.onclick = () => gerarDeclaracao(p);
-  menu.appendChild(dec);
-
-  const rast = document.createElement("button");
-  rast.innerHTML = "🚚 Rastrear Pedido";
-  rast.onclick = () => abrirRastreio(p);
-  menu.appendChild(rast);
-
-  document.body.appendChild(menu);
-
-  const rect = el.getBoundingClientRect();
-  menu.style.top = rect.bottom + "px";
-  menu.style.left = rect.left + "px";
-  menu.style.display = "flex";
-
-  menuAtual = menu;
+/* Emitir */
+if(statusNormalizado(p["Status NF"])!="emitido"){
+const btn=document.createElement("button");
+btn.innerHTML="📄 Emitir Nota";
+btn.onclick=()=>emitirPorId(id);
+menu.appendChild(btn);
 }
 
-function fecharMenu() {
-  if (menuAtual) menuAtual.remove();
+/* Ver nota */
+const ver=document.createElement("button");
+ver.innerHTML="👁 Ver Nota";
+ver.onclick=()=>window.open("nota.html?id="+id);
+menu.appendChild(ver);
+
+/* PDF */
+const pdf=document.createElement("button");
+pdf.innerHTML="📥 Gerar PDF";
+pdf.onclick=()=>window.open("nota.html?id="+id+"&pdf=1");
+menu.appendChild(pdf);
+
+/* Declaração */
+const dec=document.createElement("button");
+dec.innerHTML="📄 Declaração Conteúdo";
+dec.onclick=()=>gerarDeclaracao(p);
+menu.appendChild(dec);
+
+/* Rastreio */
+if(p["Rastreio"]){
+const rast=document.createElement("button");
+rast.innerHTML="📦 Rastrear Pedido";
+rast.onclick=()=>window.open("https://rastreamento.correios.com.br/app/index.php?objetos="+p["Rastreio"]);
+menu.appendChild(rast);
 }
 
-document.addEventListener("click", e => {
-  if (!e.target.closest("button")) fecharMenu();
+document.body.appendChild(menu);
+
+const rect=el.getBoundingClientRect();
+menu.style.top=rect.bottom+"px";
+menu.style.left=rect.left+"px";
+menu.style.display="flex";
+
+menuAtual=menu;
+}
+
+function fecharMenu(){
+if(menuAtual) menuAtual.remove();
+}
+
+document.addEventListener("click",e=>{
+if(!e.target.closest("button")) fecharMenu();
 });
 
 /* EMITIR */
-async function emitir(i) {
-  const pedido = pedidos[i];
+async function emitirPorId(id){
 
-  pedido["Status NF"] = "emitido";
-  atualizarCards();
-  render();
-  showToast("Nota emitida com sucesso 🚀");
+const p=pedidos.find(x=>x["ID Pedido"]==id);
+if(!p) return;
 
-  try {
-    await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
-  } catch {
-    showToast("Erro ao enviar ❌");
-  }
+p["Status NF"]="emitido";
+
+render();
+atualizarCards();
+showToast("Nota emitida 🚀");
+
+await fetch(API_EMITIR+"?id="+id);
 }
 
-document.getElementById("busca").addEventListener("input", render);
-document.getElementById("filtro").addEventListener("change", render);
+/* DECLARAÇÃO */
+function gerarDeclaracao(p){
+
+const html=`
+<html>
+<body style="font-family:Arial;padding:20px">
+<h2>Declaração de Conteúdo</h2>
+<p><b>Remetente:</b> RomerArt</p>
+<p><b>Destinatário:</b> ${p["Nome"]}</p>
+<p><b>Produto:</b> ${p["Serviço"]}</p>
+<p><b>Valor:</b> R$ ${p["Valor"]}</p>
+<br><br>
+_________________________<br>
+Assinatura
+<script>window.print()<\/script>
+</body>
+</html>
+`;
+
+const w=window.open("");
+w.document.write(html);
+}
+
+/* EVENTOS */
+document.getElementById("busca").addEventListener("input",render);
+document.getElementById("filtro").addEventListener("change",render);
+document.getElementById("dataFiltro").addEventListener("change",render);
 
 carregar();
 
