@@ -20,8 +20,6 @@ header {
   font-size: 18px;
   font-weight: bold;
   border-bottom: 1px solid #1e293b;
-  position: sticky;
-  top: 0;
 }
 
 /* CONTAINER */
@@ -29,32 +27,74 @@ header {
   padding: 20px;
 }
 
-/* CARD */
-.card {
+/* CARDS */
+.cards {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.card-metric {
   background: #020617;
   padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.4);
+  border-radius: 10px;
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+}
+
+.card-metric h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.card-metric span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* FILTROS */
+.filtros {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+input {
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+  background: #020617;
+  color: white;
+}
+
+select {
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+  background: #020617;
+  color: white;
 }
 
 /* TABELA */
 table {
   width: 100%;
   border-collapse: collapse;
+  background: #020617;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #1e293b;
+  font-size: 13px;
 }
 
 th {
-  text-align: left;
-  padding: 10px;
-  font-size: 12px;
   color: #94a3b8;
-}
-
-td {
-  padding: 10px;
-  border-top: 1px solid #1e293b;
-  font-size: 13px;
-  vertical-align: top;
 }
 
 /* BADGES */
@@ -71,9 +111,9 @@ td {
 
 /* BOTÕES */
 button {
-  padding: 6px 12px;
+  padding: 6px 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
 }
@@ -89,18 +129,6 @@ button {
   cursor: not-allowed;
 }
 
-/* TEXTO AJUSTES */
-.servico {
-  font-size: 12px;
-  color: #cbd5f5;
-  max-width: 250px;
-}
-
-.email {
-  font-size: 11px;
-  color: #94a3b8;
-}
-
 /* MOBILE */
 @media (max-width: 768px) {
   table {
@@ -113,26 +141,50 @@ button {
 
 <body>
 
-<header>📄 Painel de Notas Fiscais</header>
+<header>🚀 Sistema de Notas Fiscais</header>
 
 <div class="container">
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th>Pedido</th>
-          <th>Cliente</th>
-          <th>CPF/CNPJ</th>
-          <th>Email</th>
-          <th>Serviço</th>
-          <th>Valor</th>
-          <th>Status</th>
-          <th>Ação</th>
-        </tr>
-      </thead>
-      <tbody id="tabela"></tbody>
-    </table>
+
+<!-- MÉTRICAS -->
+<div class="cards">
+  <div class="card-metric">
+    <h2 id="total">0</h2>
+    <span>Total</span>
   </div>
+  <div class="card-metric">
+    <h2 id="pagos">0</h2>
+    <span>Pagos</span>
+  </div>
+  <div class="card-metric">
+    <h2 id="emitidos">0</h2>
+    <span>Emitidos</span>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<div class="filtros">
+  <input type="text" id="busca" placeholder="Buscar cliente ou pedido...">
+  <select id="filtro">
+    <option value="todos">Todos</option>
+    <option value="pago">Pagos</option>
+    <option value="emitido">Emitidos</option>
+  </select>
+</div>
+
+<!-- TABELA -->
+<table>
+<thead>
+<tr>
+  <th>Pedido</th>
+  <th>Cliente</th>
+  <th>Valor</th>
+  <th>Status</th>
+  <th>Ação</th>
+</tr>
+</thead>
+<tbody id="tabela"></tbody>
+</table>
+
 </div>
 
 <script>
@@ -143,24 +195,49 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbzSnyWol8f3D2U1sapo5
 let pedidos = [];
 
 async function carregarPedidos() {
+  const res = await fetch(API);
+  pedidos = await res.json();
+
+  atualizarDashboard();
+  renderizar();
+}
+
+function atualizarDashboard() {
+  document.getElementById("total").innerText = pedidos.length;
+
+  const pagos = pedidos.filter(p => (p["Status NF"] || "").toLowerCase() === "pago").length;
+  const emitidos = pedidos.filter(p => (p["Status NF"] || "").toLowerCase() === "emitido").length;
+
+  document.getElementById("pagos").innerText = pagos;
+  document.getElementById("emitidos").innerText = emitidos;
+}
+
+function renderizar() {
   const tabela = document.getElementById("tabela");
-  tabela.innerHTML = "<tr><td colspan='8'>Carregando...</td></tr>";
+  const busca = document.getElementById("busca").value.toLowerCase();
+  const filtro = document.getElementById("filtro").value;
 
-  try {
-    const res = await fetch(API);
-    const dados = await res.json();
-    pedidos = dados;
+  tabela.innerHTML = "";
 
-    tabela.innerHTML = "";
-
-    dados.forEach((p, index) => {
+  pedidos
+    .filter(p => {
+      const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
+      return texto.includes(busca);
+    })
+    .filter(p => {
+      const status = (p["Status NF"] || "").toLowerCase();
+      if (filtro === "pago") return status === "pago";
+      if (filtro === "emitido") return status === "emitido";
+      return true;
+    })
+    .forEach((p, index) => {
 
       const status = (p["Status NF"] || "").toLowerCase();
 
       let badge = `<span class="badge pendente">-</span>`;
       let botao = `<button class="btn-disabled">Aguardando</button>`;
 
-      if (status === "pago" || status === "paid") {
+      if (status === "pago") {
         badge = `<span class="badge pago">PAGO</span>`;
         botao = `<button class="btn-emitir" onclick="emitir(${index}, this)">Emitir</button>`;
       }
@@ -172,28 +249,18 @@ async function carregarPedidos() {
 
       tabela.innerHTML += `
         <tr>
-          <td>${p["ID Pedido"] || "-"}</td>
-          <td>${p["Nome"] || "-"}</td>
-          <td>${p["CPF/CNPJ"] || "-"}</td>
-          <td class="email">${p["Email"] || "-"}</td>
-          <td class="servico">${p["Serviço"] || "-"}</td>
-          <td>R$ ${p["Valor"] || "-"}</td>
+          <td>${p["ID Pedido"]}</td>
+          <td>${p["Nome"]}</td>
+          <td>R$ ${p["Valor"]}</td>
           <td>${badge}</td>
           <td>${botao}</td>
         </tr>
       `;
     });
-
-  } catch (err) {
-    tabela.innerHTML = "<tr><td colspan='8'>Erro ao carregar</td></tr>";
-    console.error(err);
-  }
 }
 
 async function emitir(index, btn) {
   const pedido = pedidos[index];
-
-  if (!confirm("Emitir nota " + pedido["ID Pedido"] + "?")) return;
 
   btn.innerText = "Emitindo...";
 
@@ -202,18 +269,20 @@ async function emitir(index, btn) {
     const data = await res.json();
 
     if (data.ok) {
-      btn.innerText = "Emitido ✔";
       carregarPedidos();
     } else {
-      alert(data.erro || "Erro");
-      btn.innerText = "Emitir";
+      alert(data.erro);
     }
 
   } catch (err) {
     alert("Erro: " + err.message);
-    btn.innerText = "Emitir";
   }
+
+  btn.innerText = "Emitir";
 }
+
+document.getElementById("busca").addEventListener("input", renderizar);
+document.getElementById("filtro").addEventListener("change", renderizar);
 
 carregarPedidos();
 
