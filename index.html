@@ -13,7 +13,6 @@ body {
   color: #e2e8f0;
 }
 
-/* HEADER */
 header {
   background: #020617;
   padding: 15px 20px;
@@ -22,12 +21,10 @@ header {
   border-bottom: 1px solid #1e293b;
 }
 
-/* CONTAINER */
 .container {
   padding: 20px;
 }
 
-/* CARDS */
 .cards {
   display: flex;
   gap: 15px;
@@ -40,29 +37,20 @@ header {
   padding: 15px;
   border-radius: 10px;
   flex: 1;
-  min-width: 120px;
   text-align: center;
 }
 
 .card-metric h2 {
   margin: 0;
-  font-size: 22px;
 }
 
-.card-metric span {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-/* FILTROS */
 .filtros {
   display: flex;
   gap: 10px;
   margin-bottom: 15px;
-  flex-wrap: wrap;
 }
 
-input {
+input, select {
   padding: 8px;
   border-radius: 6px;
   border: none;
@@ -70,52 +58,31 @@ input {
   color: white;
 }
 
-select {
-  padding: 8px;
-  border-radius: 6px;
-  border: none;
-  background: #020617;
-  color: white;
-}
-
-/* TABELA */
 table {
   width: 100%;
   border-collapse: collapse;
   background: #020617;
-  border-radius: 10px;
-  overflow: hidden;
 }
 
 th, td {
   padding: 10px;
   border-bottom: 1px solid #1e293b;
-  font-size: 13px;
 }
 
-th {
-  color: #94a3b8;
-}
-
-/* BADGES */
 .badge {
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: bold;
 }
 
 .pago { background: #16a34a; }
 .emitido { background: #2563eb; }
 .pendente { background: #475569; }
 
-/* BOTÕES */
 button {
   padding: 6px 10px;
-  border: none;
   border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
+  border: none;
 }
 
 .btn-emitir {
@@ -126,15 +93,6 @@ button {
 .btn-disabled {
   background: #334155;
   color: #94a3b8;
-  cursor: not-allowed;
-}
-
-/* MOBILE */
-@media (max-width: 768px) {
-  table {
-    display: block;
-    overflow-x: auto;
-  }
 }
 </style>
 </head>
@@ -145,7 +103,6 @@ button {
 
 <div class="container">
 
-<!-- MÉTRICAS -->
 <div class="cards">
   <div class="card-metric">
     <h2 id="total">0</h2>
@@ -161,9 +118,8 @@ button {
   </div>
 </div>
 
-<!-- FILTROS -->
 <div class="filtros">
-  <input type="text" id="busca" placeholder="Buscar cliente ou pedido...">
+  <input type="text" id="busca" placeholder="Buscar...">
   <select id="filtro">
     <option value="todos">Todos</option>
     <option value="pago">Pagos</option>
@@ -171,7 +127,6 @@ button {
   </select>
 </div>
 
-<!-- TABELA -->
 <table>
 <thead>
 <tr>
@@ -194,6 +149,17 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbzSnyWol8f3D2U1sapo5
 
 let pedidos = [];
 
+function normalizarStatus(status) {
+  if (!status) return "";
+
+  status = status.toString().toLowerCase().trim();
+
+  if (status === "paid") return "pago";
+  if (status === "emitido") return "emitido";
+
+  return status;
+}
+
 async function carregarPedidos() {
   const res = await fetch(API);
   pedidos = await res.json();
@@ -205,8 +171,8 @@ async function carregarPedidos() {
 function atualizarDashboard() {
   document.getElementById("total").innerText = pedidos.length;
 
-  const pagos = pedidos.filter(p => (p["Status NF"] || "").toLowerCase() === "pago").length;
-  const emitidos = pedidos.filter(p => (p["Status NF"] || "").toLowerCase() === "emitido").length;
+  const pagos = pedidos.filter(p => normalizarStatus(p["Status NF"]) === "pago").length;
+  const emitidos = pedidos.filter(p => normalizarStatus(p["Status NF"]) === "emitido").length;
 
   document.getElementById("pagos").innerText = pagos;
   document.getElementById("emitidos").innerText = emitidos;
@@ -225,14 +191,14 @@ function renderizar() {
       return texto.includes(busca);
     })
     .filter(p => {
-      const status = (p["Status NF"] || "").toLowerCase();
+      const status = normalizarStatus(p["Status NF"]);
       if (filtro === "pago") return status === "pago";
       if (filtro === "emitido") return status === "emitido";
       return true;
     })
     .forEach((p, index) => {
 
-      const status = (p["Status NF"] || "").toLowerCase();
+      const status = normalizarStatus(p["Status NF"]);
 
       let badge = `<span class="badge pendente">-</span>`;
       let botao = `<button class="btn-disabled">Aguardando</button>`;
@@ -271,7 +237,7 @@ async function emitir(index, btn) {
     if (data.ok) {
       carregarPedidos();
     } else {
-      alert(data.erro);
+      alert(data.erro || "Erro ao emitir");
     }
 
   } catch (err) {
