@@ -31,6 +31,9 @@ hr {
 }
 
 .small { font-size: 12px; }
+.barcode {
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -40,6 +43,9 @@ hr {
 Carregando...
 </div>
 
+<!-- 🔥 biblioteca de código de barras -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
@@ -48,9 +54,8 @@ const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
 const autoPDF = params.get("pdf");
 
-/* 🔥 cálculo tributo simples (IBPT médio) */
 function calcularTributo(valor){
-  return (valor * 0.068).toFixed(2); // ~6.8%
+  return (valor * 0.068).toFixed(2);
 }
 
 async function carregar(){
@@ -68,6 +73,13 @@ async function carregar(){
   const valor = parseFloat(p["Valor"] || 0);
   const tributo = calcularTributo(valor);
 
+  /* 🔥 pega a chave da coluna T */
+  const chave = p["Número chave"] || p["Chave NF"] || "";
+
+  const linkConsulta = chave
+    ? "https://www.nfse.gov.br/EmissorNacional/Notas/Visualizar/Index/" + chave
+    : "";
+
   document.getElementById("nota").innerHTML = `
 
 <div class="center bold">ROMER ART Laser & Design</div>
@@ -79,8 +91,7 @@ async function carregar(){
 <div class="center bold">DANFSe v1.0</div>
 <div class="center small">
 Documento Auxiliar da NFS-e<br>
-Prefeitura da Cidade de São Paulo<br>
-Não permite aproveitamento de crédito de ICMS
+Prefeitura da Cidade de São Paulo
 </div>
 
 <hr>
@@ -91,30 +102,20 @@ Data da compra: ${p["Data"] || "-"}
 <hr>
 
 ITEM  COD  DESCRIÇÃO<br>
-
-
 1   1   ${p["Serviço"]}
 
 <hr>
 
-QTD TOTAL DE ITENS: 1<br>
 VALOR TOTAL: R$ ${valor.toFixed(2)}
 
 <hr>
 
-FORMA DE PAGAMENTO<br>
 PIX<br>
 VALOR PAGO: R$ ${valor.toFixed(2)}
 
 <hr>
 
-Val aprox dos tributos: R$ ${tributo} (6.8%)
-
-<hr>
-
-Emitido pelo software RomerArt<br>
-Versão 1.0.0<br>
-HOMOLOGAÇÃO - SEM VALOR FISCAL
+Tributos aprox: R$ ${tributo}
 
 <hr>
 
@@ -123,20 +124,42 @@ CPF/CNPJ: ${p["CPF/CNPJ"]}
 
 <hr>
 
+<div class="center small">
+Chave NFS-e:<br>
+${chave || "Não informada"}
+</div>
+
+${chave ? `
+<div class="center barcode">
+<svg id="barcode"></svg>
+</div>
+` : ""}
+
+<hr>
+
 <div class="center">
-Consulta via QR Code
+QR Code
 <br><br>
-<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}">
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${linkConsulta}">
 </div>
 
 <hr>
 
 <div class="center small">
-Documento gerado automaticamente<br>
-RomerArt SaaS
+Emitido pelo sistema RomerArt
 </div>
 
 `;
+
+  /* 🔥 gera código de barras */
+  if(chave){
+    JsBarcode("#barcode", chave, {
+      format: "CODE128",
+      width: 1.5,
+      height: 40,
+      displayValue: false
+    });
+  }
 
   /* 🔥 PDF automático */
   if(autoPDF == "1"){
