@@ -4,172 +4,78 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>RomerArt • Sistema NF</title>
+<title>Painel de Notas Fiscais</title>
 
 <style>
 body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  margin:0;
+  font-family:Arial;
+  background:#0f172a;
+  color:#fff;
+  padding:20px;
 }
 
-/* HEADER */
-header {
-  background: #020617;
-  padding: 15px 20px;
-  font-size: 18px;
-  font-weight: bold;
-  border-bottom: 1px solid #1e293b;
-}
-
-/* CONTAINER */
-.container {
-  padding: 20px;
-}
-
-/* CARDS */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.card {
-  background: #020617;
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.card h2 {
-  margin: 0;
-  font-size: 26px;
-}
-
-/* FILTROS */
-.filtros {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-input, select {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #020617;
-  color: white;
-}
-
-/* TABELA */
-.table-container {
-  overflow-x: auto;
-}
+h1 { margin-bottom:20px; }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #020617;
-  border-radius: 10px;
-  overflow: hidden;
+  width:100%;
+  border-collapse:collapse;
+  background:#1e293b;
 }
 
 th, td {
-  padding: 12px;
-  border-bottom: 1px solid #1e293b;
-  font-size: 13px;
+  padding:10px;
+  border-bottom:1px solid #334155;
+  text-align:left;
 }
 
-th {
-  text-align: left;
-  color: #94a3b8;
-}
+th { background:#020617; }
 
-/* BADGES */
 .badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: bold;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
 }
 
-.pago { background: #16a34a; }
-.emitido { background: #2563eb; }
-.pendente { background: #475569; }
+.pago { background:#22c55e; }
+.emitido { background:#3b82f6; }
+.pendente { background:#facc15; color:#000; }
 
-/* BOTÕES */
 button {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
+  padding:6px 10px;
+  background:#22c55e;
+  border:none;
+  color:white;
+  border-radius:5px;
+  cursor:pointer;
 }
 
-.btn-emitir {
-  background: #22c55e;
-  color: white;
-}
-
-.btn-disabled {
-  background: #334155;
-  color: #94a3b8;
-  cursor: not-allowed;
+.disabled {
+  opacity:0.4;
 }
 </style>
 </head>
 
 <body>
 
-<header>🚀 Sistema SaaS • Notas Fiscais</header>
+<h1>Painel de Notas Fiscais</h1>
 
-<div class="container">
-
-<div class="cards">
-  <div class="card">
-    <h2 id="total">0</h2>
-    <span>Total</span>
-  </div>
-  <div class="card">
-    <h2 id="pagos">0</h2>
-    <span>Pagos</span>
-  </div>
-  <div class="card">
-    <h2 id="emitidos">0</h2>
-    <span>Emitidos</span>
-  </div>
-</div>
-
-<div class="filtros">
-  <input type="text" id="busca" placeholder="Buscar cliente ou pedido...">
-  <select id="filtro">
-    <option value="todos">Todos</option>
-    <option value="pago">Pagos</option>
-    <option value="emitido">Emitidos</option>
-  </select>
-</div>
-
-<div class="table-container">
 <table>
 <thead>
 <tr>
-  <th>Pedido</th>
-  <th>Cliente</th>
-  <th>CPF/CNPJ</th>
-  <th>Email</th>
-  <th>Serviço</th>
-  <th>Valor</th>
-  <th>Status</th>
-  <th>Ação</th>
+<th>Pedido</th>
+<th>Cliente</th>
+<th>CPF/CNPJ</th>
+<th>Email</th>
+<th>Serviço</th>
+<th>Valor</th>
+<th>Status</th>
+<th>Ação</th>
 </tr>
 </thead>
 
 <tbody id="tabela"></tbody>
 </table>
-</div>
-
-</div>
 
 <script>
 
@@ -178,102 +84,86 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbzSnyWol8f3D2U1sapo5
 
 let pedidos = [];
 
-function statusNormalizado(s) {
-  if (!s) return "";
-  s = s.toLowerCase().trim();
+// 🔧 NORMALIZA STATUS (CORREÇÃO PRINCIPAL)
+function normalizarStatus(s){
+  if(!s) return "";
+  s = s.toString().toLowerCase().trim();
 
-  if (s === "paid") return "pago";
-  if (s === "emitido") return "emitido";
+  if(s === "paid") return "pago";
+  if(s === "pago") return "pago";
+  if(s === "emitido") return "emitido";
 
-  return s;
+  return "pendente";
 }
 
-async function carregar() {
-  const res = await fetch(API);
-  pedidos = await res.json();
-
-  atualizarCards();
-  render();
+async function carregar(){
+  try{
+    const res = await fetch(API);
+    pedidos = await res.json();
+    render();
+  }catch(e){
+    alert("Erro ao carregar dados");
+    console.error(e);
+  }
 }
 
-function atualizarCards() {
-  document.getElementById("total").innerText = pedidos.length;
-
-  const pagos = pedidos.filter(p => statusNormalizado(p["Status NF"]) === "pago").length;
-  const emitidos = pedidos.filter(p => statusNormalizado(p["Status NF"]) === "emitido").length;
-
-  document.getElementById("pagos").innerText = pagos;
-  document.getElementById("emitidos").innerText = emitidos;
-}
-
-function render() {
+function render(){
   const tabela = document.getElementById("tabela");
-  const busca = document.getElementById("busca").value.toLowerCase();
-  const filtro = document.getElementById("filtro").value;
-
   tabela.innerHTML = "";
 
-  pedidos.forEach((p, i) => {
+  pedidos.forEach((p,i)=>{
 
-    const texto = (p["Nome"] + p["ID Pedido"]).toLowerCase();
-    if (!texto.includes(busca)) return;
+    const status = normalizarStatus(p["Status NF"]);
 
-    const status = statusNormalizado(p["Status NF"]);
+    let badge = `<span class="badge pendente">PENDENTE</span>`;
+    let acao = `<span class="disabled">Aguardando</span>`;
 
-    if (filtro !== "todos" && status !== filtro) return;
-
-    let badge = `<span class="badge pendente">-</span>`;
-    let btn = `<button class="btn-disabled">Aguardando</button>`;
-
-    if (status === "pago") {
+    if(status === "pago"){
       badge = `<span class="badge pago">PAGO</span>`;
-      btn = `<button class="btn-emitir" onclick="emitir(${i}, this)">Emitir</button>`;
+      acao = `<button onclick="emitir(${i})">Emitir</button>`;
     }
 
-    if (status === "emitido") {
+    if(status === "emitido"){
       badge = `<span class="badge emitido">EMITIDO</span>`;
-      btn = `<button class="btn-disabled">Emitido</button>`;
+      acao = `<span class="disabled">Emitido</span>`;
     }
 
     tabela.innerHTML += `
       <tr>
-        <td>${p["ID Pedido"]}</td>
-        <td>${p["Nome"]}</td>
-        <td>${p["CPF/CNPJ"]}</td>
-        <td>${p["Email"]}</td>
-        <td>${p["Serviço"]}</td>
-        <td>R$ ${p["Valor"]}</td>
+        <td>${p["ID Pedido"] || "-"}</td>
+        <td>${p["Nome"] || "-"}</td>
+        <td>${p["CPF/CNPJ"] || "-"}</td>
+        <td>${p["Email"] || "-"}</td>
+        <td>${p["Serviço"] || "-"}</td>
+        <td>R$ ${p["Valor"] || "-"}</td>
         <td>${badge}</td>
-        <td>${btn}</td>
+        <td>${acao}</td>
       </tr>
     `;
   });
 }
 
-async function emitir(i, btn) {
+async function emitir(i){
   const pedido = pedidos[i];
 
-  btn.innerText = "Emitindo...";
+  if(!confirm("Emitir nota do pedido " + pedido["ID Pedido"] + "?")) return;
 
-  try {
+  try{
     const res = await fetch(API_EMITIR + "?id=" + pedido["ID Pedido"]);
     const data = await res.json();
 
-    if (data.ok) {
+    if(data.ok){
+      alert("Nota emitida com sucesso!");
       carregar();
-    } else {
+    }else{
       alert(data.erro || "Erro ao emitir");
     }
 
-  } catch (e) {
-    alert("Erro real: " + e.message);
+  }catch(e){
+    alert("Erro ao emitir");
+    console.error(e);
   }
-
-  btn.innerText = "Emitir";
 }
-
-document.getElementById("busca").addEventListener("input", render);
-document.getElementById("filtro").addEventListener("change", render);
 
 carregar();
 
