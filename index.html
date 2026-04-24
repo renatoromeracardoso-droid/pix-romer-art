@@ -20,38 +20,39 @@ header {
   display:flex;
   justify-content:space-between;
   align-items:center;
+  font-weight:bold;
 }
 
 .btn-refresh {
-  background:#3b82f6;
-  padding:8px 14px;
-  border-radius:8px;
-  cursor:pointer;
+  background: #3b82f6;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
-.container { padding:15px; }
+.container { padding: 15px; }
 
 .cards {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 10px;
 }
 
 .card {
-  background:#020617;
-  padding:15px;
-  border-radius:12px;
-  text-align:center;
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
 }
 
 .filtros {
   margin-top:15px;
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
 }
 
 input, select {
+  width:100%;
   padding:10px;
   border-radius:8px;
   border:none;
@@ -59,11 +60,12 @@ input, select {
   color:white;
 }
 
-table {
-  width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
+.table-container {
+  margin-top:15px;
+  overflow-x:auto;
 }
+
+table { width:100%; border-collapse: collapse; }
 
 th, td {
   padding:10px;
@@ -75,21 +77,28 @@ th, td {
   border-radius:999px;
   font-size:11px;
   font-weight:bold;
-  color:#000;
 }
 
-.emitido { background:#22c55e; }
-.pendente { background:#f59e0b; }
+.emitido { background:#22c55e; color:black; }
+.pendente { background:#f59e0b; color:black; }
+
+.acoes button {
+  background:#1e293b;
+  color:white;
+  border:none;
+  padding:6px 10px;
+  border-radius:6px;
+}
 
 .menu-popup {
-  position:absolute;
-  background:#020617;
-  border:1px solid #1e293b;
-  border-radius:10px;
-  padding:8px;
-  display:none;
-  flex-direction:column;
-  z-index:999;
+  position: absolute;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  z-index: 999;
 }
 
 .menu-popup button {
@@ -101,18 +110,19 @@ th, td {
 }
 
 .toast {
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#22c55e;
-  color:white;
-  padding:12px;
-  border-radius:10px;
-  opacity:0;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22c55e;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: 0.3s;
 }
 
-.toast.show { opacity:1; }
+.toast.show { opacity: 1; }
 </style>
 </head>
 
@@ -126,21 +136,30 @@ th, td {
 <div class="container">
 
 <div class="cards">
-<div class="card"><h2 id="total">0</h2>Total</div>
-<div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
-<div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
+  <div class="card">
+    <h2 id="total">0</h2>
+    <span>Total</span>
+  </div>
+  <div class="card">
+    <h2 id="pendentes">0</h2>
+    <span>Pendentes</span>
+  </div>
+  <div class="card">
+    <h2 id="emitidos">0</h2>
+    <span>Emitidos</span>
+  </div>
 </div>
 
 <div class="filtros">
-<input id="busca" placeholder="Buscar...">
-<select id="filtro">
-<option value="todos">Todos</option>
-<option value="pendente">Pendentes</option>
-<option value="emitido">Emitidos</option>
-</select>
-<input type="date" id="dataFiltro">
+  <input id="busca" placeholder="Buscar...">
+  <select id="filtro">
+    <option value="todos">Todos</option>
+    <option value="pendente">Pendentes</option>
+    <option value="emitido">Emitidos</option>
+  </select>
 </div>
 
+<div class="table-container">
 <table>
 <thead>
 <tr>
@@ -153,6 +172,7 @@ th, td {
 </thead>
 <tbody id="tabela"></tbody>
 </table>
+</div>
 
 </div>
 
@@ -161,214 +181,147 @@ th, td {
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
-const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6NMQBFd2-Ud-sPn7sVjaKXL8kdJw8joJlAv9uPpzEy72e8duBEg/exec";
 
 let pedidos = [];
 let menuAtual = null;
 
-/* STATUS */
-function statusNormalizado(s){
-if(!s) return "pendente";
-return s.toLowerCase()=="emitido"?"emitido":"pendente";
-}
-
-/* TOAST */
 function showToast(msg){
-const t=document.getElementById("toast");
-t.innerText=msg;
-t.classList.add("show");
-setTimeout(()=>t.classList.remove("show"),2000);
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2500);
 }
 
-/* CACHE + LOAD */
+function statusNormalizado(s){
+  return (s || "").toLowerCase() === "emitido" ? "emitido" : "pendente";
+}
+
 async function carregar(){
-
-const cache = localStorage.getItem("dados_nf");
-
-if(cache){
-pedidos = JSON.parse(cache);
-render();
-atualizarCards();
+  const res = await fetch(API);
+  pedidos = await res.json();
+  atualizarCards();
+  render();
 }
 
-const res = await fetch(API);
-const data = await res.json();
-
-pedidos = data;
-localStorage.setItem("dados_nf", JSON.stringify(data));
-
-render();
-atualizarCards();
-}
-
-/* CARDS */
 function atualizarCards(){
-document.getElementById("total").innerText=pedidos.length;
-document.getElementById("pendentes").innerText=
-pedidos.filter(p=>statusNormalizado(p["Status NF"])=="pendente").length;
-document.getElementById("emitidos").innerText=
-pedidos.filter(p=>statusNormalizado(p["Status NF"])=="emitido").length;
+  document.getElementById("total").innerText = pedidos.length;
+  document.getElementById("pendentes").innerText =
+    pedidos.filter(p => statusNormalizado(p["Status NF"])==="pendente").length;
+  document.getElementById("emitidos").innerText =
+    pedidos.filter(p => statusNormalizado(p["Status NF"])==="emitido").length;
 }
 
-/* RENDER */
 function render(){
+  const tabela = document.getElementById("tabela");
+  tabela.innerHTML = "";
 
-const tabela=document.getElementById("tabela");
-tabela.innerHTML="";
+  const busca = document.getElementById("busca").value.toLowerCase();
+  const filtro = document.getElementById("filtro").value;
 
-const busca=document.getElementById("busca").value.toLowerCase();
-const filtro=document.getElementById("filtro").value;
-const dataFiltro=document.getElementById("dataFiltro").value;
+  pedidos.forEach((p,i)=>{
 
-pedidos
-.filter(p=>{
+    const status = statusNormalizado(p["Status NF"]);
 
-const nome=(p["Nome"]||"").toLowerCase();
-const id=(p["ID Pedido"]||"").toString();
+    if(filtro !== "todos" && status !== filtro) return;
+    if(busca && !p["Nome"].toLowerCase().includes(busca)) return;
 
-const matchBusca=nome.includes(busca)||id.includes(busca);
+    const badge = status==="emitido"
+      ? `<span class="badge emitido">EMITIDO</span>`
+      : `<span class="badge pendente">PENDENTE</span>`;
 
-const status=statusNormalizado(p["Status NF"]);
-
-const matchStatus=
-filtro=="todos"||
-(filtro=="pendente"&&status=="pendente")||
-(filtro=="emitido"&&status=="emitido");
-
-let matchData=true;
-
-if(dataFiltro && p["Data"]){
-const dataPlanilha=new Date(p["Data"]).toISOString().slice(0,10);
-matchData=dataPlanilha===dataFiltro;
+    tabela.innerHTML += `
+      <tr>
+        <td>${p["ID Pedido"]}</td>
+        <td>${p["Nome"]}</td>
+        <td>R$ ${p["Valor"]}</td>
+        <td>${badge}</td>
+        <td><button onclick="abrirMenu(${i}, this)">⋮</button></td>
+      </tr>
+    `;
+  });
 }
 
-return matchBusca && matchStatus && matchData;
+/* 🔥 GERAR LINK AUTOMÁTICO */
+function gerarLinkNota(chave){
+  return `https://www.nfse.gov.br/EmissorNacional/Notas/Visualizar/Index/${chave}`;
+}
 
-})
-.forEach(p=>{
+/* 🔥 ABRIR NOTA */
+function abrirNotaReal(p){
+  if(p["Chave NF"]){
+    window.open(gerarLinkNota(p["Chave NF"]), "_blank");
+  } else {
+    showToast("Sem chave da nota");
+  }
+}
 
-const status=statusNormalizado(p["Status NF"]);
+/* 🔥 DECLARAÇÃO DE CONTEÚDO */
+function declaracao(p){
+  const texto = `
+DECLARAÇÃO DE CONTEÚDO
 
-const badge=status=="emitido"
-?'<span class="badge emitido">EMITIDO</span>'
-:'<span class="badge pendente">PENDENTE</span>';
+Remetente:
+ROMER ART
+CNPJ: 66.252.416/0001-05
 
-tabela.innerHTML+=`
-<tr>
-<td>${p["ID Pedido"]}</td>
-<td>${p["Nome"]}</td>
-<td>R$ ${p["Valor"]}</td>
-<td>${badge}</td>
-<td><button onclick="abrirMenu('${p["ID Pedido"]}', this)">⋮</button></td>
-</tr>`;
-});
+Destinatário:
+${p["Nome"]}
+
+Conteúdo:
+${p["Serviço"]}
+
+Valor: R$ ${p["Valor"]}
+
+Declaro que o conteúdo não é proibido e está de acordo com as normas dos Correios.
+`;
+
+  const w = window.open();
+  w.document.write("<pre>"+texto+"</pre>");
 }
 
 /* MENU */
-function abrirMenu(id, el){
+function abrirMenu(i, el){
+  fecharMenu();
 
-fecharMenu();
+  const p = pedidos[i];
+  const menu = document.createElement("div");
+  menu.className = "menu-popup";
 
-const p=pedidos.find(x=>x["ID Pedido"]==id);
-if(!p) return;
+  const emitir = document.createElement("button");
+  emitir.innerHTML = "📄 Emitir Nota";
+  emitir.onclick = () => showToast("Emitir manual no portal");
+  menu.appendChild(emitir);
 
-const menu=document.createElement("div");
-menu.className="menu-popup";
+  const ver = document.createElement("button");
+  ver.innerHTML = "👁 Ver Nota";
+  ver.onclick = () => abrirNotaReal(p);
+  menu.appendChild(ver);
 
-/* Emitir */
-if(statusNormalizado(p["Status NF"])!="emitido"){
-const btn=document.createElement("button");
-btn.innerHTML="📄 Emitir Nota";
-btn.onclick=()=>emitirPorId(id);
-menu.appendChild(btn);
-}
+  const declar = document.createElement("button");
+  declar.innerHTML = "📦 Declaração Conteúdo";
+  declar.onclick = () => declaracao(p);
+  menu.appendChild(declar);
 
-/* Ver nota */
-const ver=document.createElement("button");
-ver.innerHTML="👁 Ver Nota";
-ver.onclick=()=>window.open("nota.html?id="+id);
-menu.appendChild(ver);
+  document.body.appendChild(menu);
 
-/* PDF */
-const pdf=document.createElement("button");
-pdf.innerHTML="📥 Gerar PDF";
-pdf.onclick=()=>window.open("nota.html?id="+id+"&pdf=1");
-menu.appendChild(pdf);
+  const rect = el.getBoundingClientRect();
+  menu.style.top = rect.bottom+"px";
+  menu.style.left = rect.left+"px";
+  menu.style.display = "flex";
 
-/* Declaração */
-const dec=document.createElement("button");
-dec.innerHTML="📄 Declaração Conteúdo";
-dec.onclick=()=>gerarDeclaracao(p);
-menu.appendChild(dec);
-
-/* Rastreio */
-if(p["Rastreio"]){
-const rast=document.createElement("button");
-rast.innerHTML="📦 Rastrear Pedido";
-rast.onclick=()=>window.open("https://rastreamento.correios.com.br/app/index.php?objetos="+p["Rastreio"]);
-menu.appendChild(rast);
-}
-
-document.body.appendChild(menu);
-
-const rect=el.getBoundingClientRect();
-menu.style.top=rect.bottom+"px";
-menu.style.left=rect.left+"px";
-menu.style.display="flex";
-
-menuAtual=menu;
+  menuAtual = menu;
 }
 
 function fecharMenu(){
-if(menuAtual) menuAtual.remove();
+  if(menuAtual) menuAtual.remove();
 }
 
-document.addEventListener("click",e=>{
-if(!e.target.closest("button")) fecharMenu();
+document.addEventListener("click", e=>{
+  if(!e.target.closest("button")) fecharMenu();
 });
 
-/* EMITIR */
-async function emitirPorId(id){
-
-const p=pedidos.find(x=>x["ID Pedido"]==id);
-if(!p) return;
-
-p["Status NF"]="emitido";
-
-render();
-atualizarCards();
-showToast("Nota emitida 🚀");
-
-await fetch(API_EMITIR+"?id="+id);
-}
-
-/* DECLARAÇÃO */
-function gerarDeclaracao(p){
-
-const html=`
-<html>
-<body style="font-family:Arial;padding:20px">
-<h2>Declaração de Conteúdo</h2>
-<p><b>Remetente:</b> RomerArt</p>
-<p><b>Destinatário:</b> ${p["Nome"]}</p>
-<p><b>Produto:</b> ${p["Serviço"]}</p>
-<p><b>Valor:</b> R$ ${p["Valor"]}</p>
-<br><br>
-_________________________<br>
-Assinatura
-<script>window.print()<\/script>
-</body>
-</html>
-`;
-
-const w=window.open("");
-w.document.write(html);
-}
-
-/* EVENTOS */
-document.getElementById("busca").addEventListener("input",render);
-document.getElementById("filtro").addEventListener("change",render);
-document.getElementById("dataFiltro").addEventListener("change",render);
+document.getElementById("busca").addEventListener("input", render);
+document.getElementById("filtro").addEventListener("change", render);
 
 carregar();
 
