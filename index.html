@@ -213,7 +213,7 @@ function salvarIDs(){
 
 /* CARDS */
 function atualizarCards(){
-  total.innerText = pedidos?.length;
+  total.innerText = pedidos.length;
   pendentes.innerText = pedidos.filter(p=>normalizarStatus(p["Status NF"])==="pendente").length;
   emitidos.innerText = pedidos.filter(p=>normalizarStatus(p["Status NF"])==="emitido").length;
   envios.innerText = pedidos.filter(p=>p["Frete"]).length;
