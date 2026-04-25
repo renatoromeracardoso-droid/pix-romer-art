@@ -167,20 +167,26 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-/* CARREGAR */
+/* CARREGAR (🔥 CORREÇÃO AQUI) */
 async function carregar(){
   try{
-    const res = await fetch(API + "?t=" + new Date().getTime()); // 🔥 evita cache
+    const res = await fetch(API + "?t=" + new Date().getTime());
     const data = await res.json();
 
-    pedidos = Array.isArray(data) ? data : [];
+    // 🔥 aceita qualquer formato
+    if(Array.isArray(data)){
+      pedidos = data;
+    } else if(typeof data === "object"){
+      pedidos = Object.values(data);
+    } else {
+      pedidos = [];
+    }
 
     atualizarCards();
     render();
 
   }catch(e){
     console.error(e);
-    tabela.innerHTML = `<tr><td colspan="5">Erro ao carregar dados</td></tr>`;
     showToast("Erro ao carregar ❌");
   }
 }
@@ -262,10 +268,7 @@ function abrirMenu(i, el){
 /* FECHAR MENU */
 document.addEventListener("click", (e) => {
   if (!e.target.closest(".menu-popup") && !e.target.closest("button")) {
-    if(menuAtual){
-      menuAtual.remove();
-      menuAtual = null;
-    }
+    if(menuAtual) menuAtual.remove();
   }
 });
 
@@ -292,12 +295,9 @@ async function emitir(i){
   const p = pedidos[i];
   showToast("Emitindo...");
   await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
-
   if(menuAtual) menuAtual.remove();
-
   showToast("Nota emitida ✅");
-
-  setTimeout(carregar, 700); // 🔥 evita bug de atualização
+  setTimeout(carregar, 600);
 }
 
 /* ENVIO */
@@ -305,12 +305,9 @@ async function gerarEnvio(i){
   const p = pedidos[i];
   showToast("Gerando envio...");
   await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
-
   if(menuAtual) menuAtual.remove();
-
   showToast("Envio gerado 🚀");
-
-  setTimeout(carregar, 700); // 🔥 evita bug
+  setTimeout(carregar, 600);
 }
 
 /* INIT */
