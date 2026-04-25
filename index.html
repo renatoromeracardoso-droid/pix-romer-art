@@ -155,7 +155,8 @@ let menuAtual = null;
 function normalizarStatus(s){
   s = (s || "").toLowerCase();
   if(s === "emitido") return "emitido";
-  return "pendente"; // 🔥 força qualquer outro como pendente
+  if(s === "paid") return "pendente";
+  return "pendente";
 }
 
 /* TOAST */
@@ -169,19 +170,14 @@ function showToast(msg){
 /* CARREGAR */
 async function carregar(){
   try{
-    // 🔥 evita cache travado
-    const res = await fetch(API + "?t=" + new Date().getTime());
+    const res = await fetch(API);
     const data = await res.json();
-
-    pedidos = Array.isArray(data) ? data : [];
-
+    pedidos = data || [];
     atualizarCards();
     render();
-
   }catch(e){
-    console.error(e);
-    tabela.innerHTML = `<tr><td colspan="5">Erro ao carregar dados</td></tr>`;
     showToast("Erro ao carregar ❌");
+    console.error(e);
   }
 }
 
@@ -202,7 +198,6 @@ function atualizarCards(){
 /* TABELA */
 function render(){
   tabela.innerHTML="";
-
   pedidos.forEach((p,i)=>{
     const status = normalizarStatus(p["Status NF"]);
     const envio = p["Frete"] ? "📦" : "-";
@@ -241,6 +236,7 @@ function abrirMenu(i, el){
     botoes += `<button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>`;
   }
 
+  // 🔥 DECLARAÇÃO SEMPRE VISÍVEL
   botoes += `<button onclick="gerarDeclaracao(${i})">📦 Declaração</button>`;
 
   botoes += `
@@ -249,6 +245,7 @@ function abrirMenu(i, el){
   `;
 
   menu.innerHTML = botoes;
+
   document.body.appendChild(menu);
 
   const rect = el.getBoundingClientRect();
@@ -259,13 +256,10 @@ function abrirMenu(i, el){
   menuAtual = menu;
 }
 
-/* FECHAR MENU CORRIGIDO */
+/* FECHAR MENU */
 document.addEventListener("click", (e) => {
   if (!e.target.closest(".menu-popup") && !e.target.closest("button")) {
-    if(menuAtual){
-      menuAtual.remove();
-      menuAtual = null;
-    }
+    if(menuAtual) menuAtual.remove();
   }
 });
 
@@ -290,35 +284,21 @@ function gerarDeclaracao(i){
 /* EMITIR */
 async function emitir(i){
   const p = pedidos[i];
-
   showToast("Emitindo...");
   await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
-
-  if(menuAtual){
-    menuAtual.remove();
-    menuAtual = null;
-  }
-
+  if(menuAtual) menuAtual.remove();
   showToast("Nota emitida ✅");
-
-  setTimeout(carregar, 800); // 🔥 reload suave
+  await carregar();
 }
 
 /* ENVIO */
 async function gerarEnvio(i){
   const p = pedidos[i];
-
   showToast("Gerando envio...");
   await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
-
-  if(menuAtual){
-    menuAtual.remove();
-    menuAtual = null;
-  }
-
+  if(menuAtual) menuAtual.remove();
   showToast("Envio gerado 🚀");
-
-  setTimeout(carregar, 800); // 🔥 reload suave
+  await carregar();
 }
 
 /* INIT */
