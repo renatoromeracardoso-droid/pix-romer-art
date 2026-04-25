@@ -3,108 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-header {
-  background: #020617;
-  padding: 15px 20px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-weight:bold;
-}
-
-.btn-refresh {
-  background: #3b82f6;
-  padding: 8px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.container { padding: 15px; }
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(4,1fr);
-  gap: 10px;
-}
-
-.card {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.table-container {
-  margin-top:15px;
-  overflow-x:auto;
-}
-
-table {
-  width:100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding:10px;
-  border-bottom:1px solid #1e293b;
-  font-size:13px;
-}
-
-.badge {
-  padding:5px 12px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:bold;
-}
-
-.emitido { background:#22c55e; color:#000; }
-.pendente { background:#f59e0b; color:#000; }
-
-.menu-popup {
-  position: absolute;
-  background: #020617;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 8px;
-  display: none;
-  flex-direction: column;
-  z-index: 999;
-}
-
-.menu-popup button {
-  background:none;
-  border:none;
-  color:white;
-  padding:10px;
-  text-align:left;
-  cursor:pointer;
-}
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #22c55e;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 10px;
-  opacity: 0;
-  transition: 0.3s;
-}
-
-.toast.show { opacity: 1; }
+body {margin:0;font-family:'Segoe UI';background:#0f172a;color:#e2e8f0;}
+header {background:#020617;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
+.btn-refresh {background:#3b82f6;padding:8px 14px;border-radius:8px;cursor:pointer;}
+.container {padding:15px;}
+.cards {display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.card {background:#020617;padding:15px;border-radius:12px;text-align:center;}
+table {width:100%;border-collapse:collapse;}
+th,td {padding:10px;border-bottom:1px solid #1e293b;}
+.badge {padding:5px 12px;border-radius:999px;font-size:11px;font-weight:bold;}
+.emitido {background:#22c55e;color:#000;}
+.pendente {background:#f59e0b;color:#000;}
+.menu-popup {position:absolute;background:#020617;border:1px solid #1e293b;border-radius:10px;padding:8px;display:none;flex-direction:column;z-index:999;}
+.menu-popup button {background:none;border:none;color:white;padding:10px;text-align:left;cursor:pointer;}
+.toast {position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;padding:12px 20px;border-radius:10px;opacity:0;transition:0.3s;}
+.toast.show {opacity:1;}
 </style>
 </head>
 
@@ -112,19 +28,18 @@ th, td {
 
 <header>
 🚀 Sistema SaaS • Notas
-<div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
+<div class="btn-refresh" onclick="carregar()">Atualizar</div>
 </header>
 
 <div class="container">
 
 <div class="cards">
-  <div class="card"><h2 id="total">0</h2><span>Total</span></div>
-  <div class="card"><h2 id="pendentes">0</h2><span>Pendentes</span></div>
-  <div class="card"><h2 id="emitidos">0</h2><span>Emitidos</span></div>
-  <div class="card"><h2 id="envios">0</h2><span>Envios</span></div>
+<div class="card"><h2 id="total">0</h2>Total</div>
+<div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
+<div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
+<div class="card"><h2 id="envios">0</h2>Envios</div>
 </div>
 
-<div class="table-container">
 <table>
 <thead>
 <tr>
@@ -137,40 +52,27 @@ th, td {
 </thead>
 <tbody id="tabela"></tbody>
 </table>
-</div>
 
 </div>
 
 <div id="toast" class="toast"></div>
 
-    <script>
+<script>
 
-const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
-const API_SCRIPT = "https://script.google.com/macros/s/AKfycbwO1J85bxJyKFPdk9n9hgpKHFVHd_wVrP7NOZb098mdzlzvIr6fmWrbUDco-u08sB4/exec";
+const API = "COLE_AQUI_SEU_LINK_DO_SCRIPT";
 
 let pedidos = [];
 let menuAtual = null;
 
-/* 🔥 NORMALIZAR OBJETO (RESOLVE TUDO) */
-function limparObjeto(obj){
-  let novo = {};
-  for(let k in obj){
-    let key = k.trim().replace(/\s+/g," ");
-    novo[key] = obj[k];
-  }
-  return novo;
-}
-
 /* STATUS */
-function normalizarStatus(s){
+function statusNF(s){
   s = (s || "").toLowerCase();
   if(s === "emitido") return "emitido";
-  if(s === "paid") return "pendente";
   return "pendente";
 }
 
 /* TOAST */
-function showToast(msg){
+function toast(msg){
   const t = document.getElementById("toast");
   t.innerText = msg;
   t.classList.add("show");
@@ -180,138 +82,90 @@ function showToast(msg){
 /* CARREGAR */
 async function carregar(){
   try{
-    const res = await fetch(API + "?t=" + Date.now());
-    let data = await res.json();
-
-    if(!Array.isArray(data)){
-      data = Object.values(data);
-    }
-
-    // 🔥 limpa todas as chaves
-    pedidos = data.map(limparObjeto);
-
+    const res = await fetch(API);
+    pedidos = await res.json();
     atualizarCards();
     render();
-
   }catch(e){
+    toast("Erro ❌");
     console.error(e);
-    showToast("Erro ao carregar ❌");
   }
 }
 
 /* CARDS */
 function atualizarCards(){
   total.innerText = pedidos.length;
-  pendentes.innerText = pedidos.filter(p=>normalizarStatus(p["Status NF"])==="pendente").length;
-  emitidos.innerText = pedidos.filter(p=>normalizarStatus(p["Status NF"])==="emitido").length;
+  pendentes.innerText = pedidos.filter(p=>statusNF(p["Status NF"])==="pendente").length;
+  emitidos.innerText = pedidos.filter(p=>statusNF(p["Status NF"])==="emitido").length;
   envios.innerText = pedidos.filter(p=>p["Frete"]).length;
 }
 
 /* RENDER */
 function render(){
   tabela.innerHTML="";
-
   pedidos.forEach((p,i)=>{
-
-    const id = p["ID Pedido"] || "-";
-    const nome = p["Nome"] || "-";
-    const valor = p["Valor"] || "0.00";
-    const status = normalizarStatus(p["Status NF"]);
-    const envio = p["Frete"] ? "📦" : "-";
-
-    tabela.innerHTML += `
+    tabela.innerHTML+=`
     <tr>
       <td>
-        <button onclick="abrirMenu(${i}, this)">⋮</button>
-        ${id}
+        <button onclick="menu(${i},this)">⋮</button>
+        ${p["ID Pedido"]}
       </td>
-      <td>${nome}</td>
-      <td>R$ ${valor}</td>
-      <td><span class="badge ${status}">${status}</span></td>
-      <td>${envio}</td>
-    </tr>
-    `;
+      <td>${p["Nome"]}</td>
+      <td>R$ ${p["Valor"]}</td>
+      <td><span class="badge ${statusNF(p["Status NF"])}">${statusNF(p["Status NF"])}</span></td>
+      <td>${p["Frete"]?"📦":"-"}</td>
+    </tr>`;
   });
 }
 
 /* MENU */
-function abrirMenu(i, el){
-
+function menu(i,el){
   if(menuAtual) menuAtual.remove();
-
   const p = pedidos[i];
-  const menu = document.createElement("div");
-  menu.className = "menu-popup";
 
-  let html = "";
+  const m = document.createElement("div");
+  m.className="menu-popup";
 
-  if(normalizarStatus(p["Status NF"]) !== "emitido"){
-    html += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
-  }
+  let html="";
 
-  if(!p["Frete"]){
-    html += `<button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>`;
-  }
+  html+=`<button onclick="emitir(${i})">Emitir Nota</button>`;
+  html+=`<button onclick="envio(${i})">Gerar Envio</button>`;
+  html+=`<button onclick="declaracao(${i})">Declaração</button>`;
 
-  html += `<button onclick="gerarDeclaracao(${i})">📦 Declaração</button>`;
-  html += `<button onclick="verNota(${i})">👁 Nota</button>`;
-  html += `<button onclick="pdf(${i})">📥 PDF</button>`;
+  m.innerHTML=html;
 
-  menu.innerHTML = html;
+  document.body.appendChild(m);
 
-  document.body.appendChild(menu);
+  const r=el.getBoundingClientRect();
+  m.style.top=r.bottom+"px";
+  m.style.left=r.left+"px";
+  m.style.display="flex";
 
-  const rect = el.getBoundingClientRect();
-  menu.style.top = rect.bottom+"px";
-  menu.style.left = rect.left+"px";
-  menu.style.display = "flex";
-
-  menuAtual = menu;
+  menuAtual=m;
 }
-
-/* FECHAR MENU */
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".menu-popup") && !e.target.closest("button")) {
-    if(menuAtual) menuAtual.remove();
-  }
-});
 
 /* AÇÕES */
-function verNota(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
-}
-
-function pdf(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
-}
-
-function gerarDeclaracao(i){
-  const p = pedidos[i];
-  window.open(`declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`);
-}
-
-/* EMITIR */
 async function emitir(i){
-  showToast("Emitindo...");
-  await fetch(API_SCRIPT + "?acao=emitir&id=" + pedidos[i]["ID Pedido"]);
-  if(menuAtual) menuAtual.remove();
-  showToast("Nota emitida ✅");
-  setTimeout(carregar, 800);
+  toast("Emitindo...");
+  await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
+  carregar();
 }
 
-/* ENVIO */
-async function gerarEnvio(i){
-  showToast("Gerando envio...");
-  await fetch(API_SCRIPT + "?acao=envio&id=" + pedidos[i]["ID Pedido"]);
-  if(menuAtual) menuAtual.remove();
-  showToast("Envio gerado 🚀");
-  setTimeout(carregar, 800);
+async function envio(i){
+  toast("Gerando envio...");
+  await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
+  carregar();
+}
+
+function declaracao(i){
+  const p = pedidos[i];
+  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
 /* INIT */
 carregar();
 
-    </script>
+</script>
 
 </body>
 </html>
