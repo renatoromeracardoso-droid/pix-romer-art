@@ -143,13 +143,23 @@ th, td {
 
 <div id="toast" class="toast"></div>
 
-<script>
+    <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
 const API_SCRIPT = "https://script.google.com/macros/s/AKfycbwO1J85bxJyKFPdk9n9hgpKHFVHd_wVrP7NOZb098mdzlzvIr6fmWrbUDco-u08sB4/exec";
 
 let pedidos = [];
 let menuAtual = null;
+
+/* 🔥 NORMALIZAR OBJETO (RESOLVE TUDO) */
+function limparObjeto(obj){
+  let novo = {};
+  for(let k in obj){
+    let key = k.trim().replace(/\s+/g," ");
+    novo[key] = obj[k];
+  }
+  return novo;
+}
 
 /* STATUS */
 function normalizarStatus(s){
@@ -167,20 +177,18 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-/* CARREGAR (🔥 CORREÇÃO AQUI) */
+/* CARREGAR */
 async function carregar(){
   try{
-    const res = await fetch(API + "?t=" + new Date().getTime());
-    const data = await res.json();
+    const res = await fetch(API + "?t=" + Date.now());
+    let data = await res.json();
 
-    // 🔥 aceita qualquer formato
-    if(Array.isArray(data)){
-      pedidos = data;
-    } else if(typeof data === "object"){
-      pedidos = Object.values(data);
-    } else {
-      pedidos = [];
+    if(!Array.isArray(data)){
+      data = Object.values(data);
     }
+
+    // 🔥 limpa todas as chaves
+    pedidos = data.map(limparObjeto);
 
     atualizarCards();
     render();
@@ -191,12 +199,6 @@ async function carregar(){
   }
 }
 
-/* ATUALIZAR */
-function atualizarManual(){
-  showToast("Atualizando...");
-  carregar();
-}
-
 /* CARDS */
 function atualizarCards(){
   total.innerText = pedidos.length;
@@ -205,10 +207,15 @@ function atualizarCards(){
   envios.innerText = pedidos.filter(p=>p["Frete"]).length;
 }
 
-/* TABELA */
+/* RENDER */
 function render(){
   tabela.innerHTML="";
+
   pedidos.forEach((p,i)=>{
+
+    const id = p["ID Pedido"] || "-";
+    const nome = p["Nome"] || "-";
+    const valor = p["Valor"] || "0.00";
     const status = normalizarStatus(p["Status NF"]);
     const envio = p["Frete"] ? "📦" : "-";
 
@@ -216,10 +223,10 @@ function render(){
     <tr>
       <td>
         <button onclick="abrirMenu(${i}, this)">⋮</button>
-        ${p["ID Pedido"]}
+        ${id}
       </td>
-      <td>${p["Nome"]}</td>
-      <td>R$ ${p["Valor"]}</td>
+      <td>${nome}</td>
+      <td>R$ ${valor}</td>
       <td><span class="badge ${status}">${status}</span></td>
       <td>${envio}</td>
     </tr>
@@ -236,24 +243,21 @@ function abrirMenu(i, el){
   const menu = document.createElement("div");
   menu.className = "menu-popup";
 
-  let botoes = "";
+  let html = "";
 
   if(normalizarStatus(p["Status NF"]) !== "emitido"){
-    botoes += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
+    html += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
   }
 
   if(!p["Frete"]){
-    botoes += `<button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>`;
+    html += `<button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>`;
   }
 
-  botoes += `<button onclick="gerarDeclaracao(${i})">📦 Declaração</button>`;
+  html += `<button onclick="gerarDeclaracao(${i})">📦 Declaração</button>`;
+  html += `<button onclick="verNota(${i})">👁 Nota</button>`;
+  html += `<button onclick="pdf(${i})">📥 PDF</button>`;
 
-  botoes += `
-    <button onclick="verNota(${i})">👁 Nota</button>
-    <button onclick="pdf(${i})">📥 PDF</button>
-  `;
-
-  menu.innerHTML = botoes;
+  menu.innerHTML = html;
 
   document.body.appendChild(menu);
 
@@ -274,46 +278,40 @@ document.addEventListener("click", (e) => {
 
 /* AÇÕES */
 function verNota(i){
-  const p = pedidos[i];
-  window.open(`nota.html?id=${p["ID Pedido"]}`);
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
 }
 
 function pdf(i){
-  const p = pedidos[i];
-  window.open(`nota.html?id=${p["ID Pedido"]}&pdf=1`);
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
 }
 
 function gerarDeclaracao(i){
   const p = pedidos[i];
-  window.open(
-    `declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`
-  );
+  window.open(`declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`);
 }
 
 /* EMITIR */
 async function emitir(i){
-  const p = pedidos[i];
   showToast("Emitindo...");
-  await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
+  await fetch(API_SCRIPT + "?acao=emitir&id=" + pedidos[i]["ID Pedido"]);
   if(menuAtual) menuAtual.remove();
   showToast("Nota emitida ✅");
-  setTimeout(carregar, 600);
+  setTimeout(carregar, 800);
 }
 
 /* ENVIO */
 async function gerarEnvio(i){
-  const p = pedidos[i];
   showToast("Gerando envio...");
-  await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
+  await fetch(API_SCRIPT + "?acao=envio&id=" + pedidos[i]["ID Pedido"]);
   if(menuAtual) menuAtual.remove();
   showToast("Envio gerado 🚀");
-  setTimeout(carregar, 600);
+  setTimeout(carregar, 800);
 }
 
 /* INIT */
 carregar();
 
-</script>
+    </script>
 
 </body>
 </html>
