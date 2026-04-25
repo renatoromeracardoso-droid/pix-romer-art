@@ -240,30 +240,44 @@ function render() {
   });
 }
 
-/* 🔥 NOTA INTERNA */
+/* NOTA */
 function verNota(p) {
   window.open(`nota.html?id=${p["ID Pedido"]}`, "_blank");
 }
 
-/* 🔥 NOTA OFICIAL */
+/* NOTA OFICIAL */
 function notaOficial(p){
   if(p["Link Nota"]) return window.open(p["Link Nota"]);
   if(p["Chave NF"]) return window.open("https://www.nfse.gov.br/EmissorNacional/Notas/Visualizar/Index/" + p["Chave NF"]);
   showToast("Sem nota vinculada");
 }
 
-/* 🔥 DECLARAÇÃO */
+/* DECLARAÇÃO */
 function gerarDeclaracao(p) {
   window.open(`declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}&pdf=1`);
 }
 
-/* 🔥 RASTREIO */
+/* RASTREIO */
 function abrirRastreio(p){
   if(!p["Rastreio"]) return showToast("Sem rastreio");
   window.open("https://rastreamento.correios.com.br/app/index.php?objetos=" + p["Rastreio"]);
 }
 
-/* 🔥 MENU */
+/* 🔥 NOVO: GERAR ENVIO */
+function gerarEnvioPedido(p){
+
+  showToast("Gerando envio...");
+
+  fetch(API_EMITIR + "?acao=envio&id=" + p["ID Pedido"])
+    .then(r => r.text())
+    .then(() => {
+      showToast("Envio gerado 🚀");
+      setTimeout(() => carregar(), 1500);
+    })
+    .catch(() => showToast("Erro ao gerar envio ❌"));
+}
+
+/* MENU */
 function abrirMenu(i, el) {
   fecharMenu();
 
@@ -303,6 +317,12 @@ function abrirMenu(i, el) {
   rast.onclick = () => abrirRastreio(p);
   menu.appendChild(rast);
 
+  /* 🔥 NOVO BOTÃO */
+  const envio = document.createElement("button");
+  envio.innerHTML = "📦 Gerar Envio";
+  envio.onclick = () => gerarEnvioPedido(p);
+  menu.appendChild(envio);
+
   document.body.appendChild(menu);
 
   const rect = el.getBoundingClientRect();
@@ -321,7 +341,7 @@ document.addEventListener("click", e => {
   if (!e.target.closest("button")) fecharMenu();
 });
 
-/* 🔥 EMITIR */
+/* EMITIR */
 async function emitir(i) {
   const p = pedidos[i];
 
@@ -331,7 +351,7 @@ async function emitir(i) {
   showToast("Nota emitida 🚀");
 
   try {
-    await fetch(API_EMITIR + "?id=" + p["ID Pedido"]);
+    await fetch(API_EMITIR + "?acao=emitir&id=" + p["ID Pedido"]);
   } catch {
     showToast("Erro ao enviar ❌");
   }
