@@ -173,15 +173,36 @@ function showToast(msg){
 
 /* CARREGAR */
 async function carregar(){
-  const res = await fetch(API + "?t=" + Date.now());
-  const data = await res.json();
+  try{
+    const res = await fetch(API + "?t=" + Date.now());
 
-  pedidos = data || [];
+    if(!res.ok){
+      throw new Error("Erro na API");
+    }
 
-  atualizarCards();
-  render();
+    const data = await res.json();
 
-  salvarIDs();
+    // 🔥 GARANTE QUE SEMPRE É ARRAY
+    pedidos = Array.isArray(data) ? data : [];
+
+    atualizarCards();
+    render();
+
+  }catch(e){
+    console.error(e);
+
+    // 🔥 NÃO QUEBRA A TELA
+    pedidos = [];
+
+    total.innerText = 0;
+    pendentes.innerText = 0;
+    emitidos.innerText = 0;
+    envios.innerText = 0;
+
+    tabela.innerHTML = "<tr><td colspan='5'>Erro ao carregar dados</td></tr>";
+
+    showToast("Erro ao carregar ❌");
+  }
 }
 
 /* SALVAR IDS */
@@ -192,7 +213,7 @@ function salvarIDs(){
 
 /* CARDS */
 function atualizarCards(){
-  total.innerText = pedidos.length;
+  total.innerText = pedidos?.length;
   pendentes.innerText = pedidos.filter(p=>normalizarStatus(p["Status NF"])==="pendente").length;
   emitidos.innerText = pedidos.filter(p=>normalizarStatus(p["Status NF"])==="emitido").length;
   envios.innerText = pedidos.filter(p=>p["Frete"]).length;
