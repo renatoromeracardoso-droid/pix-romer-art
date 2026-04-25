@@ -118,22 +118,10 @@ th, td {
 <div class="container">
 
 <div class="cards">
-  <div class="card">
-    <h2 id="total">0</h2>
-    <span>Total</span>
-  </div>
-  <div class="card">
-    <h2 id="pendentes">0</h2>
-    <span>Pendentes</span>
-  </div>
-  <div class="card">
-    <h2 id="emitidos">0</h2>
-    <span>Emitidos</span>
-  </div>
-  <div class="card">
-    <h2 id="envios">0</h2>
-    <span>Envios</span>
-  </div>
+  <div class="card"><h2 id="total">0</h2><span>Total</span></div>
+  <div class="card"><h2 id="pendentes">0</h2><span>Pendentes</span></div>
+  <div class="card"><h2 id="emitidos">0</h2><span>Emitidos</span></div>
+  <div class="card"><h2 id="envios">0</h2><span>Envios</span></div>
 </div>
 
 <div class="table-container">
@@ -147,7 +135,6 @@ th, td {
 <th>Envio</th>
 </tr>
 </thead>
-
 <tbody id="tabela"></tbody>
 </table>
 </div>
@@ -164,13 +151,11 @@ const API_SCRIPT = "https://script.google.com/macros/s/AKfycbwO1J85bxJyKFPdk9n9h
 let pedidos = [];
 let menuAtual = null;
 
-/* NORMALIZAR STATUS */
+/* STATUS */
 function normalizarStatus(s){
   s = (s || "").toLowerCase();
-
   if(s === "emitido") return "emitido";
   if(s === "paid") return "pendente";
-
   return "pendente";
 }
 
@@ -187,12 +172,9 @@ async function carregar(){
   try{
     const res = await fetch(API);
     const data = await res.json();
-
     pedidos = data || [];
-
     atualizarCards();
     render();
-
   }catch(e){
     showToast("Erro ao carregar ❌");
     console.error(e);
@@ -207,41 +189,30 @@ function atualizarManual(){
 
 /* CARDS */
 function atualizarCards(){
-
-  document.getElementById("total").innerText = pedidos.length;
-
-  document.getElementById("pendentes").innerText =
-    pedidos.filter(p => normalizarStatus(p["Status NF"]) === "pendente").length;
-
-  document.getElementById("emitidos").innerText =
-    pedidos.filter(p => normalizarStatus(p["Status NF"]) === "emitido").length;
-
-  document.getElementById("envios").innerText =
-    pedidos.filter(p => p["Frete"]).length;
+  total.innerText = pedidos.length;
+  pendentes.innerText = pedidos.filter(p=>normalizarStatus(p["Status NF"])==="pendente").length;
+  emitidos.innerText = pedidos.filter(p=>normalizarStatus(p["Status NF"])==="emitido").length;
+  envios.innerText = pedidos.filter(p=>p["Frete"]).length;
 }
 
-/* RENDER */
+/* TABELA */
 function render(){
-
-  const tabela = document.getElementById("tabela");
-  tabela.innerHTML = "";
-
+  tabela.innerHTML="";
   pedidos.forEach((p,i)=>{
-
     const status = normalizarStatus(p["Status NF"]);
     const envio = p["Frete"] ? "📦" : "-";
 
     tabela.innerHTML += `
-      <tr>
-        <td>
-          <button onclick="abrirMenu(${i}, this)">⋮</button>
-          ${p["ID Pedido"]}
-        </td>
-        <td>${p["Nome"]}</td>
-        <td>R$ ${p["Valor"]}</td>
-        <td><span class="badge ${status}">${status}</span></td>
-        <td>${envio}</td>
-      </tr>
+    <tr>
+      <td>
+        <button onclick="abrirMenu(${i}, this)">⋮</button>
+        ${p["ID Pedido"]}
+      </td>
+      <td>${p["Nome"]}</td>
+      <td>R$ ${p["Valor"]}</td>
+      <td><span class="badge ${status}">${status}</span></td>
+      <td>${envio}</td>
+    </tr>
     `;
   });
 }
@@ -252,7 +223,6 @@ function abrirMenu(i, el){
   if(menuAtual) menuAtual.remove();
 
   const p = pedidos[i];
-
   const menu = document.createElement("div");
   menu.className = "menu-popup";
 
@@ -265,6 +235,9 @@ function abrirMenu(i, el){
   if(!p["Frete"]){
     botoes += `<button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>`;
   }
+
+  // 🔥 DECLARAÇÃO SEMPRE VISÍVEL
+  botoes += `<button onclick="gerarDeclaracao(${i})">📦 Declaração</button>`;
 
   botoes += `
     <button onclick="verNota(${i})">👁 Nota</button>
@@ -301,33 +274,30 @@ function pdf(i){
   window.open(`nota.html?id=${p["ID Pedido"]}&pdf=1`);
 }
 
+function gerarDeclaracao(i){
+  const p = pedidos[i];
+  window.open(
+    `declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`
+  );
+}
+
 /* EMITIR */
 async function emitir(i){
   const p = pedidos[i];
-
   showToast("Emitindo...");
-
   await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
-
   if(menuAtual) menuAtual.remove();
-
   showToast("Nota emitida ✅");
-
   await carregar();
 }
 
 /* ENVIO */
 async function gerarEnvio(i){
   const p = pedidos[i];
-
   showToast("Gerando envio...");
-
   await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
-
   if(menuAtual) menuAtual.remove();
-
   showToast("Envio gerado 🚀");
-
   await carregar();
 }
 
