@@ -33,8 +33,9 @@ hr {
 .small { font-size: 12px; }
 
 .chave {
-  word-break: break-all;
+  word-break: break-word;
   font-size: 11px;
+  line-height: 1.4;
 }
 
 .barcode {
@@ -59,14 +60,14 @@ const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
 const autoPDF = params.get("pdf");
 
-/* 🔥 FORMATA DATA */
+/* FORMATA DATA */
 function formatarData(data){
   if(!data) return "-";
   const d = new Date(data);
   return d.toLocaleString("pt-BR");
 }
 
-/* 🔥 TRIBUTO */
+/* TRIBUTO */
 function calcularTributo(valor){
   return (valor * 0.068).toFixed(2);
 }
@@ -86,10 +87,10 @@ async function carregar(){
   const valor = parseFloat(p["Valor"] || 0);
   const tributo = calcularTributo(valor);
 
-  /* 🔥 NOVO: MÉTODO PAGAMENTO */
-  const pagamento = p["Método pagamento"] || "PIX";
+  /* MÉTODO PAGAMENTO AJUSTADO */
+  const pagamento = (p["Método pagamento"] || "PIX").toUpperCase();
 
-  /* 🔥 CHAVE NF */
+  /* CHAVE */
   const chave = p["Número chave"] || p["Chave NF"] || "";
 
   const linkConsulta = chave
@@ -105,13 +106,10 @@ async function carregar(){
 
 <hr>
 
-<div class="center bold">DANFSe v1.0</div>
+<div class="center bold">DANFSe (Documento Auxiliar da NFS-e)</div>
 <div class="center small">
-Documento Auxiliar da NFS-e<br>
-Simples Nacional na Data de Competência
-<br>
+Simples Nacional na Data de Competência<br>
 Optante - Microempreendedor Individual (MEI)
-
 </div>
 
 <hr>
@@ -122,7 +120,7 @@ Data da compra: ${formatarData(p["Data"])}
 <hr>
 
 ITEM  COD  DESCRIÇÃO<br>
-1   1   ${p["Serviço"]}
+1   1   ${p["Serviço"] || "-"}
 
 <hr>
 
@@ -139,12 +137,10 @@ VALOR PAGO: R$ ${valor.toFixed(2)}
 Tributos aprox: R$ ${tributo} (6.8%)
 
 <hr>
-CONSUMIDOR
 
-<br>
-
-${p["Nome"]}<br>
-CPF/CNPJ: ${p["CPF/CNPJ"]}
+<b>CONSUMIDOR</b><br>
+${p["Nome"] || "-"}<br>
+CPF/CNPJ: ${p["CPF/CNPJ"] || "-"}
 
 <hr>
 
@@ -159,22 +155,20 @@ ${chave ? `
 </div>
 ` : ""}
 
+${chave ? `
 <hr>
-
 <div class="center">
 Consulta via QR Code<br><br>
 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${linkConsulta}">
 </div>
+` : ""}
 
 <hr>
+
 <div class="center small">
 Este documento é uma representação simplificada da NFS-e.<br>
-A validade fiscal está condicionada à consulta no portal oficial.<br>
-
-</div>
-<div class="center small">
-Consulte esta nota pelo QR Code acima<br>
-ou pela chave de acesso<br><br>
+A validade fiscal está condicionada à consulta no portal oficial.<br><br>
+Consulte via QR Code ou chave de acesso<br>
 www.nfse.gov.br
 </div>
 
@@ -186,7 +180,7 @@ Emitido pelo sistema RomerArt
 
 `;
 
-  /* 🔥 GERA CÓDIGO DE BARRAS */
+  /* CÓDIGO DE BARRAS */
   if(chave){
     JsBarcode("#barcode", chave, {
       format: "CODE128",
@@ -197,7 +191,7 @@ Emitido pelo sistema RomerArt
     });
   }
 
-  /* 🔥 PDF AUTOMÁTICO */
+  /* PDF AUTOMÁTICO */
   if(autoPDF == "1"){
     setTimeout(()=>window.print(), 700);
   }
