@@ -7,28 +7,42 @@
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {margin:0;font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;}
-
-header {
-  background:#020617;
-  padding:15px;
-  display:flex;
-  justify-content:space-between;
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
 }
 
-.container {padding:15px;}
+header {
+  background: #020617;
+  padding: 15px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:bold;
+}
+
+.btn-refresh {
+  background: #3b82f6;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.container { padding: 15px; }
 
 .cards {
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:10px;
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 10px;
 }
 
 .card {
-  background:#020617;
-  padding:15px;
-  border-radius:10px;
-  text-align:center;
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
 }
 
 .filtros {
@@ -37,39 +51,41 @@ header {
   gap:10px;
 }
 
-input, select {
-  padding:8px;
-  border-radius:6px;
-  border:none;
-  background:#020617;
-  color:white;
+.table-container {
+  margin-top:15px;
+  overflow-x:auto;
 }
 
-table {width:100%;margin-top:15px;}
+table {
+  width:100%;
+  border-collapse: collapse;
+}
 
-td,th {
+th, td {
   padding:10px;
   border-bottom:1px solid #1e293b;
+  font-size:13px;
 }
 
 .badge {
-  padding:5px 10px;
+  padding:5px 12px;
   border-radius:999px;
-  font-size:12px;
+  font-size:11px;
+  font-weight:bold;
 }
 
-.emitido {background:#22c55e;color:#000;}
-.pendente {background:#f59e0b;color:#000;}
+.emitido { background:#22c55e; color:#000; }
+.pendente { background:#f59e0b; color:#000; }
 
 .menu-popup {
-  position:absolute;
-  background:#020617;
-  border:1px solid #1e293b;
-  border-radius:10px;
-  padding:10px;
-  display:none;
-  flex-direction:column;
-  z-index:999;
+  position: absolute;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  z-index: 999;
 }
 
 .menu-popup button {
@@ -82,56 +98,54 @@ td,th {
 }
 
 .toast {
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#22c55e;
-  padding:10px;
-  border-radius:8px;
-  opacity:0;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22c55e;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: 0.3s;
 }
 
-.toast.show {opacity:1;}
-
-.loading {
-  text-align:center;
-  margin-top:15px;
-}
+.toast.show { opacity: 1; }
 </style>
 </head>
 
 <body>
 
 <header>
-Sistema Notas
-<button onclick="atualizarManual()">Atualizar</button>
+🚀 Sistema SaaS • Notas
+<div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </header>
 
 <div class="container">
 
 <div class="cards">
-  <div class="card"><h2 id="total">0</h2>Total</div>
-  <div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
-  <div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
-  <div class="card"><h2 id="envios">0</h2>Envios</div>
+  <div class="card">
+    <h2 id="total">0</h2>
+    <span>Total</span>
+  </div>
+  <div class="card">
+    <h2 id="pendentes">0</h2>
+    <span>Pendentes</span>
+  </div>
+  <div class="card">
+    <h2 id="emitidos">0</h2>
+    <span>Emitidos</span>
+  </div>
+  <div class="card">
+    <h2 id="envios">0</h2>
+    <span>Envios</span>
+  </div>
 </div>
 
-<div class="filtros">
-  <input type="date" id="filtroData">
-  <select id="filtroEnvio">
-    <option value="todos">Envio: Todos</option>
-    <option value="com">Com envio</option>
-    <option value="sem">Sem envio</option>
-  </select>
-</div>
-
-<div id="loading" class="loading">Carregando...</div>
-
+<div class="table-container">
 <table>
 <thead>
 <tr>
-<th></th>
 <th>Pedido</th>
 <th>Cliente</th>
 <th>Valor</th>
@@ -139,8 +153,10 @@ Sistema Notas
 <th>Envio</th>
 </tr>
 </thead>
+
 <tbody id="tabela"></tbody>
 </table>
+</div>
 
 </div>
 
@@ -154,7 +170,7 @@ const API_SCRIPT = "https://script.google.com/macros/s/AKfycbwO1J85bxJyKFPdk9n9h
 let pedidos = [];
 let menuAtual = null;
 
-/* 🔥 TOAST */
+/* TOAST */
 function showToast(msg){
   const t = document.getElementById("toast");
   t.innerText = msg;
@@ -162,154 +178,131 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-/* 🔥 STATUS */
-function status(s){
-  return (s||"").toLowerCase()=="emitido" ? "emitido" : "pendente";
-}
-
-/* 🔥 CACHE */
-function salvarCache(data){
-  localStorage.setItem("cache", JSON.stringify(data));
-}
-
-function carregarCache(){
-  const cache = localStorage.getItem("cache");
-  if(cache){
-    pedidos = JSON.parse(cache);
-    atualizarUI();
-  }
-}
-
-/* 🔥 CARREGAR */
+/* CARREGAR */
 async function carregar(){
-
-  document.getElementById("loading").style.display = "block";
-
   try{
-    const res = await fetch(API + "?t=" + Date.now());
+    const res = await fetch(API);
     const data = await res.json();
 
-    if(Array.isArray(data)){
-      pedidos = data;
-      salvarCache(data);
-    }
+    pedidos = data || [];
+
+    atualizarCards();
+    render();
 
   }catch(e){
-    console.log("erro api, usando cache");
-    carregarCache();
+    showToast("Erro ao carregar ❌");
+    console.error(e);
   }
-
-  atualizarUI();
-  document.getElementById("loading").style.display = "none";
 }
 
-/* 🔥 ATUALIZAR */
+/* ATUALIZAR */
 function atualizarManual(){
   showToast("Atualizando...");
   carregar();
 }
 
-/* 🔥 UI */
-function atualizarUI(){
+/* CARDS */
+function atualizarCards(){
 
-  total.innerText = pedidos.length || 0;
-  pendentes.innerText = pedidos.filter(p=>status(p["Status NF"])=="pendente").length || 0;
-  emitidos.innerText = pedidos.filter(p=>status(p["Status NF"])=="emitido").length || 0;
-  envios.innerText = pedidos.filter(p=>p["Frete"]).length || 0;
+  document.getElementById("total").innerText = pedidos.length;
 
-  render();
+  document.getElementById("pendentes").innerText =
+    pedidos.filter(p => (p["Status NF"]||"").toLowerCase() !== "emitido").length;
+
+  document.getElementById("emitidos").innerText =
+    pedidos.filter(p => (p["Status NF"]||"").toLowerCase() === "emitido").length;
+
+  document.getElementById("envios").innerText =
+    pedidos.filter(p => p["Frete"]).length;
 }
 
-/* 🔥 TABELA */
+/* RENDER */
 function render(){
 
-  tabela.innerHTML="";
-
-  const dataFiltro = document.getElementById("filtroData").value;
-  const envioFiltro = document.getElementById("filtroEnvio").value;
+  const tabela = document.getElementById("tabela");
+  tabela.innerHTML = "";
 
   pedidos.forEach((p,i)=>{
 
-    const st = status(p["Status NF"]);
-
-    if(envioFiltro=="com" && !p["Frete"]) return;
-    if(envioFiltro=="sem" && p["Frete"]) return;
-
-    if(dataFiltro && p["Data"]){
-      if(!p["Data"].startsWith(dataFiltro)) return;
-    }
+    const status = (p["Status NF"]||"pendente").toLowerCase();
+    const envio = p["Frete"] ? "📦" : "-";
 
     tabela.innerHTML += `
-    <tr>
-      <td><button onclick="abrirMenu(${i},this)">⋮</button></td>
-      <td>${p["ID Pedido"] || "-"}</td>
-      <td>${p["Nome"] || "-"}</td>
-      <td>R$ ${p["Valor"] || 0}</td>
-      <td><span class="badge ${st}">${st}</span></td>
-      <td>${p["Frete"] || "-"}</td>
-    </tr>
+      <tr>
+        <td>
+          <button onclick="abrirMenu(${i}, this)">⋮</button>
+          ${p["ID Pedido"]}
+        </td>
+        <td>${p["Nome"]}</td>
+        <td>R$ ${p["Valor"]}</td>
+        <td><span class="badge ${status}">${status}</span></td>
+        <td>${envio}</td>
+      </tr>
     `;
   });
 }
 
-/* 🔥 MENU COMPLETO */
+/* MENU */
 function abrirMenu(i, el){
 
   if(menuAtual) menuAtual.remove();
 
   const p = pedidos[i];
-  const m = document.createElement("div");
-  m.className = "menu-popup";
 
-  if(status(p["Status NF"]) !== "emitido"){
-    const e = document.createElement("button");
-    e.innerText="📄 Emitir Nota";
-    e.onclick = ()=>emitir(p);
-    m.appendChild(e);
-  }
+  const menu = document.createElement("div");
+  menu.className = "menu-popup";
 
-  m.innerHTML += `
-    <button onclick="window.open('nota.html?id=${p["ID Pedido"]}')">👁 Nota Sistema</button>
-    <button onclick="window.open('${p["Link Nota"] || "#"}')">🧾 Nota Oficial</button>
-    <button onclick="window.open('nota.html?id=${p["ID Pedido"]}&pdf=1')">📥 PDF</button>
-    <button onclick="window.open('declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}')">📦 Declaração</button>
-    <button onclick="window.open('https://rastreamento.correios.com.br/app/index.php?objetos=${p["Rastreio"] || ""}')">🚚 Rastrear</button>
+  menu.innerHTML = `
+    <button onclick="emitir(${i})">📄 Emitir Nota</button>
+    <button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>
+    <button onclick="verNota(${i})">👁 Nota</button>
+    <button onclick="pdf(${i})">📥 PDF</button>
   `;
 
-  const env = document.createElement("button");
-  env.innerText="📦 Gerar Envio";
-  env.onclick = ()=>gerarEnvio(p);
-  m.appendChild(env);
+  document.body.appendChild(menu);
 
-  document.body.appendChild(m);
+  const rect = el.getBoundingClientRect();
+  menu.style.top = rect.bottom+"px";
+  menu.style.left = rect.left+"px";
+  menu.style.display = "flex";
 
-  const r = el.getBoundingClientRect();
-  m.style.top = r.bottom+"px";
-  m.style.left = r.left+"px";
-  m.style.display="flex";
-
-  menuAtual = m;
+  menuAtual = menu;
 }
 
-/* 🔥 AÇÕES */
-async function emitir(p){
+/* AÇÕES */
+function verNota(i){
+  const p = pedidos[i];
+  window.open(`nota.html?id=${p["ID Pedido"]}`);
+}
+
+function pdf(i){
+  const p = pedidos[i];
+  window.open(`nota.html?id=${p["ID Pedido"]}&pdf=1`);
+}
+
+/* EMITIR */
+async function emitir(i){
+  const p = pedidos[i];
+
   showToast("Emitindo...");
+
   await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
-  carregar();
+
+  setTimeout(carregar,1000);
 }
 
-async function gerarEnvio(p){
+/* ENVIO */
+async function gerarEnvio(i){
+  const p = pedidos[i];
+
   showToast("Gerando envio...");
-  await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
-  carregar();
-}
 
-/* FILTROS */
-document.getElementById("filtroData").addEventListener("change", render);
-document.getElementById("filtroEnvio").addEventListener("change", render);
+  await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
+
+  setTimeout(carregar,1000);
+}
 
 /* INIT */
-carregarCache();
 carregar();
 
 </script>
