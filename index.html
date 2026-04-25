@@ -45,10 +45,14 @@ header {
   text-align: center;
 }
 
+.table-container {
+  margin-top:15px;
+  overflow-x:auto;
+}
+
 table {
   width:100%;
   border-collapse: collapse;
-  margin-top:15px;
 }
 
 th, td {
@@ -66,16 +70,6 @@ th, td {
 
 .emitido { background:#22c55e; color:#000; }
 .pendente { background:#f59e0b; color:#000; }
-
-.novo {
-  background: #1e293b;
-  animation: pulse 1s infinite alternate;
-}
-
-@keyframes pulse {
-  from { background:#1e293b; }
-  to { background:#334155; }
-}
 
 .menu-popup {
   position: absolute;
@@ -130,6 +124,7 @@ th, td {
   <div class="card"><h2 id="envios">0</h2><span>Envios</span></div>
 </div>
 
+<div class="table-container">
 <table>
 <thead>
 <tr>
@@ -142,6 +137,7 @@ th, td {
 </thead>
 <tbody id="tabela"></tbody>
 </table>
+</div>
 
 </div>
 
@@ -154,12 +150,12 @@ const API_SCRIPT = "https://script.google.com/macros/s/AKfycbwO1J85bxJyKFPdk9n9h
 
 let pedidos = [];
 let menuAtual = null;
-let pedidosAntigos = JSON.parse(localStorage.getItem("pedidos_ids") || "[]");
 
 /* STATUS */
 function normalizarStatus(s){
   s = (s || "").toLowerCase();
   if(s === "emitido") return "emitido";
+  if(s === "paid") return "pendente";
   return "pendente";
 }
 
@@ -174,41 +170,21 @@ function showToast(msg){
 /* CARREGAR */
 async function carregar(){
   try{
-    const res = await fetch(API + "?t=" + Date.now());
-
-    if(!res.ok){
-      throw new Error("Erro na API");
-    }
-
+    const res = await fetch(API);
     const data = await res.json();
-
-    // 🔥 GARANTE QUE SEMPRE É ARRAY
-    pedidos = Array.isArray(data) ? data : [];
-
+    pedidos = data || [];
     atualizarCards();
     render();
-
   }catch(e){
-    console.error(e);
-
-    // 🔥 NÃO QUEBRA A TELA
-    pedidos = [];
-
-    total.innerText = 0;
-    pendentes.innerText = 0;
-    emitidos.innerText = 0;
-    envios.innerText = 0;
-
-    tabela.innerHTML = "<tr><td colspan='5'>Erro ao carregar dados</td></tr>";
-
     showToast("Erro ao carregar ❌");
+    console.error(e);
   }
 }
 
-/* SALVAR IDS */
-function salvarIDs(){
-  const ids = pedidos.map(p=>p["ID Pedido"]);
-  localStorage.setItem("pedidos_ids", JSON.stringify(ids));
+/* ATUALIZAR */
+function atualizarManual(){
+  showToast("Atualizando...");
+  carregar();
 }
 
 /* CARDS */
@@ -222,16 +198,12 @@ function atualizarCards(){
 /* TABELA */
 function render(){
   tabela.innerHTML="";
-
   pedidos.forEach((p,i)=>{
-
     const status = normalizarStatus(p["Status NF"]);
     const envio = p["Frete"] ? "📦" : "-";
 
-    const novo = !pedidosAntigos.includes(p["ID Pedido"]);
-
     tabela.innerHTML += `
-    <tr class="${novo ? "novo" : ""}">
+    <tr>
       <td>
         <button onclick="abrirMenu(${i}, this)">⋮</button>
         ${p["ID Pedido"]}
@@ -254,26 +226,25 @@ function abrirMenu(i, el){
   const menu = document.createElement("div");
   menu.className = "menu-popup";
 
-  let html = "";
+  let botoes = "";
 
   if(normalizarStatus(p["Status NF"]) !== "emitido"){
-    html += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
+    botoes += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
   }
 
   if(!p["Frete"]){
-    html += `<button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>`;
+    botoes += `<button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>`;
   }
 
-  html += `
-    <button onclick="gerarDeclaracao(${i})">📦 Declaração</button>
+  // 🔥 DECLARAÇÃO SEMPRE VISÍVEL
+  botoes += `<button onclick="gerarDeclaracao(${i})">📦 Declaração</button>`;
+
+  botoes += `
     <button onclick="verNota(${i})">👁 Nota</button>
+    <button onclick="pdf(${i})">📥 PDF</button>
   `;
 
-  if(p["Frete"]){
-    html += `<button onclick="window.open('${p["Frete"]}')">🏷️ Etiqueta</button>`;
-  }
-
-  menu.innerHTML = html;
+  menu.innerHTML = botoes;
 
   document.body.appendChild(menu);
 
@@ -294,30 +265,41 @@ document.addEventListener("click", (e) => {
 
 /* AÇÕES */
 function verNota(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+  const p = pedidos[i];
+  window.open(`nota.html?id=${p["ID Pedido"]}`);
+}
+
+function pdf(i){
+  const p = pedidos[i];
+  window.open(`nota.html?id=${p["ID Pedido"]}&pdf=1`);
 }
 
 function gerarDeclaracao(i){
   const p = pedidos[i];
-  window.open(`declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`);
+  window.open(
+    `declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}`
+  );
 }
 
+/* EMITIR */
 async function emitir(i){
   const p = pedidos[i];
+  showToast("Emitindo...");
   await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
-  showToast("Nota emitida");
-  carregar();
+  if(menuAtual) menuAtual.remove();
+  showToast("Nota emitida ✅");
+  await carregar();
 }
 
+/* ENVIO */
 async function gerarEnvio(i){
   const p = pedidos[i];
+  showToast("Gerando envio...");
   await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
-  showToast("Envio gerado");
-  carregar();
+  if(menuAtual) menuAtual.remove();
+  showToast("Envio gerado 🚀");
+  await carregar();
 }
-
-/* AUTO UPDATE (EMPRESA) */
-setInterval(carregar, 15000);
 
 /* INIT */
 carregar();
