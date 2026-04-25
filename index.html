@@ -184,11 +184,14 @@ const API_EMITIR = "https://script.google.com/macros/s/AKfycbyTLu9rYTVUAxxaXKq6N
 
 let pedidos = [];
 let menuAtual = null;
+let loadingEnvio = false;
 
+/* STATUS */
 function statusNormalizado(s) {
   return (s || "").toLowerCase() === "emitido" ? "emitido" : "pendente";
 }
 
+/* TOAST */
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.innerText = msg;
@@ -196,6 +199,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2500);
 }
 
+/* CARREGAR */
 async function carregar() {
   const res = await fetch(API);
   pedidos = await res.json();
@@ -208,12 +212,14 @@ function atualizarManual() {
   showToast("Atualizado ✔");
 }
 
+/* CARDS */
 function atualizarCards() {
   total.innerText = pedidos.length;
   pendentes.innerText = pedidos.filter(p => statusNormalizado(p["Status NF"])==="pendente").length;
   emitidos.innerText = pedidos.filter(p => statusNormalizado(p["Status NF"])==="emitido").length;
 }
 
+/* TABELA */
 function render() {
   tabela.innerHTML = "";
 
@@ -263,18 +269,34 @@ function abrirRastreio(p){
   window.open("https://rastreamento.correios.com.br/app/index.php?objetos=" + p["Rastreio"]);
 }
 
-/* 🔥 NOVO: GERAR ENVIO */
-function gerarEnvioPedido(p){
+/* 🚚 GERAR ENVIO (CORRIGIDO) */
+async function gerarEnvioPedido(p){
 
-  showToast("Gerando envio...");
+  if(loadingEnvio){
+    showToast("Aguarde...");
+    return;
+  }
 
-  fetch(API_EMITIR + "?acao=envio&id=" + p["ID Pedido"])
-    .then(r => r.text())
-    .then(() => {
-      showToast("Envio gerado 🚀");
-      setTimeout(() => carregar(), 1500);
-    })
-    .catch(() => showToast("Erro ao gerar envio ❌"));
+  loadingEnvio = true;
+  showToast("Calculando frete...");
+
+  try{
+
+    const res = await fetch(API_EMITIR + "?acao=envio&id=" + p["ID Pedido"]);
+    const txt = await res.text();
+
+    console.log(txt);
+
+    showToast("Frete gerado 🚚");
+
+    setTimeout(()=>carregar(), 1200);
+
+  }catch(e){
+    console.error(e);
+    showToast("Erro ao gerar envio ❌");
+  }
+
+  loadingEnvio = false;
 }
 
 /* MENU */
@@ -317,7 +339,6 @@ function abrirMenu(i, el) {
   rast.onclick = () => abrirRastreio(p);
   menu.appendChild(rast);
 
-  /* 🔥 NOVO BOTÃO */
   const envio = document.createElement("button");
   envio.innerHTML = "📦 Gerar Envio";
   envio.onclick = () => gerarEnvioPedido(p);
