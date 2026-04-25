@@ -7,118 +7,24 @@
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-header {
-  background: #020617;
-  padding: 15px 20px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-weight:bold;
-}
-
-.btn-refresh {
-  background: #3b82f6;
-  padding: 8px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.container { padding: 15px; }
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(4,1fr);
-  gap: 10px;
-}
-
-.card {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.filtros{
-  margin-top:15px;
-  display:flex;
-  gap:10px;
-}
-
-.filtros input, .filtros select{
-  padding:10px;
-  border-radius:8px;
-  border:none;
-  background:#020617;
-  color:white;
-}
-
-.table-container {
-  margin-top:15px;
-  overflow-x:auto;
-}
-
-table {
-  width:100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding:10px;
-  border-bottom:1px solid #1e293b;
-  font-size:13px;
-}
-
-.badge {
-  padding:5px 12px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:bold;
-}
-
-.emitido { background:#22c55e; color:#000; }
-.pendente { background:#f59e0b; color:#000; }
-
-.menu-popup {
-  position: absolute;
-  background: #020617;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 8px;
-  display: none;
-  flex-direction: column;
-  z-index: 999;
-}
-
-.menu-popup button {
-  background:none;
-  border:none;
-  color:white;
-  padding:10px;
-  text-align:left;
-  cursor:pointer;
-}
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #22c55e;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 10px;
-  opacity: 0;
-  transition: 0.3s;
-}
-
-.toast.show { opacity: 1; }
+body {margin:0;font-family:'Segoe UI';background:#0f172a;color:#e2e8f0;}
+header {background:#020617;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
+.btn-refresh {background:#3b82f6;padding:8px 14px;border-radius:8px;cursor:pointer;}
+.container {padding:15px;}
+.cards {display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.card {background:#020617;padding:15px;border-radius:12px;text-align:center;}
+.filtros{margin-top:15px;display:flex;gap:10px;}
+.filtros input, .filtros select{padding:10px;border-radius:8px;border:none;background:#020617;color:white;}
+.table-container {margin-top:15px;overflow-x:auto;}
+table {width:100%;border-collapse: collapse;}
+th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
+.badge {padding:5px 12px;border-radius:999px;font-size:11px;font-weight:bold;}
+.emitido {background:#22c55e;color:#000;}
+.pendente {background:#f59e0b;color:#000;}
+.menu-popup {position:absolute;background:#020617;border:1px solid #1e293b;border-radius:10px;padding:8px;display:none;flex-direction:column;z-index:999;}
+.menu-popup button {background:none;border:none;color:white;padding:10px;text-align:left;cursor:pointer;}
+.toast {position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:12px 20px;border-radius:10px;opacity:0;transition:0.3s;}
+.toast.show {opacity:1;}
 </style>
 </head>
 
@@ -168,7 +74,7 @@ th, td {
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
+const API = "https://script.google.com/macros/s/AKfycbyMLIobZOi-lp2PqgdELZhuwcw2ylRS-UD0lCk1yuMj9bRxSKq1BzLXkD8AuLEbWBe17g/exec";
 
 let pedidos = [];
 let menuAtual = null;
@@ -204,7 +110,7 @@ async function carregar(){
   render();
 }
 
-/* ATUALIZAR (CORRIGIDO) */
+/* ATUALIZAR */
 async function atualizarManual(){
   toast("Atualizando...");
   await carregar();
@@ -267,6 +173,9 @@ function menu(i,el){
     html+=`<button onclick="envio(${i})">📦 Gerar Envio</button>`;
   }
 
+  // 🔥 NOVO BOTÃO
+  html+=`<button onclick="etiqueta(${i})">🏷 Etiqueta</button>`;
+
   html+=`<button onclick="nota(${i})">👁 Nota</button>`;
   html+=`<button onclick="pdf(${i})">📥 PDF</button>`;
   html+=`<button onclick="declaracao(${i})">📦 Declaração</button>`;
@@ -283,7 +192,7 @@ function menu(i,el){
   menuAtual=m;
 }
 
-/* FECHAR AO CLICAR FORA */
+/* CLICK FORA */
 document.addEventListener("click", (e)=>{
   if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
     fecharMenu();
@@ -303,6 +212,23 @@ async function envio(i){
   toast("Gerando envio...");
   await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
   await carregar();
+}
+
+// 🔥 NOVA FUNÇÃO
+async function etiqueta(i){
+  fecharMenu();
+  toast("Gerando etiqueta...");
+
+  const res = await fetch(API+"?acao=etiqueta&id="+pedidos[i]["ID Pedido"]);
+  const url = await res.text();
+
+  if(url.startsWith("http")){
+    window.open(url);
+    toast("Etiqueta pronta 🚀");
+  } else {
+    console.log(url);
+    toast("Erro ao gerar ❌");
+  }
 }
 
 function nota(i){
