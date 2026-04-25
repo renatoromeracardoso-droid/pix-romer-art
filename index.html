@@ -127,7 +127,7 @@ th, td {
 
 <header>
 🚀 Sistema SaaS • Notas
-<div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
+<div class="btn-refresh" onclick="carregar()">Atualizar</div>
 </header>
 
 <div class="container">
@@ -180,18 +180,15 @@ th, td {
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
-const API_EMITIR = "https://script.google.com/macros/s/AKfycby9fdrGR3SEC2jDzIzZAtVAsYzF3fPNSaWoPslklG84LgPFSOThPzauFrU0VnpkdSQY_A/exec";
+const API_SCRIPT = "https://script.google.com/macros/s/AKfycby9fdrGR3SEC2jDzIzZAtVAsYzF3fPNSaWoPslklG84LgPFSOThPzauFrU0VnpkdSQY_A/exec";
 
 let pedidos = [];
 let menuAtual = null;
-let loadingEnvio = false;
 
-/* STATUS */
 function statusNormalizado(s) {
   return (s || "").toLowerCase() === "emitido" ? "emitido" : "pendente";
 }
 
-/* TOAST */
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.innerText = msg;
@@ -199,7 +196,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2500);
 }
 
-/* CARREGAR */
 async function carregar() {
   const res = await fetch(API);
   pedidos = await res.json();
@@ -207,31 +203,18 @@ async function carregar() {
   render();
 }
 
-function atualizarManual() {
-  carregar();
-  showToast("Atualizado ✔");
-}
-
-/* CARDS */
 function atualizarCards() {
   total.innerText = pedidos.length;
   pendentes.innerText = pedidos.filter(p => statusNormalizado(p["Status NF"])==="pendente").length;
   emitidos.innerText = pedidos.filter(p => statusNormalizado(p["Status NF"])==="emitido").length;
 }
 
-/* TABELA */
 function render() {
   tabela.innerHTML = "";
-
-  const busca = buscaInput.value.toLowerCase();
-  const filtro = filtroSelect.value;
 
   pedidos.forEach((p, i) => {
 
     const status = statusNormalizado(p["Status NF"]);
-
-    if(filtro !== "todos" && status !== filtro) return;
-    if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
 
     tabela.innerHTML += `
       <tr>
@@ -246,57 +229,20 @@ function render() {
   });
 }
 
-/* NOTA */
-function verNota(p) {
-  window.open(`nota.html?id=${p["ID Pedido"]}`, "_blank");
+/* EMITIR */
+async function emitir(p){
+  showToast("Emitindo...");
+  await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
+  showToast("Emitido ✔");
+  setTimeout(carregar,1000);
 }
 
-/* NOTA OFICIAL */
-function notaOficial(p){
-  if(p["Link Nota"]) return window.open(p["Link Nota"]);
-  if(p["Chave NF"]) return window.open("https://www.nfse.gov.br/EmissorNacional/Notas/Visualizar/Index/" + p["Chave NF"]);
-  showToast("Sem nota vinculada");
-}
-
-/* DECLARAÇÃO */
-function gerarDeclaracao(p) {
-  window.open(`declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}&pdf=1`);
-}
-
-/* RASTREIO */
-function abrirRastreio(p){
-  if(!p["Rastreio"]) return showToast("Sem rastreio");
-  window.open("https://rastreamento.correios.com.br/app/index.php?objetos=" + p["Rastreio"]);
-}
-
-/* 🚚 GERAR ENVIO (CORRIGIDO) */
-async function gerarEnvioPedido(p){
-
-  if(loadingEnvio){
-    showToast("Aguarde...");
-    return;
-  }
-
-  loadingEnvio = true;
-  showToast("Calculando frete...");
-
-  try{
-
-    const res = await fetch(API_EMITIR + "?acao=envio&id=" + p["ID Pedido"]);
-    const txt = await res.text();
-
-    console.log(txt);
-
-    showToast("Frete gerado 🚚");
-
-    setTimeout(()=>carregar(), 1200);
-
-  }catch(e){
-    console.error(e);
-    showToast("Erro ao gerar envio ❌");
-  }
-
-  loadingEnvio = false;
+/* ENVIO */
+async function gerarEnvio(p){
+  showToast("Gerando envio...");
+  await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
+  showToast("Envio gerado ✔");
+  setTimeout(carregar,1000);
 }
 
 /* MENU */
@@ -307,42 +253,10 @@ function abrirMenu(i, el) {
   const menu = document.createElement("div");
   menu.className = "menu-popup";
 
-  if (statusNormalizado(p["Status NF"]) !== "emitido") {
-    const emitirBtn = document.createElement("button");
-    emitirBtn.innerHTML = "📄 Emitir Nota";
-    emitirBtn.onclick = () => emitir(i);
-    menu.appendChild(emitirBtn);
-  }
-
-  const ver = document.createElement("button");
-  ver.innerHTML = "👁 Nota Sistema";
-  ver.onclick = () => verNota(p);
-  menu.appendChild(ver);
-
-  const oficial = document.createElement("button");
-  oficial.innerHTML = "🧾 Nota Oficial";
-  oficial.onclick = () => notaOficial(p);
-  menu.appendChild(oficial);
-
-  const pdf = document.createElement("button");
-  pdf.innerHTML = "📥 PDF";
-  pdf.onclick = () => window.open(`nota.html?id=${p["ID Pedido"]}&pdf=1`);
-  menu.appendChild(pdf);
-
-  const dec = document.createElement("button");
-  dec.innerHTML = "📦 Declaração";
-  dec.onclick = () => gerarDeclaracao(p);
-  menu.appendChild(dec);
-
-  const rast = document.createElement("button");
-  rast.innerHTML = "🚚 Rastrear";
-  rast.onclick = () => abrirRastreio(p);
-  menu.appendChild(rast);
-
-  const envio = document.createElement("button");
-  envio.innerHTML = "📦 Gerar Envio";
-  envio.onclick = () => gerarEnvioPedido(p);
-  menu.appendChild(envio);
+  menu.innerHTML = `
+    <button onclick='emitir(${JSON.stringify(p)})'>📄 Emitir Nota</button>
+    <button onclick='gerarEnvio(${JSON.stringify(p)})'>📦 Gerar Envio</button>
+  `;
 
   document.body.appendChild(menu);
 
@@ -361,28 +275,6 @@ function fecharMenu() {
 document.addEventListener("click", e => {
   if (!e.target.closest("button")) fecharMenu();
 });
-
-/* EMITIR */
-async function emitir(i) {
-  const p = pedidos[i];
-
-  p["Status NF"] = "emitido";
-  atualizarCards();
-  render();
-  showToast("Nota emitida 🚀");
-
-  try {
-    await fetch(API_EMITIR + "?acao=emitir&id=" + p["ID Pedido"]);
-  } catch {
-    showToast("Erro ao enviar ❌");
-  }
-}
-
-const buscaInput = document.getElementById("busca");
-const filtroSelect = document.getElementById("filtro");
-
-buscaInput.addEventListener("input", render);
-filtroSelect.addEventListener("change", render);
 
 carregar();
 
