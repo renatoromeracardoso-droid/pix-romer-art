@@ -7,22 +7,16 @@
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
-}
+body {margin:0;font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;}
 
 header {
-  background: #020617;
-  padding: 15px;
+  background:#020617;
+  padding:15px;
   display:flex;
   justify-content:space-between;
-  align-items:center;
 }
 
-.container { padding:15px; }
+.container {padding:15px;}
 
 .cards {
   display:grid;
@@ -38,9 +32,9 @@ header {
 }
 
 .filtros {
+  margin-top:15px;
   display:flex;
   gap:10px;
-  margin-top:15px;
 }
 
 input, select {
@@ -51,9 +45,9 @@ input, select {
   color:white;
 }
 
-table { width:100%; margin-top:15px; }
+table {width:100%;margin-top:15px;}
 
-td, th {
+td,th {
   padding:10px;
   border-bottom:1px solid #1e293b;
 }
@@ -64,8 +58,8 @@ td, th {
   font-size:12px;
 }
 
-.emitido { background:#22c55e; color:#000; }
-.pendente { background:#f59e0b; color:#000; }
+.emitido {background:#22c55e;color:#000;}
+.pendente {background:#f59e0b;color:#000;}
 
 .menu-popup {
   position:absolute;
@@ -98,12 +92,11 @@ td, th {
   opacity:0;
 }
 
-.toast.show { opacity:1; }
+.toast.show {opacity:1;}
 
 .loading {
   text-align:center;
-  margin-top:20px;
-  opacity:0.6;
+  margin-top:15px;
 }
 </style>
 </head>
@@ -161,6 +154,7 @@ const API_SCRIPT = "https://script.google.com/macros/s/AKfycbwO1J85bxJyKFPdk9n9h
 let pedidos = [];
 let menuAtual = null;
 
+/* 🔥 TOAST */
 function showToast(msg){
   const t = document.getElementById("toast");
   t.innerText = msg;
@@ -168,21 +162,22 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-/* 🚀 CACHE LOCAL */
+/* 🔥 STATUS */
+function status(s){
+  return (s||"").toLowerCase()=="emitido" ? "emitido" : "pendente";
+}
+
+/* 🔥 CACHE */
 function salvarCache(data){
-  localStorage.setItem("pedidos_cache", JSON.stringify(data));
+  localStorage.setItem("cache", JSON.stringify(data));
 }
 
 function carregarCache(){
-  const cache = localStorage.getItem("pedidos_cache");
+  const cache = localStorage.getItem("cache");
   if(cache){
     pedidos = JSON.parse(cache);
     atualizarUI();
   }
-}
-
-function status(s){
-  return (s||"").toLowerCase()=="emitido" ? "emitido" : "pendente";
 }
 
 /* 🔥 CARREGAR */
@@ -191,39 +186,43 @@ async function carregar(){
   document.getElementById("loading").style.display = "block";
 
   try{
-    const res = await fetch(API + "?t=" + Date.now()); // evita cache
-    pedidos = await res.json();
+    const res = await fetch(API + "?t=" + Date.now());
+    const data = await res.json();
 
-    salvarCache(pedidos);
-    atualizarUI();
+    if(Array.isArray(data)){
+      pedidos = data;
+      salvarCache(data);
+    }
 
   }catch(e){
-    console.log("erro, usando cache");
+    console.log("erro api, usando cache");
     carregarCache();
   }
 
+  atualizarUI();
   document.getElementById("loading").style.display = "none";
 }
 
-/* 🔥 ATUALIZAR MANUAL */
+/* 🔥 ATUALIZAR */
 function atualizarManual(){
   showToast("Atualizando...");
   carregar();
 }
 
-/* UI */
+/* 🔥 UI */
 function atualizarUI(){
 
-  total.innerText = pedidos.length;
-  pendentes.innerText = pedidos.filter(p=>status(p["Status NF"])=="pendente").length;
-  emitidos.innerText = pedidos.filter(p=>status(p["Status NF"])=="emitido").length;
-  envios.innerText = pedidos.filter(p=>p["Frete"]).length;
+  total.innerText = pedidos.length || 0;
+  pendentes.innerText = pedidos.filter(p=>status(p["Status NF"])=="pendente").length || 0;
+  emitidos.innerText = pedidos.filter(p=>status(p["Status NF"])=="emitido").length || 0;
+  envios.innerText = pedidos.filter(p=>p["Frete"]).length || 0;
 
   render();
 }
 
-/* RENDER */
+/* 🔥 TABELA */
 function render(){
+
   tabela.innerHTML="";
 
   const dataFiltro = document.getElementById("filtroData").value;
@@ -242,10 +241,10 @@ function render(){
 
     tabela.innerHTML += `
     <tr>
-      <td><button onclick="menu(${i},this)">⋮</button></td>
-      <td>${p["ID Pedido"]}</td>
-      <td>${p["Nome"]}</td>
-      <td>R$ ${p["Valor"]}</td>
+      <td><button onclick="abrirMenu(${i},this)">⋮</button></td>
+      <td>${p["ID Pedido"] || "-"}</td>
+      <td>${p["Nome"] || "-"}</td>
+      <td>R$ ${p["Valor"] || 0}</td>
       <td><span class="badge ${st}">${st}</span></td>
       <td>${p["Frete"] || "-"}</td>
     </tr>
@@ -253,13 +252,12 @@ function render(){
   });
 }
 
-/* MENU */
-function menu(i, el){
+/* 🔥 MENU COMPLETO */
+function abrirMenu(i, el){
 
   if(menuAtual) menuAtual.remove();
 
   const p = pedidos[i];
-
   const m = document.createElement("div");
   m.className = "menu-popup";
 
@@ -269,6 +267,14 @@ function menu(i, el){
     e.onclick = ()=>emitir(p);
     m.appendChild(e);
   }
+
+  m.innerHTML += `
+    <button onclick="window.open('nota.html?id=${p["ID Pedido"]}')">👁 Nota Sistema</button>
+    <button onclick="window.open('${p["Link Nota"] || "#"}')">🧾 Nota Oficial</button>
+    <button onclick="window.open('nota.html?id=${p["ID Pedido"]}&pdf=1')">📥 PDF</button>
+    <button onclick="window.open('declaracao.html?nome=${encodeURIComponent(p["Nome"])}&cpf=${p["CPF/CNPJ"]}&servico=${encodeURIComponent(p["Serviço"])}&valor=${p["Valor"]}')">📦 Declaração</button>
+    <button onclick="window.open('https://rastreamento.correios.com.br/app/index.php?objetos=${p["Rastreio"] || ""}')">🚚 Rastrear</button>
+  `;
 
   const env = document.createElement("button");
   env.innerText="📦 Gerar Envio";
@@ -285,7 +291,7 @@ function menu(i, el){
   menuAtual = m;
 }
 
-/* AÇÕES */
+/* 🔥 AÇÕES */
 async function emitir(p){
   showToast("Emitindo...");
   await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
@@ -303,8 +309,8 @@ document.getElementById("filtroData").addEventListener("change", render);
 document.getElementById("filtroEnvio").addEventListener("change", render);
 
 /* INIT */
-carregarCache(); // carrega rápido
-carregar(); // atualiza real
+carregarCache();
+carregar();
 
 </script>
 
