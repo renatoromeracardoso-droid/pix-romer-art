@@ -45,12 +45,6 @@ header {
   text-align: center;
 }
 
-.filtros {
-  margin-top:15px;
-  display:flex;
-  gap:10px;
-}
-
 .table-container {
   margin-top:15px;
   overflow-x:auto;
@@ -170,6 +164,16 @@ const API_SCRIPT = "https://script.google.com/macros/s/AKfycbwO1J85bxJyKFPdk9n9h
 let pedidos = [];
 let menuAtual = null;
 
+/* NORMALIZAR STATUS */
+function normalizarStatus(s){
+  s = (s || "").toLowerCase();
+
+  if(s === "emitido") return "emitido";
+  if(s === "paid") return "pendente";
+
+  return "pendente";
+}
+
 /* TOAST */
 function showToast(msg){
   const t = document.getElementById("toast");
@@ -207,10 +211,10 @@ function atualizarCards(){
   document.getElementById("total").innerText = pedidos.length;
 
   document.getElementById("pendentes").innerText =
-    pedidos.filter(p => (p["Status NF"]||"").toLowerCase() !== "emitido").length;
+    pedidos.filter(p => normalizarStatus(p["Status NF"]) === "pendente").length;
 
   document.getElementById("emitidos").innerText =
-    pedidos.filter(p => (p["Status NF"]||"").toLowerCase() === "emitido").length;
+    pedidos.filter(p => normalizarStatus(p["Status NF"]) === "emitido").length;
 
   document.getElementById("envios").innerText =
     pedidos.filter(p => p["Frete"]).length;
@@ -224,7 +228,7 @@ function render(){
 
   pedidos.forEach((p,i)=>{
 
-    const status = (p["Status NF"]||"pendente").toLowerCase();
+    const status = normalizarStatus(p["Status NF"]);
     const envio = p["Frete"] ? "📦" : "-";
 
     tabela.innerHTML += `
@@ -252,12 +256,22 @@ function abrirMenu(i, el){
   const menu = document.createElement("div");
   menu.className = "menu-popup";
 
-  menu.innerHTML = `
-    <button onclick="emitir(${i})">📄 Emitir Nota</button>
-    <button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>
+  let botoes = "";
+
+  if(normalizarStatus(p["Status NF"]) !== "emitido"){
+    botoes += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
+  }
+
+  if(!p["Frete"]){
+    botoes += `<button onclick="gerarEnvio(${i})">📦 Gerar Envio</button>`;
+  }
+
+  botoes += `
     <button onclick="verNota(${i})">👁 Nota</button>
     <button onclick="pdf(${i})">📥 PDF</button>
   `;
+
+  menu.innerHTML = botoes;
 
   document.body.appendChild(menu);
 
@@ -268,6 +282,13 @@ function abrirMenu(i, el){
 
   menuAtual = menu;
 }
+
+/* FECHAR MENU */
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".menu-popup") && !e.target.closest("button")) {
+    if(menuAtual) menuAtual.remove();
+  }
+});
 
 /* AÇÕES */
 function verNota(i){
@@ -288,7 +309,11 @@ async function emitir(i){
 
   await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
 
-  setTimeout(carregar,1000);
+  if(menuAtual) menuAtual.remove();
+
+  showToast("Nota emitida ✅");
+
+  await carregar();
 }
 
 /* ENVIO */
@@ -299,7 +324,11 @@ async function gerarEnvio(i){
 
   await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
 
-  setTimeout(carregar,1000);
+  if(menuAtual) menuAtual.remove();
+
+  showToast("Envio gerado 🚀");
+
+  await carregar();
 }
 
 /* INIT */
