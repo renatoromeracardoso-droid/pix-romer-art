@@ -60,6 +60,7 @@ td, th {
   padding:10px;
   display:none;
   flex-direction:column;
+  z-index:999;
 }
 
 .menu-popup button {
@@ -68,6 +69,7 @@ td, th {
   color:white;
   padding:10px;
   text-align:left;
+  cursor:pointer;
 }
 
 .toast {
@@ -120,9 +122,7 @@ Sistema Notas
 <script>
 
 const API = "https://opensheet.elk.sh/1rc7bmVfGwuSjrHTTYNxOdAWx9DPp5CdQetycT4EaGkM/Notas";
-
-/* 🔥 SEU SCRIPT NOVO */
-const API_SCRIPT = "https://script.google.com/macros/s/AKfycbw17vBghxnYx36MyLCYZ2m6pcsl8jdhoChpRXHE-TR1UkcUHyOFjBwM3oISavliG2lL/exec";
+const API_SCRIPT = "https://script.google.com/macros/s/AKfycby9fdrGR3SEC2jDzIzZAtVAsYzF3fPNSaWoPslklG84LgPFSOThPzauFrU0VnpkdSQY_A/exec";
 
 let pedidos = [];
 let menuAtual = null;
@@ -168,7 +168,7 @@ function render(){
   });
 }
 
-/* MENU */
+/* MENU COMPLETO */
 function menu(i, el){
 
   if(menuAtual) menuAtual.remove();
@@ -178,15 +178,35 @@ function menu(i, el){
   const m = document.createElement("div");
   m.className = "menu-popup";
 
-  /* emitir */
-  const e = document.createElement("button");
-  e.innerText="Emitir Nota";
-  e.onclick = ()=>emitir(i);
-  m.appendChild(e);
+  /* EMITIR */
+  if(status(p["Status NF"]) !== "emitido"){
+    const e = document.createElement("button");
+    e.innerText="📄 Emitir Nota";
+    e.onclick = ()=>emitir(i);
+    m.appendChild(e);
+  }
 
-  /* envio */
+  /* NOTA SISTEMA */
+  const nota = document.createElement("button");
+  nota.innerText="👁 Nota Sistema";
+  nota.onclick = ()=>window.open(`nota.html?id=${p["ID Pedido"]}`);
+  m.appendChild(nota);
+
+  /* PDF */
+  const pdf = document.createElement("button");
+  pdf.innerText="📥 PDF";
+  pdf.onclick = ()=>window.open(`nota.html?id=${p["ID Pedido"]}&pdf=1`);
+  m.appendChild(pdf);
+
+  /* DECLARAÇÃO */
+  const dec = document.createElement("button");
+  dec.innerText="📦 Declaração";
+  dec.onclick = ()=>window.open(`declaracao.html?nome=${p["Nome"]}&cpf=${p["CPF/CNPJ"]}&servico=${p["Serviço"]}&valor=${p["Valor"]}`);
+  m.appendChild(dec);
+
+  /* ENVIO */
   const env = document.createElement("button");
-  env.innerText="Gerar Envio";
+  env.innerText="📦 Gerar Envio";
   env.onclick = ()=>gerarEnvio(p);
   m.appendChild(env);
 
