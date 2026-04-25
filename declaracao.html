@@ -3,31 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Declaração de Conteúdo</title>
+
+<title>DC-e • Declaração de Conteúdo</title>
 
 <style>
 body {
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   background: #f1f5f9;
   padding: 20px;
 }
 
-.box {
+.doc {
   background: white;
-  padding: 20px;
-  max-width: 500px;
+  max-width: 520px;
   margin: auto;
-  border: 1px solid #000;
+  padding: 20px;
+  border: 2px solid #000;
 }
 
-h2 {
+.header {
   text-align: center;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.sub {
+  text-align:center;
+  font-size:12px;
+  margin-bottom:10px;
 }
 
 .linha {
   display:flex;
   justify-content:space-between;
   margin:5px 0;
+  font-size:13px;
 }
 
 table {
@@ -42,6 +52,15 @@ td, th {
   font-size:12px;
 }
 
+.center {
+  text-align:center;
+}
+
+.qr {
+  text-align:center;
+  margin-top:15px;
+}
+
 .btn {
   margin-top:15px;
   padding:10px;
@@ -49,65 +68,104 @@ td, th {
   background:black;
   color:white;
   border:none;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<div class="box" id="doc">
-
-<h2>DECLARAÇÃO DE CONTEÚDO</h2>
-
-<div class="linha"><b>Remetente:</b> ROMER ART Laser & Design</div>
-<div class="linha"><b>CNPJ:</b> 66.252.416/0001-05</div>
-
-<hr>
-
-<div class="linha"><b>Destinatário:</b> <span id="nome"></span></div>
-<div class="linha"><b>CPF/CNPJ:</b> <span id="cpf"></span></div>
-
-<hr>
-
-<table>
-<tr>
-<th>Descrição</th>
-<th>Valor</th>
-</tr>
-<tr>
-<td id="produto"></td>
-<td id="valor"></td>
-</tr>
-</table>
-
-<br>
-
-<b>Total:</b> <span id="total"></span>
-
-<br><br>
-
-Declaro que não se trata de conteúdo ilícito.
-
-<br><br>
-
-_____________________________________<br>
-Assinatura do remetente
-
-<button class="btn" onclick="window.print()">📄 Gerar PDF</button>
-
+<div class="doc" id="doc">
+Carregando...
 </div>
 
 <script>
 
 const url = new URLSearchParams(window.location.search);
 
-document.getElementById("nome").innerText = url.get("nome");
-document.getElementById("cpf").innerText = url.get("cpf");
-document.getElementById("produto").innerText = url.get("servico");
+const nome = url.get("nome") || "-";
+const cpf = url.get("cpf") || "-";
+const produto = url.get("servico") || "-";
+const valor = url.get("valor") || "0";
 
-const valor = url.get("valor");
-document.getElementById("valor").innerText = "R$ " + valor;
-document.getElementById("total").innerText = "R$ " + valor;
+/* 🔥 GERA NÚMERO DC-e */
+function gerarNumero(){
+  return "DCE-" + Date.now();
+}
+
+/* 🔥 DATA */
+const data = new Date().toLocaleString("pt-BR");
+
+/* 🔥 LINK VERIFICAÇÃO (simulado) */
+const link = window.location.href;
+
+document.getElementById("doc").innerHTML = `
+
+<div class="header">DECLARAÇÃO DE CONTEÚDO ELETRÔNICA</div>
+<div class="sub">DC-e • Documento Auxiliar para Transporte</div>
+
+<hr>
+
+<div class="linha"><b>Número:</b> ${gerarNumero()}</div>
+<div class="linha"><b>Data:</b> ${data}</div>
+
+<hr>
+
+<b>REMETENTE</b>
+<div class="linha">RomerArt</div>
+<div class="linha">CNPJ: 66.252.416/0001-05</div>
+<div class="linha">São Paulo - SP</div>
+
+<hr>
+
+<b>DESTINATÁRIO</b>
+<div class="linha">${nome}</div>
+<div class="linha">CPF/CNPJ: ${cpf}</div>
+
+<hr>
+
+<b>DESCRIÇÃO DOS ITENS</b>
+
+<table>
+<tr>
+<th>Item</th>
+<th>Descrição</th>
+<th>Valor</th>
+</tr>
+<tr>
+<td>1</td>
+<td>${produto}</td>
+<td>R$ ${valor}</td>
+</tr>
+</table>
+
+<br>
+
+<div class="linha"><b>Valor Total:</b> R$ ${valor}</div>
+
+<hr>
+
+<div style="font-size:12px">
+Declaro, sob as penas da lei, que o conteúdo desta remessa não constitui mercadoria sujeita à tributação, quando aplicável, e está em conformidade com a legislação vigente.
+</div>
+
+<hr>
+
+<div class="qr">
+Consulta via QR Code<br><br>
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(link)}">
+</div>
+
+<hr>
+
+<div class="center" style="font-size:11px">
+Documento gerado automaticamente pelo sistema RomerArt<br>
+Esta DC-e é válida como documento auxiliar de envio
+</div>
+
+<button class="btn" onclick="window.print()">📄 Gerar PDF</button>
+
+`;
 
 </script>
 
