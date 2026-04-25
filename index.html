@@ -19,13 +19,14 @@ header {
   padding: 15px;
   display:flex;
   justify-content:space-between;
+  align-items:center;
 }
 
 .container { padding:15px; }
 
 .cards {
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(4,1fr);
   gap:10px;
 }
 
@@ -34,6 +35,20 @@ header {
   padding:15px;
   border-radius:10px;
   text-align:center;
+}
+
+.filtros {
+  display:flex;
+  gap:10px;
+  margin-top:15px;
+}
+
+input, select {
+  padding:8px;
+  border-radius:6px;
+  border:none;
+  background:#020617;
+  color:white;
 }
 
 table { width:100%; margin-top:15px; }
@@ -84,6 +99,12 @@ td, th {
 }
 
 .toast.show { opacity:1; }
+
+.loading {
+  text-align:center;
+  margin-top:20px;
+  opacity:0.6;
+}
 </style>
 </head>
 
@@ -91,7 +112,7 @@ td, th {
 
 <header>
 Sistema Notas
-<button onclick="carregar()">Atualizar</button>
+<button onclick="atualizarManual()">Atualizar</button>
 </header>
 
 <div class="container">
@@ -100,16 +121,29 @@ Sistema Notas
   <div class="card"><h2 id="total">0</h2>Total</div>
   <div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
   <div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
+  <div class="card"><h2 id="envios">0</h2>Envios</div>
 </div>
+
+<div class="filtros">
+  <input type="date" id="filtroData">
+  <select id="filtroEnvio">
+    <option value="todos">Envio: Todos</option>
+    <option value="com">Com envio</option>
+    <option value="sem">Sem envio</option>
+  </select>
+</div>
+
+<div id="loading" class="loading">Carregando...</div>
 
 <table>
 <thead>
 <tr>
+<th></th>
 <th>Pedido</th>
 <th>Cliente</th>
 <th>Valor</th>
 <th>Status</th>
-<th></th>
+<th>Envio</th>
 </tr>
 </thead>
 <tbody id="tabela"></tbody>
@@ -134,41 +168,92 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
+/* 🚀 CACHE LOCAL */
+function salvarCache(data){
+  localStorage.setItem("pedidos_cache", JSON.stringify(data));
+}
+
+function carregarCache(){
+  const cache = localStorage.getItem("pedidos_cache");
+  if(cache){
+    pedidos = JSON.parse(cache);
+    atualizarUI();
+  }
+}
+
 function status(s){
   return (s||"").toLowerCase()=="emitido" ? "emitido" : "pendente";
 }
 
+/* 🔥 CARREGAR */
 async function carregar(){
-  const res = await fetch(API);
-  pedidos = await res.json();
+
+  document.getElementById("loading").style.display = "block";
+
+  try{
+    const res = await fetch(API + "?t=" + Date.now()); // evita cache
+    pedidos = await res.json();
+
+    salvarCache(pedidos);
+    atualizarUI();
+
+  }catch(e){
+    console.log("erro, usando cache");
+    carregarCache();
+  }
+
+  document.getElementById("loading").style.display = "none";
+}
+
+/* 🔥 ATUALIZAR MANUAL */
+function atualizarManual(){
+  showToast("Atualizando...");
+  carregar();
+}
+
+/* UI */
+function atualizarUI(){
 
   total.innerText = pedidos.length;
   pendentes.innerText = pedidos.filter(p=>status(p["Status NF"])=="pendente").length;
   emitidos.innerText = pedidos.filter(p=>status(p["Status NF"])=="emitido").length;
+  envios.innerText = pedidos.filter(p=>p["Frete"]).length;
 
   render();
 }
 
+/* RENDER */
 function render(){
   tabela.innerHTML="";
+
+  const dataFiltro = document.getElementById("filtroData").value;
+  const envioFiltro = document.getElementById("filtroEnvio").value;
 
   pedidos.forEach((p,i)=>{
 
     const st = status(p["Status NF"]);
 
+    if(envioFiltro=="com" && !p["Frete"]) return;
+    if(envioFiltro=="sem" && p["Frete"]) return;
+
+    if(dataFiltro && p["Data"]){
+      if(!p["Data"].startsWith(dataFiltro)) return;
+    }
+
     tabela.innerHTML += `
     <tr>
+      <td><button onclick="menu(${i},this)">⋮</button></td>
       <td>${p["ID Pedido"]}</td>
       <td>${p["Nome"]}</td>
       <td>R$ ${p["Valor"]}</td>
       <td><span class="badge ${st}">${st}</span></td>
-      <td><button onclick="menu(${i},this)">⋮</button></td>
+      <td>${p["Frete"] || "-"}</td>
     </tr>
     `;
   });
 }
 
-/* MENU COMPLETO */
+/* MENU */
 function menu(i, el){
 
   if(menuAtual) menuAtual.remove();
@@ -178,33 +263,13 @@ function menu(i, el){
   const m = document.createElement("div");
   m.className = "menu-popup";
 
-  /* EMITIR */
   if(status(p["Status NF"]) !== "emitido"){
     const e = document.createElement("button");
     e.innerText="📄 Emitir Nota";
-    e.onclick = ()=>emitir(i);
+    e.onclick = ()=>emitir(p);
     m.appendChild(e);
   }
 
-  /* NOTA SISTEMA */
-  const nota = document.createElement("button");
-  nota.innerText="👁 Nota Sistema";
-  nota.onclick = ()=>window.open(`nota.html?id=${p["ID Pedido"]}`);
-  m.appendChild(nota);
-
-  /* PDF */
-  const pdf = document.createElement("button");
-  pdf.innerText="📥 PDF";
-  pdf.onclick = ()=>window.open(`nota.html?id=${p["ID Pedido"]}&pdf=1`);
-  m.appendChild(pdf);
-
-  /* DECLARAÇÃO */
-  const dec = document.createElement("button");
-  dec.innerText="📦 Declaração";
-  dec.onclick = ()=>window.open(`declaracao.html?nome=${p["Nome"]}&cpf=${p["CPF/CNPJ"]}&servico=${p["Serviço"]}&valor=${p["Valor"]}`);
-  m.appendChild(dec);
-
-  /* ENVIO */
   const env = document.createElement("button");
   env.innerText="📦 Gerar Envio";
   env.onclick = ()=>gerarEnvio(p);
@@ -220,33 +285,26 @@ function menu(i, el){
   menuAtual = m;
 }
 
-/* EMITIR */
-async function emitir(i){
-
-  const p = pedidos[i];
-
+/* AÇÕES */
+async function emitir(p){
   showToast("Emitindo...");
-
   await fetch(API_SCRIPT + "?acao=emitir&id=" + p["ID Pedido"]);
-
-  showToast("Emitido ✔");
-
-  setTimeout(carregar,1000);
+  carregar();
 }
 
-/* ENVIO */
 async function gerarEnvio(p){
-
   showToast("Gerando envio...");
-
   await fetch(API_SCRIPT + "?acao=envio&id=" + p["ID Pedido"]);
-
-  showToast("Envio gerado 🚀");
-
-  setTimeout(carregar,1000);
+  carregar();
 }
 
-carregar();
+/* FILTROS */
+document.getElementById("filtroData").addEventListener("change", render);
+document.getElementById("filtroEnvio").addEventListener("change", render);
+
+/* INIT */
+carregarCache(); // carrega rápido
+carregar(); // atualiza real
 
 </script>
 
