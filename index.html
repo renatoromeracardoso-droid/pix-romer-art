@@ -132,6 +132,14 @@ function toast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
+/* FECHAR MENU */
+function fecharMenu(){
+  if(menuAtual){
+    menuAtual.remove();
+    menuAtual = null;
+  }
+}
+
 /* CARREGAR */
 async function carregar(){
   const res = await fetch(API);
@@ -180,7 +188,7 @@ function render(){
 /* MENU */
 function menu(i,el){
 
-  if(menuAtual) menuAtual.remove();
+  fecharMenu(); // 🔥 garante que nunca fica aberto duplicado
 
   const p = pedidos[i];
   const m = document.createElement("div");
@@ -188,8 +196,15 @@ function menu(i,el){
 
   let html="";
 
-  html+=`<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
-  html+=`<button onclick="envio(${i})">📦 Gerar Envio</button>`;
+  // 🔥 ESCONDE BOTÕES CONFORME STATUS
+  if(statusNF(p["Status NF"]) !== "emitido"){
+    html+=`<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
+  }
+
+  if(!p["Frete"]){
+    html+=`<button onclick="envio(${i})">📦 Gerar Envio</button>`;
+  }
+
   html+=`<button onclick="nota(${i})">👁 Nota</button>`;
   html+=`<button onclick="pdf(${i})">📥 PDF</button>`;
   html+=`<button onclick="declaracao(${i})">📦 Declaração</button>`;
@@ -206,35 +221,40 @@ function menu(i,el){
   menuAtual=m;
 }
 
-/* FECHAR MENU AUTOMÁTICO */
-function fecharMenu(){
-  if(menuAtual) menuAtual.remove();
-}
+/* CLICK FORA = FECHA MENU */
+document.addEventListener("click", (e)=>{
+  if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
+    fecharMenu();
+  }
+});
 
 /* AÇÕES */
 async function emitir(i){
-  fecharMenu();
+  fecharMenu(); // 🔥 fecha instantâneo
   toast("Emitindo...");
   await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
-  carregar();
+  await carregar(); // 🔥 recarrega dados atualizados
 }
 
 async function envio(i){
-  fecharMenu();
+  fecharMenu(); // 🔥 fecha instantâneo
   toast("Gerando envio...");
   await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
-  carregar();
+  await carregar(); // 🔥 atualiza tela
 }
 
 function nota(i){
+  fecharMenu();
   window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
 }
 
 function pdf(i){
+  fecharMenu();
   window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
 }
 
 function declaracao(i){
+  fecharMenu();
   const p = pedidos[i];
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
@@ -247,6 +267,8 @@ document.getElementById("filtro").addEventListener("change", render);
 carregar();
 
 </script>
+
+  
 
 </body>
 </html>
