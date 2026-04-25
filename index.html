@@ -7,18 +7,51 @@
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {margin:0;font-family:'Segoe UI';background:#0f172a;color:#e2e8f0;}
-header {background:#020617;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
-.btn-refresh {background:#3b82f6;padding:8px 14px;border-radius:8px;cursor:pointer;}
-.container {padding:15px;}
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
 
-.cards {display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-.card {background:#020617;padding:15px;border-radius:12px;text-align:center;}
+header {
+  background: #020617;
+  padding: 15px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:bold;
+}
 
-.filtros {margin-top:15px;display:flex;gap:10px;}
+.btn-refresh {
+  background: #3b82f6;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
 
-input, select {
-  width:100%;
+.container { padding: 15px; }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 10px;
+}
+
+.card {
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.filtros{
+  margin-top:15px;
+  display:flex;
+  gap:10px;
+}
+
+.filtros input, .filtros select{
   padding:10px;
   border-radius:8px;
   border:none;
@@ -26,22 +59,41 @@ input, select {
   color:white;
 }
 
-table {width:100%;border-collapse:collapse;margin-top:15px;}
-th,td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
+.table-container {
+  margin-top:15px;
+  overflow-x:auto;
+}
 
-.badge {padding:5px 12px;border-radius:999px;font-size:11px;font-weight:bold;}
-.emitido {background:#22c55e;color:#000;}
-.pendente {background:#f59e0b;color:#000;}
+table {
+  width:100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid #1e293b;
+  font-size:13px;
+}
+
+.badge {
+  padding:5px 12px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:bold;
+}
+
+.emitido { background:#22c55e; color:#000; }
+.pendente { background:#f59e0b; color:#000; }
 
 .menu-popup {
-  position:absolute;
-  background:#020617;
-  border:1px solid #1e293b;
-  border-radius:10px;
-  padding:8px;
-  display:none;
-  flex-direction:column;
-  z-index:999;
+  position: absolute;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  z-index: 999;
 }
 
 .menu-popup button {
@@ -54,17 +106,19 @@ th,td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
 }
 
 .toast {
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#22c55e;
-  padding:12px 20px;
-  border-radius:10px;
-  opacity:0;
-  transition:0.3s;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22c55e;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: 0.3s;
 }
-.toast.show {opacity:1;}
+
+.toast.show { opacity: 1; }
 </style>
 </head>
 
@@ -72,16 +126,16 @@ th,td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
 
 <header>
 🚀 Sistema SaaS • Notas
-<div class="btn-refresh" onclick="carregar()">Atualizar</div>
+<div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </header>
 
 <div class="container">
 
 <div class="cards">
-  <div class="card"><h2 id="total">0</h2>Total</div>
-  <div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
-  <div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
-  <div class="card"><h2 id="envios">0</h2>Envios</div>
+  <div class="card"><h2 id="total">0</h2><span>Total</span></div>
+  <div class="card"><h2 id="pendentes">0</h2><span>Pendentes</span></div>
+  <div class="card"><h2 id="emitidos">0</h2><span>Emitidos</span></div>
+  <div class="card"><h2 id="envios">0</h2><span>Envios</span></div>
 </div>
 
 <div class="filtros">
@@ -93,6 +147,7 @@ th,td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
   </select>
 </div>
 
+<div class="table-container">
 <table>
 <thead>
 <tr>
@@ -105,6 +160,7 @@ th,td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
 </thead>
 <tbody id="tabela"></tbody>
 </table>
+</div>
 
 </div>
 
@@ -142,10 +198,17 @@ function fecharMenu(){
 
 /* CARREGAR */
 async function carregar(){
-  const res = await fetch(API);
+  const res = await fetch(API + "?t=" + new Date().getTime());
   pedidos = await res.json();
   atualizarCards();
   render();
+}
+
+/* ATUALIZAR (CORRIGIDO) */
+async function atualizarManual(){
+  toast("Atualizando...");
+  await carregar();
+  toast("Atualizado ✅");
 }
 
 /* CARDS */
@@ -175,10 +238,10 @@ function render(){
     <tr>
       <td>
         <button onclick="menu(${i},this)">⋮</button>
-        ${p["ID Pedido"]}
+        ${p["ID Pedido"] || "-"}
       </td>
-      <td>${p["Nome"]}</td>
-      <td>R$ ${p["Valor"]}</td>
+      <td>${p["Nome"] || "-"}</td>
+      <td>R$ ${p["Valor"] || "0.00"}</td>
       <td><span class="badge ${status}">${status}</span></td>
       <td>${p["Frete"]?"📦":"-"}</td>
     </tr>`;
@@ -188,7 +251,7 @@ function render(){
 /* MENU */
 function menu(i,el){
 
-  fecharMenu(); // 🔥 garante que nunca fica aberto duplicado
+  fecharMenu();
 
   const p = pedidos[i];
   const m = document.createElement("div");
@@ -196,7 +259,6 @@ function menu(i,el){
 
   let html="";
 
-  // 🔥 ESCONDE BOTÕES CONFORME STATUS
   if(statusNF(p["Status NF"]) !== "emitido"){
     html+=`<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
   }
@@ -221,7 +283,7 @@ function menu(i,el){
   menuAtual=m;
 }
 
-/* CLICK FORA = FECHA MENU */
+/* FECHAR AO CLICAR FORA */
 document.addEventListener("click", (e)=>{
   if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
     fecharMenu();
@@ -230,17 +292,17 @@ document.addEventListener("click", (e)=>{
 
 /* AÇÕES */
 async function emitir(i){
-  fecharMenu(); // 🔥 fecha instantâneo
+  fecharMenu();
   toast("Emitindo...");
   await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
-  await carregar(); // 🔥 recarrega dados atualizados
+  await carregar();
 }
 
 async function envio(i){
-  fecharMenu(); // 🔥 fecha instantâneo
+  fecharMenu();
   toast("Gerando envio...");
   await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
-  await carregar(); // 🔥 atualiza tela
+  await carregar();
 }
 
 function nota(i){
@@ -267,8 +329,6 @@ document.getElementById("filtro").addEventListener("change", render);
 carregar();
 
 </script>
-
-  
 
 </body>
 </html>
