@@ -74,10 +74,7 @@ th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
 
 <script>
 
-// API PRINCIPAL
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
-
-// API ETIQUETA (ATUAL)
 const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbyyRieyK0t5rfu3aQ6oaLcWr6gqIX47-8EI-eHQpILB-3RmZ7AuyTEDWH8uUHhVU4qlAg/exec";
 
 let pedidos = [];
@@ -118,13 +115,15 @@ async function atualizarManual(){
   toast("Atualizado ✅");
 }
 
+// 🔥 CORRIGIDO AQUI
 function atualizarCards(){
   total.innerText = pedidos.length;
   pendentes.innerText = pedidos.filter(p=>statusNF(p["Status NF"])==="pendente").length;
   emitidos.innerText = pedidos.filter(p=>statusNF(p["Status NF"])==="emitido").length;
-  envios.innerText = pedidos.filter(p=>p["Rastreio"]).length;
+  envios.innerText = pedidos.filter(p=>p["Frete"]).length;
 }
 
+// 🔥 CORRIGIDO AQUI
 function render(){
 
   tabela.innerHTML="";
@@ -142,11 +141,12 @@ function render(){
       <td>${p["Nome"] || "-"}</td>
       <td>R$ ${p["Valor"] || "0.00"}</td>
       <td><span class="badge ${status}">${status}</span></td>
-      <td>${p["Rastreio"] ? "📦" : "-"}</td>
+      <td>${p["Frete"] ? "📦" : "-"}</td>
     </tr>`;
   });
 }
 
+// 🔥 MENU CORRIGIDO
 function menu(i,el){
 
   fecharMenu();
@@ -157,26 +157,22 @@ function menu(i,el){
 
   let html="";
 
-  // Emitir
   if(statusNF(p["Status NF"]) !== "emitido"){
     html+=`<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
   }
 
-  // Envio
   if(!p["Frete"]){
     html+=`<button onclick="envio(${i})">📦 Gerar Envio</button>`;
   }
 
-  // Etiqueta inteligente
   if(p["Link Etiqueta"]){
     html+=`<button onclick="window.open('${p["Link Etiqueta"]}')">🏷 Ver Etiqueta</button>`;
   }else{
     html+=`<button onclick="etiqueta(${i})">🏷 Gerar Etiqueta</button>`;
   }
 
-  // Extras (voltaram)
   html+=`<button onclick="nota(${i})">👁 Ver Nota</button>`;
-  html+=`<button onclick="pdf(${i})">📥 Baixar PDF</button>`;
+  html+=`<button onclick="pdf(${i})">📥 PDF</button>`;
   html+=`<button onclick="declaracao(${i})">📦 Declaração</button>`;
 
   m.innerHTML=html;
@@ -190,7 +186,6 @@ function menu(i,el){
   menuAtual=m;
 }
 
-// ===== ETIQUETA ROBUSTA =====
 async function etiqueta(i){
 
   fecharMenu();
@@ -201,8 +196,6 @@ async function etiqueta(i){
     const res = await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
     const url = await res.text();
 
-    console.log("Resposta etiqueta:", url);
-
     if(url && url.startsWith("http")){
       window.open(url);
       toast("Etiqueta pronta 🚀");
@@ -211,14 +204,12 @@ async function etiqueta(i){
     }
 
   }catch(err){
-    console.error(err);
     toast("Erro na conexão ❌");
   }
 
   await carregar();
 }
 
-// ===== AÇÕES =====
 async function emitir(i){
   await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
   await carregar();
@@ -242,11 +233,9 @@ function declaracao(i){
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
-// FILTROS
 document.getElementById("busca").addEventListener("input", render);
 document.getElementById("filtro").addEventListener("change", render);
 
-// INIT
 carregar();
 
 </script>
