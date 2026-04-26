@@ -7,118 +7,24 @@
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-header {
-  background: #020617;
-  padding: 15px 20px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-weight:bold;
-}
-
-.btn-refresh {
-  background: #3b82f6;
-  padding: 8px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.container { padding: 15px; }
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(4,1fr);
-  gap: 10px;
-}
-
-.card {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.filtros{
-  margin-top:15px;
-  display:flex;
-  gap:10px;
-}
-
-.filtros input, .filtros select{
-  padding:10px;
-  border-radius:8px;
-  border:none;
-  background:#020617;
-  color:white;
-}
-
-.table-container {
-  margin-top:15px;
-  overflow-x:auto;
-}
-
-table {
-  width:100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding:10px;
-  border-bottom:1px solid #1e293b;
-  font-size:13px;
-}
-
-.badge {
-  padding:5px 12px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:bold;
-}
-
-.emitido { background:#22c55e; color:#000; }
-.pendente { background:#f59e0b; color:#000; }
-
-.menu-popup {
-  position: absolute;
-  background: #020617;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 8px;
-  display: none;
-  flex-direction: column;
-  z-index: 999;
-}
-
-.menu-popup button {
-  background:none;
-  border:none;
-  color:white;
-  padding:10px;
-  text-align:left;
-  cursor:pointer;
-}
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #22c55e;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 10px;
-  opacity: 0;
-  transition: 0.3s;
-}
-
-.toast.show { opacity: 1; }
+body {margin:0;font-family:'Segoe UI';background:#0f172a;color:#e2e8f0;}
+header {background:#020617;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
+.btn-refresh {background:#3b82f6;padding:8px 14px;border-radius:8px;cursor:pointer;}
+.container {padding:15px;}
+.cards {display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.card {background:#020617;padding:15px;border-radius:12px;text-align:center;}
+.filtros{margin-top:15px;display:flex;gap:10px;}
+.filtros input, .filtros select{padding:10px;border-radius:8px;border:none;background:#020617;color:white;}
+.table-container {margin-top:15px;overflow-x:auto;}
+table {width:100%;border-collapse: collapse;}
+th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
+.badge {padding:5px 12px;border-radius:999px;font-size:11px;font-weight:bold;}
+.emitido {background:#22c55e;color:#000;}
+.pendente {background:#f59e0b;color:#000;}
+.menu-popup {position:absolute;background:#020617;border:1px solid #1e293b;border-radius:10px;padding:8px;display:flex;flex-direction:column;z-index:999;}
+.menu-popup button {background:none;border:none;color:white;padding:10px;text-align:left;cursor:pointer;}
+.toast {position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:12px 20px;border-radius:10px;opacity:0;transition:0.3s;}
+.toast.show {opacity:1;}
 </style>
 </head>
 
@@ -168,11 +74,23 @@ th, td {
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbwXb_yo5m0zagS4NvEOLhcpUI-yUljh70bAo2iZLWO7Se0k39Z7FgXTUSmTj_kTb5TFdw/exec";
+// 🔥 API PRINCIPAL (NÃO MEXER)
+const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
+
+// 🔥 API ETIQUETA (SEU NOVO SCRIPT)
+const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbwXb_yo5m0zagS4NvEOLhcpUI-yUljh70bAo2iZLWO7Se0k39Z7FgXTUSmTj_kTb5TFdw/exec";
 
 let pedidos = [];
 let menuAtual = null;
 
+/* STATUS */
+function statusNF(s){
+  s = (s || "").toLowerCase();
+  if(s === "emitido") return "emitido";
+  return "pendente";
+}
+
+/* TOAST */
 function toast(msg){
   const t = document.getElementById("toast");
   t.innerText = msg;
@@ -180,6 +98,7 @@ function toast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
+/* FECHAR MENU */
 function fecharMenu(){
   if(menuAtual){
     menuAtual.remove();
@@ -187,40 +106,26 @@ function fecharMenu(){
   }
 }
 
-/* 🔥 CARREGAR SEGURO */
+/* CARREGAR */
 async function carregar(){
   try{
     const res = await fetch(API + "?t=" + new Date().getTime());
-    const text = await res.text();
-
-    try{
-      pedidos = JSON.parse(text);
-    }catch{
-      console.error("Resposta inválida:", text);
-      toast("Erro na API ❌");
-      pedidos = [];
-    }
-
+    pedidos = await res.json();
     atualizarCards();
     render();
-
   }catch(e){
-    console.error(e);
     toast("Erro ao carregar ❌");
   }
 }
 
-function atualizarManual(){
+/* ATUALIZAR */
+async function atualizarManual(){
   toast("Atualizando...");
-  carregar();
+  await carregar();
+  toast("Atualizado ✅");
 }
 
-function statusNF(s){
-  s = (s || "").toLowerCase();
-  if(s === "emitido") return "emitido";
-  return "pendente";
-}
-
+/* CARDS */
 function atualizarCards(){
   total.innerText = pedidos.length;
   pendentes.innerText = pedidos.filter(p=>statusNF(p["Status NF"])==="pendente").length;
@@ -228,6 +133,7 @@ function atualizarCards(){
   envios.innerText = pedidos.filter(p=>p["Frete"]).length;
 }
 
+/* RENDER */
 function render(){
 
   const busca = document.getElementById("busca").value.toLowerCase();
@@ -256,61 +162,73 @@ function render(){
   });
 }
 
+/* MENU */
 function menu(i,el){
+
   fecharMenu();
 
+  const p = pedidos[i];
   const m = document.createElement("div");
   m.className="menu-popup";
 
-  m.innerHTML=`
-    <button onclick="emitir(${i})">📄 Emitir Nota</button>
-    <button onclick="envio(${i})">📦 Gerar Envio</button>
-    <button onclick="etiqueta(${i})">🏷 Etiqueta</button>
-    <button onclick="nota(${i})">👁 Nota</button>
-    <button onclick="pdf(${i})">📥 PDF</button>
-  `;
+  let html="";
+
+  if(statusNF(p["Status NF"]) !== "emitido"){
+    html+=`<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
+  }
+
+  if(!p["Frete"]){
+    html+=`<button onclick="envio(${i})">📦 Gerar Envio</button>`;
+  }
+
+  html+=`<button onclick="etiqueta(${i})">🏷 Etiqueta</button>`;
+  html+=`<button onclick="nota(${i})">👁 Nota</button>`;
+  html+=`<button onclick="pdf(${i})">📥 PDF</button>`;
+  html+=`<button onclick="declaracao(${i})">📦 Declaração</button>`;
+
+  m.innerHTML=html;
 
   document.body.appendChild(m);
 
   const r=el.getBoundingClientRect();
   m.style.top=r.bottom+"px";
   m.style.left=r.left+"px";
-  m.style.display="flex";
 
   menuAtual=m;
 }
 
+/* CLICK FORA */
 document.addEventListener("click", (e)=>{
   if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
     fecharMenu();
   }
 });
 
+/* AÇÕES */
 async function emitir(i){
   fecharMenu();
+  toast("Emitindo...");
   await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
-  carregar();
+  await carregar();
 }
 
 async function envio(i){
   fecharMenu();
+  toast("Gerando envio...");
   await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
-  carregar();
+  await carregar();
 }
 
 async function etiqueta(i){
   fecharMenu();
-  const res = await fetch(API+"?acao=etiqueta&id="+pedidos[i]["ID Pedido"]);
-  const txt = await res.text();
+  toast("Gerando etiqueta...");
 
-  try{
-    const data = JSON.parse(txt);
-    if(data.etiqueta) window.open(data.etiqueta);
-  }catch{
-    toast("Erro etiqueta ❌");
-  }
+  const res = await fetch(API_ETIQUETA + "?id=" + pedidos[i]["ID Pedido"]);
+  const url = await res.text();
 
-  carregar();
+  window.open(url);
+
+  toast("Etiqueta pronta 🚀");
 }
 
 function nota(i){
@@ -323,9 +241,17 @@ function pdf(i){
   window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
 }
 
+function declaracao(i){
+  fecharMenu();
+  const p = pedidos[i];
+  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
+}
+
+/* FILTROS */
 document.getElementById("busca").addEventListener("input", render);
 document.getElementById("filtro").addEventListener("change", render);
 
+/* INIT */
 carregar();
 
 </script>
