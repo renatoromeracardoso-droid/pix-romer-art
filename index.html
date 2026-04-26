@@ -8,31 +8,26 @@
 
 <style>
 
-:root{
-  --bg:#020617;
-  --card:#0f172a;
-  --accent:#f97316;
-  --green:#22c55e;
-  --yellow:#f59e0b;
-}
-
 body{
   margin:0;
   font-family:'Segoe UI';
-  background:linear-gradient(180deg,#020617,#020617,#0f172a);
-  color:#e2e8f0;
+  background:#f1f5f9;
+  color:#0f172a;
 }
 
-/* HEADER */
+/* HEADER CLEAN */
 header{
+  background:white;
   padding:18px;
   display:flex;
   justify-content:space-between;
   align-items:center;
+  box-shadow:0 2px 10px rgba(0,0,0,0.05);
 }
 
 .btn-refresh{
-  background:var(--accent);
+  background:#f97316;
+  color:white;
   padding:10px 16px;
   border-radius:10px;
   cursor:pointer;
@@ -41,26 +36,32 @@ header{
 /* CARDS */
 .cards{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:10px;
-  padding:10px;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  padding:15px;
 }
 
 .card{
-  background:#0f172a;
-  padding:18px;
+  background:white;
+  padding:20px;
   border-radius:16px;
-  text-align:center;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
 }
 
 .card h2{
   margin:0;
-  color:var(--accent);
+  font-size:24px;
 }
+
+/* CORES DOS CARDS */
+.card:nth-child(1){background:#e0f2fe;}
+.card:nth-child(2){background:#fef3c7;}
+.card:nth-child(3){background:#dcfce7;}
+.card:nth-child(4){background:#ede9fe;}
 
 /* FILTRO */
 .filtros{
-  padding:10px;
+  padding:0 15px;
   display:flex;
   gap:10px;
 }
@@ -68,54 +69,53 @@ header{
 input,select{
   flex:1;
   padding:12px;
-  border-radius:10px;
+  border-radius:12px;
   border:none;
-  background:#020617;
-  color:white;
+  background:white;
+  box-shadow:0 3px 10px rgba(0,0,0,0.05);
 }
 
-/* TABELA */
+/* LISTA CLEAN */
 .table-container{
-  padding:10px;
+  padding:15px;
 }
 
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-
-td{
-  padding:12px;
-  border-bottom:1px solid #1e293b;
+.item{
+  background:white;
+  border-radius:14px;
+  padding:15px;
+  margin-bottom:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
 }
 
 .badge{
-  padding:5px 12px;
+  padding:6px 12px;
   border-radius:999px;
   font-size:11px;
   font-weight:bold;
 }
 
-.emitido{background:var(--green);color:#000;}
-.pendente{background:var(--yellow);color:#000;}
+.emitido{background:#22c55e;color:white;}
+.pendente{background:#f59e0b;color:white;}
 
 /* MENU */
 .menu-popup{
   position:absolute;
-  background:#020617;
-  border:1px solid #1e293b;
+  background:white;
   border-radius:14px;
   padding:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.1);
   display:flex;
   flex-direction:column;
   z-index:999;
-  animation:fade .2s;
 }
 
 .menu-popup button{
   background:none;
   border:none;
-  color:white;
   padding:12px;
   text-align:left;
   cursor:pointer;
@@ -123,7 +123,7 @@ td{
 }
 
 .menu-popup button:hover{
-  background:#1e293b;
+  background:#f1f5f9;
 }
 
 /* TOAST */
@@ -132,6 +132,8 @@ td{
   bottom:20px;
   left:50%;
   transform:translateX(-50%);
+  background:#22c55e;
+  color:white;
   padding:12px 20px;
   border-radius:10px;
   opacity:0;
@@ -145,7 +147,7 @@ td{
 <body>
 
 <header>
-🚀 RomerArt • Sistema
+🚀 RomerArt
 <div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </header>
 
@@ -165,16 +167,13 @@ td{
   </select>
 </div>
 
-<div class="table-container">
-<table>
-<tbody id="tabela"></tbody>
-</table>
-</div>
+<div class="table-container" id="lista"></div>
 
 <div id="toast" class="toast"></div>
 
 <script>
 
+// 🔥 SEUS LINKS AQUI
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
 const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbzQeZfOaSKql1r7NrsLcEs6wMO5knXEZWQBxHdopu7K5wk2NSQPdg5_C-3OUiJ4x_7qxA/exec";
 
@@ -193,7 +192,7 @@ function fecharMenu(){
   if(menuAtual){menuAtual.remove();menuAtual=null;}
 }
 
-document.addEventListener("click",(e)=>{
+document.addEventListener("click",e=>{
   if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
     fecharMenu();
   }
@@ -214,23 +213,26 @@ function atualizarCards(){
 }
 
 function render(){
-  tabela.innerHTML="";
+
+  lista.innerHTML="";
+
   pedidos.forEach((p,i)=>{
-    tabela.innerHTML+=`
-    <tr>
-      <td>
-        <button onclick="menu(${i},this)">⋮</button>
-        ${p["ID Pedido"]}
-      </td>
-      <td>${p["Nome"]}</td>
-      <td>R$ ${p["Valor"]}</td>
-      <td>
+
+    lista.innerHTML+=`
+    <div class="item">
+      <div>
+        <strong>${p["Nome"]}</strong><br>
+        Pedido ${p["ID Pedido"]}<br>
+        R$ ${p["Valor"]}
+      </div>
+
+      <div>
         <span class="badge ${p["Status NF"]==="emitido"?"emitido":"pendente"}">
         ${p["Status NF"]}
-        </span>
-      </td>
-      <td>${(p["Frete"]||p["Rastreio"])?"📦":"-"}</td>
-    </tr>`;
+        </span><br><br>
+        <button onclick="menu(${i},this)">⋮</button>
+      </div>
+    </div>`;
   });
 }
 
@@ -238,15 +240,14 @@ function menu(i,el){
 
   fecharMenu();
 
-  const p=pedidos[i];
   const m=document.createElement("div");
   m.className="menu-popup";
 
   m.innerHTML=`
-    <button onclick="nota(${i})">👁 Ver Nota</button>
+    <button onclick="nota(${i})">👁 Nota</button>
     <button onclick="pdf(${i})">📄 PDF</button>
-    <button onclick="emitir(${i})">📄 Emitir Nota</button>
-    <button onclick="envio(${i})">📦 Gerar Envio</button>
+    <button onclick="emitir(${i})">📄 Emitir</button>
+    <button onclick="envio(${i})">📦 Envio</button>
     <button onclick="etiqueta(${i})">🏷 Etiqueta</button>
     <button onclick="declaracao(${i})">📦 Declaração</button>
   `;
@@ -270,7 +271,7 @@ async function atualizarManual(){
 async function emitir(i){
   fecharMenu();
   await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
-  toast("Nota emitida");
+  toast("Emitido");
   carregar();
 }
 
@@ -306,9 +307,6 @@ function declaracao(i){
   const p=pedidos[i];
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
-
-document.getElementById("busca").addEventListener("input",render);
-document.getElementById("filtro").addEventListener("change",render);
 
 carregar();
 
