@@ -74,23 +74,19 @@ th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
 
 <script>
 
-// ✅ API PRINCIPAL (dados)
+// API PRINCIPAL (NÃO MEXE)
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
 
-// ✅ API ETIQUETA (CORRIGIDA)
-const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbyN9sV9gNj7R80OdPyClkPlts1UrYy6cckvBSRFj9A6WhluGvEt_bAhK2lsJcQIWw9YPg/exec";
+// SUA API NOVA
+const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbxOcPXtM08dyfYmKcuCMaa6a26oewrYVHizyNRasZUrK46eJTFCSkXxAhMlHzmoXDDb8Q/exec";
 
 let pedidos = [];
 let menuAtual = null;
 
-/* STATUS */
 function statusNF(s){
-  s = (s || "").toLowerCase();
-  if(s === "emitido") return "emitido";
-  return "pendente";
+  return (s||"").toLowerCase() === "emitido" ? "emitido" : "pendente";
 }
 
-/* TOAST */
 function toast(msg){
   const t = document.getElementById("toast");
   t.innerText = msg;
@@ -98,47 +94,28 @@ function toast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-/* FECHAR MENU */
 function fecharMenu(){
   if(menuAtual){
     menuAtual.remove();
-    menuAtual = null;
+    menuAtual=null;
   }
 }
 
-/* CARREGAR */
 async function carregar(){
-  try{
-    const res = await fetch(API + "?t=" + new Date().getTime());
-    pedidos = await res.json();
-    atualizarCards();
-    render();
-  }catch(e){
-    console.error(e);
-    toast("Erro ao carregar ❌");
-  }
+  const res = await fetch(API+"?t="+Date.now());
+  pedidos = await res.json();
+  atualizarCards();
+  render();
 }
 
-/* ATUALIZAR */
-async function atualizarManual(){
-  toast("Atualizando...");
-  await carregar();
-  toast("Atualizado ✅");
-}
-
-/* CARDS */
 function atualizarCards(){
   total.innerText = pedidos.length;
   pendentes.innerText = pedidos.filter(p=>statusNF(p["Status NF"])==="pendente").length;
   emitidos.innerText = pedidos.filter(p=>statusNF(p["Status NF"])==="emitido").length;
-  envios.innerText = pedidos.filter(p=>p["Frete"]).length;
+  envios.innerText = pedidos.filter(p=>p["Rastreio"]).length;
 }
 
-/* RENDER */
 function render(){
-
-  const busca = document.getElementById("busca").value.toLowerCase();
-  const filtro = document.getElementById("filtro").value;
 
   tabela.innerHTML="";
 
@@ -146,24 +123,20 @@ function render(){
 
     const status = statusNF(p["Status NF"]);
 
-    if(filtro !== "todos" && status !== filtro) return;
-    if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
-
     tabela.innerHTML+=`
     <tr>
       <td>
         <button onclick="menu(${i},this)">⋮</button>
-        ${p["ID Pedido"] || "-"}
+        ${p["ID Pedido"]}
       </td>
-      <td>${p["Nome"] || "-"}</td>
-      <td>R$ ${p["Valor"] || "0.00"}</td>
+      <td>${p["Nome"]}</td>
+      <td>R$ ${p["Valor"]}</td>
       <td><span class="badge ${status}">${status}</span></td>
-      <td>${p["Frete"]?"📦":"-"}</td>
+      <td>${p["Rastreio"] ? "📦" : "-"}</td>
     </tr>`;
   });
 }
 
-/* MENU */
 function menu(i,el){
 
   fecharMenu();
@@ -175,17 +148,18 @@ function menu(i,el){
   let html="";
 
   if(statusNF(p["Status NF"]) !== "emitido"){
-    html+=`<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
+    html+=`<button onclick="emitir(${i})">Emitir Nota</button>`;
   }
 
   if(!p["Frete"]){
-    html+=`<button onclick="envio(${i})">📦 Gerar Envio</button>`;
+    html+=`<button onclick="envio(${i})">Gerar Envio</button>`;
   }
 
-  html+=`<button onclick="etiqueta(${i})">🏷 Etiqueta</button>`;
-  html+=`<button onclick="nota(${i})">👁 Nota</button>`;
-  html+=`<button onclick="pdf(${i})">📥 PDF</button>`;
-  html+=`<button onclick="declaracao(${i})">📦 Declaração</button>`;
+  if(p["Link Etiqueta"]){
+    html+=`<button onclick="window.open('${p["Link Etiqueta"]}')">Ver Etiqueta</button>`;
+  }else{
+    html+=`<button onclick="etiqueta(${i})">Gerar Etiqueta</button>`;
+  }
 
   m.innerHTML=html;
 
@@ -198,71 +172,24 @@ function menu(i,el){
   menuAtual=m;
 }
 
-/* CLICK FORA */
-document.addEventListener("click", (e)=>{
-  if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
-    fecharMenu();
-  }
-});
-
-/* AÇÕES */
-async function emitir(i){
-  fecharMenu();
-  toast("Emitindo...");
-  await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
-  await carregar();
-}
-
-async function envio(i){
-  fecharMenu();
-  toast("Gerando envio...");
-  await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
-  await carregar();
-}
-
 async function etiqueta(i){
+
   fecharMenu();
   toast("Gerando etiqueta...");
 
-  try{
-    const res = await fetch(API_ETIQUETA + "?id=" + pedidos[i]["ID Pedido"]);
-    const url = await res.text();
+  const res = await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
+  const url = await res.text();
 
-    if(url && url.startsWith("http")){
-      window.open(url);
-      toast("Etiqueta pronta 🚀");
-    }else{
-      console.log("Resposta:", url);
-      toast("Erro ao gerar etiqueta ❌");
-    }
-
-  }catch(err){
-    console.error(err);
-    toast("Erro na conexão ❌");
+  if(url.startsWith("http")){
+    window.open(url);
+    toast("Etiqueta pronta 🚀");
+  }else{
+    toast("Erro ao gerar ❌");
   }
+
+  await carregar();
 }
 
-function nota(i){
-  fecharMenu();
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
-}
-
-function pdf(i){
-  fecharMenu();
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
-}
-
-function declaracao(i){
-  fecharMenu();
-  const p = pedidos[i];
-  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
-}
-
-/* FILTROS */
-document.getElementById("busca").addEventListener("input", render);
-document.getElementById("filtro").addEventListener("change", render);
-
-/* INIT */
 carregar();
 
 </script>
