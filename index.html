@@ -74,10 +74,10 @@ th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
 
 <script>
 
-// API PRINCIPAL (NÃO MEXE)
+// API PRINCIPAL
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
 
-// SUA API NOVA
+// API ETIQUETA (ATUAL)
 const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbxOcPXtM08dyfYmKcuCMaa6a26oewrYVHizyNRasZUrK46eJTFCSkXxAhMlHzmoXDDb8Q/exec";
 
 let pedidos = [];
@@ -102,10 +102,20 @@ function fecharMenu(){
 }
 
 async function carregar(){
-  const res = await fetch(API+"?t="+Date.now());
-  pedidos = await res.json();
-  atualizarCards();
-  render();
+  try{
+    const res = await fetch(API+"?t="+Date.now());
+    pedidos = await res.json();
+    atualizarCards();
+    render();
+  }catch(e){
+    toast("Erro ao carregar ❌");
+  }
+}
+
+async function atualizarManual(){
+  toast("Atualizando...");
+  await carregar();
+  toast("Atualizado ✅");
 }
 
 function atualizarCards(){
@@ -127,10 +137,10 @@ function render(){
     <tr>
       <td>
         <button onclick="menu(${i},this)">⋮</button>
-        ${p["ID Pedido"]}
+        ${p["ID Pedido"] || "-"}
       </td>
-      <td>${p["Nome"]}</td>
-      <td>R$ ${p["Valor"]}</td>
+      <td>${p["Nome"] || "-"}</td>
+      <td>R$ ${p["Valor"] || "0.00"}</td>
       <td><span class="badge ${status}">${status}</span></td>
       <td>${p["Rastreio"] ? "📦" : "-"}</td>
     </tr>`;
@@ -147,19 +157,27 @@ function menu(i,el){
 
   let html="";
 
+  // Emitir
   if(statusNF(p["Status NF"]) !== "emitido"){
-    html+=`<button onclick="emitir(${i})">Emitir Nota</button>`;
+    html+=`<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
   }
 
+  // Envio
   if(!p["Frete"]){
-    html+=`<button onclick="envio(${i})">Gerar Envio</button>`;
+    html+=`<button onclick="envio(${i})">📦 Gerar Envio</button>`;
   }
 
+  // Etiqueta inteligente
   if(p["Link Etiqueta"]){
-    html+=`<button onclick="window.open('${p["Link Etiqueta"]}')">Ver Etiqueta</button>`;
+    html+=`<button onclick="window.open('${p["Link Etiqueta"]}')">🏷 Ver Etiqueta</button>`;
   }else{
-    html+=`<button onclick="etiqueta(${i})">Gerar Etiqueta</button>`;
+    html+=`<button onclick="etiqueta(${i})">🏷 Gerar Etiqueta</button>`;
   }
+
+  // Extras (voltaram)
+  html+=`<button onclick="nota(${i})">👁 Ver Nota</button>`;
+  html+=`<button onclick="pdf(${i})">📥 Baixar PDF</button>`;
+  html+=`<button onclick="declaracao(${i})">📦 Declaração</button>`;
 
   m.innerHTML=html;
 
@@ -172,24 +190,63 @@ function menu(i,el){
   menuAtual=m;
 }
 
+// ===== ETIQUETA ROBUSTA =====
 async function etiqueta(i){
 
   fecharMenu();
   toast("Gerando etiqueta...");
 
-  const res = await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
-  const url = await res.text();
+  try{
 
-  if(url.startsWith("http")){
-    window.open(url);
-    toast("Etiqueta pronta 🚀");
-  }else{
-    toast("Erro ao gerar ❌");
+    const res = await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
+    const url = await res.text();
+
+    console.log("Resposta etiqueta:", url);
+
+    if(url && url.startsWith("http")){
+      window.open(url);
+      toast("Etiqueta pronta 🚀");
+    }else{
+      toast("Erro ao gerar etiqueta ❌");
+    }
+
+  }catch(err){
+    console.error(err);
+    toast("Erro na conexão ❌");
   }
 
   await carregar();
 }
 
+// ===== AÇÕES =====
+async function emitir(i){
+  await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
+  await carregar();
+}
+
+async function envio(i){
+  await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
+  await carregar();
+}
+
+function nota(i){
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+}
+
+function pdf(i){
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
+}
+
+function declaracao(i){
+  const p = pedidos[i];
+  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
+}
+
+// FILTROS
+document.getElementById("busca").addEventListener("input", render);
+document.getElementById("filtro").addEventListener("change", render);
+
+// INIT
 carregar();
 
 </script>
