@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>RomerArt • Sistema NF</title>
 
 <style>
@@ -33,11 +32,7 @@ header{
   padding:15px;
 }
 
-.card{
-  padding:20px;
-  border-radius:14px;
-}
-
+.card{padding:20px;border-radius:14px;}
 .card:nth-child(1){background:#dbeafe;}
 .card:nth-child(2){background:#fef3c7;}
 .card:nth-child(3){background:#dcfce7;}
@@ -66,15 +61,8 @@ input,select{
   box-shadow:0 5px 15px rgba(0,0,0,0.05);
 }
 
-.left{
-  display:flex;
-  gap:10px;
-}
-
-.menu-btn{
-  cursor:pointer;
-  font-size:18px;
-}
+.left{display:flex;gap:10px;}
+.menu-btn{cursor:pointer;font-size:18px;}
 
 .badge{
   padding:5px 10px;
@@ -88,9 +76,9 @@ input,select{
 .alerta{
   color:red;
   font-size:12px;
+  margin-top:4px;
 }
 
-/* MENU */
 .menu-popup{
   position:absolute;
   background:white;
@@ -114,7 +102,6 @@ input,select{
   background:#f1f5f9;
 }
 
-/* TOAST */
 .toast{
   position:fixed;
   bottom:20px;
@@ -135,7 +122,7 @@ input,select{
 
 <header>
 🚀 RomerArt
-<div class="btn-refresh" onclick="carregar()">Atualizar</div>
+<div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </header>
 
 <div class="cards">
@@ -164,6 +151,7 @@ input,select{
 <script>
 
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
+const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbzQeZfOaSKql1r7NrsLcEs6wMO5knXEZWQBxHdopu7K5wk2NSQPdg5_C-3OUiJ4x_7qxA/exec";
 
 let pedidos=[];
 let menuAtual=null;
@@ -173,6 +161,12 @@ function toast(msg){
   t.innerText=msg;
   t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),2000);
+}
+
+async function atualizarManual(){
+  toast("Atualizando...");
+  await carregar();
+  toast("Atualizado");
 }
 
 async function carregar(){
@@ -202,20 +196,20 @@ document.addEventListener("click",(e)=>{
   }
 });
 
-/* MENU FUNCIONANDO */
 function abrirMenu(i,el){
 
   fecharMenu();
-
-  const p=pedidos[i];
 
   const m=document.createElement("div");
   m.className="menu-popup";
 
   m.innerHTML=`
+    <button onclick="nota(${i})">👁 Ver Nota</button>
+    <button onclick="pdf(${i})">📄 PDF</button>
     <button onclick="emitir(${i})">📄 Emitir Nota</button>
     <button onclick="envio(${i})">📦 Gerar Envio</button>
-    <button onclick="etiqueta(${i})">🏷 Etiqueta</button>
+    <button onclick="etiqueta(${i})">🏷 Gerar Etiqueta</button>
+    <button onclick="declaracao(${i})">📦 Declaração</button>
   `;
 
   document.body.appendChild(m);
@@ -227,10 +221,18 @@ function abrirMenu(i,el){
   menuAtual=m;
 }
 
-/* DATA CORRIGIDA */
+/* DATA */
 function formatarData(d){
   if(!d) return "";
-  return d.split(" ")[0]; // remove hora
+  return d.split(" ")[0];
+}
+
+/* DIAS SEM ENVIO */
+function diasSemEnvio(data){
+  if(!data) return 0;
+  const d=new Date(data);
+  const hoje=new Date();
+  return Math.floor((hoje-d)/(1000*60*60*24));
 }
 
 function render(){
@@ -255,6 +257,11 @@ function render(){
       if(dataPedido!==dataFiltro) return;
     }
 
+    const dias=diasSemEnvio(p["Data"]);
+    const alerta = (!p["Frete"] && dias>=2)
+      ? `<div class="alerta">⚠ ${dias} dias sem envio</div>`
+      : "";
+
     lista.innerHTML+=`
     <div class="item">
 
@@ -264,6 +271,7 @@ function render(){
         <div>
           <strong>Pedido ${p["ID Pedido"]}</strong><br>
           ${p["Nome"]}
+          ${alerta}
         </div>
       </div>
 
@@ -280,6 +288,19 @@ function render(){
 }
 
 /* AÇÕES */
+function nota(i){
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+}
+
+function pdf(i){
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
+}
+
+function declaracao(i){
+  const p=pedidos[i];
+  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
+}
+
 async function emitir(i){
   fecharMenu();
   toast("Emitindo...");
@@ -292,7 +313,7 @@ async function envio(i){
 
 async function etiqueta(i){
   fecharMenu();
-  toast("Etiqueta...");
+  toast("Gerando etiqueta...");
 }
 
 /* EVENTOS */
