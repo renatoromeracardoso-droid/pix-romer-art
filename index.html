@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>RomerArt • Sistema NF</title>
 
 <style>
@@ -73,11 +74,7 @@ input,select{
 .emitido{background:#22c55e;color:white;}
 .pendente{background:#f59e0b;color:white;}
 
-.alerta{
-  color:red;
-  font-size:12px;
-  margin-top:4px;
-}
+.alerta{color:red;font-size:12px;}
 
 .menu-popup{
   position:absolute;
@@ -156,11 +153,14 @@ const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbzQeZfOaSKql1r7Nrs
 let pedidos=[];
 let menuAtual=null;
 
-function toast(msg){
-  const t=document.getElementById("toast");
-  t.innerText=msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
+/* =========================
+   LOAD
+========================= */
+async function carregar(){
+  const r = await fetch(API + "?t=" + Date.now());
+  pedidos = await r.json();
+  atualizarCards();
+  render();
 }
 
 async function atualizarManual(){
@@ -169,20 +169,19 @@ async function atualizarManual(){
   toast("Atualizado");
 }
 
-async function carregar(){
-  const r=await fetch(API+"?t="+Date.now());
-  pedidos=await r.json();
-  atualizarCards();
-  render();
-}
-
+/* =========================
+   CARDS
+========================= */
 function atualizarCards(){
-  total.innerText=pedidos.length;
-  pendentes.innerText=pedidos.filter(p=>p["Status NF"]!=="emitido").length;
-  emitidos.innerText=pedidos.filter(p=>p["Status NF"]==="emitido").length;
-  envios.innerText=pedidos.filter(p=>p["Frete"]||p["Rastreio"]).length;
+  total.innerText = pedidos.length;
+  pendentes.innerText = pedidos.filter(p=>p["Status NF"]!=="emitido").length;
+  emitidos.innerText = pedidos.filter(p=>p["Status NF"]==="emitido").length;
+  envios.innerText = pedidos.filter(p=>p["Frete"]||p["Rastreio"]).length;
 }
 
+/* =========================
+   MENU
+========================= */
 function fecharMenu(){
   if(menuAtual){
     menuAtual.remove();
@@ -200,64 +199,77 @@ function abrirMenu(i,el){
 
   fecharMenu();
 
-  const m=document.createElement("div");
-  m.className="menu-popup";
+  const p = pedidos[i];
 
-  m.innerHTML=`
-    <button onclick="nota(${i})">👁 Ver Nota</button>
+  let html = `
+    <button onclick="nota(${i})">👁 Nota</button>
     <button onclick="pdf(${i})">📄 PDF</button>
-    <button onclick="emitir(${i})">📄 Emitir Nota</button>
-    <button onclick="envio(${i})">📦 Gerar Envio</button>
-    <button onclick="etiqueta(${i})">🏷 Gerar Etiqueta</button>
+  `;
+
+  if(p["Status NF"] !== "emitido"){
+    html += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
+  }
+
+  if(!p["Frete"] && !p["Rastreio"]){
+    html += `<button onclick="envio(${i})">📦 Gerar Envio</button>`;
+  }
+
+  html += `
+    <button onclick="etiqueta(${i})">🏷 Etiqueta</button>
     <button onclick="declaracao(${i})">📦 Declaração</button>
   `;
 
+  const m = document.createElement("div");
+  m.className="menu-popup";
+  m.innerHTML = html;
+
   document.body.appendChild(m);
 
-  const r=el.getBoundingClientRect();
-  m.style.top=r.bottom+"px";
-  m.style.left=r.left+"px";
+  const r = el.getBoundingClientRect();
+  m.style.top = r.bottom+"px";
+  m.style.left = r.left+"px";
 
-  menuAtual=m;
+  menuAtual = m;
 }
 
-/* DATA */
+/* =========================
+   UTIL
+========================= */
 function formatarData(d){
   if(!d) return "";
   return d.split(" ")[0];
 }
 
-/* DIAS SEM ENVIO */
 function diasSemEnvio(data){
   if(!data) return 0;
-  const d=new Date(data);
-  const hoje=new Date();
+  const d = new Date(data);
+  const hoje = new Date();
   return Math.floor((hoje-d)/(1000*60*60*24));
 }
 
+/* =========================
+   RENDER
+========================= */
 function render(){
 
-  const busca=document.getElementById("busca").value.toLowerCase();
-  const status=document.getElementById("filtroStatus").value;
-  const dataFiltro=document.getElementById("filtroData").value;
+  const busca = document.getElementById("busca").value.toLowerCase();
+  const status = document.getElementById("filtroStatus").value;
+  const dataFiltro = document.getElementById("filtroData").value;
 
   lista.innerHTML="";
 
   pedidos.forEach((p,i)=>{
 
-    const nome=(p["Nome"]||"").toLowerCase();
-
-    if(busca && !nome.includes(busca)) return;
+    if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
 
     if(status==="pendente" && p["Status NF"]==="emitido") return;
     if(status==="emitido" && p["Status NF"]!=="emitido") return;
 
     if(dataFiltro){
-      const dataPedido=formatarData(p["Data"]);
-      if(dataPedido!==dataFiltro) return;
+      if(formatarData(p["Data"])!==dataFiltro) return;
     }
 
-    const dias=diasSemEnvio(p["Data"]);
+    const dias = diasSemEnvio(p["Data"]);
     const alerta = (!p["Frete"] && dias>=2)
       ? `<div class="alerta">⚠ ${dias} dias sem envio</div>`
       : "";
@@ -287,7 +299,41 @@ function render(){
   });
 }
 
-/* AÇÕES */
+/* =========================
+   AÇÕES
+========================= */
+
+async function emitir(i){
+  fecharMenu();
+  const id = pedidos[i]["ID Pedido"];
+  await fetch(API + "?acao=emitir&id=" + id);
+  toast("Nota emitida");
+  carregar();
+}
+
+async function envio(i){
+  fecharMenu();
+  const id = pedidos[i]["ID Pedido"];
+  await fetch(API + "?acao=envio&id=" + id);
+  toast("Envio criado 📦");
+  carregar();
+}
+
+async function etiqueta(i){
+  fecharMenu();
+  const id = pedidos[i]["ID Pedido"];
+
+  const r = await fetch(API_ETIQUETA + "?id=" + id);
+  const t = await r.text();
+
+  if(t.startsWith("http")){
+    window.open(t);
+    toast("Etiqueta pronta");
+  }else{
+    toast(t);
+  }
+}
+
 function nota(i){
   window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
 }
@@ -297,29 +343,26 @@ function pdf(i){
 }
 
 function declaracao(i){
-  const p=pedidos[i];
+  const p = pedidos[i];
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
-async function emitir(i){
-  fecharMenu();
-  toast("Emitindo...");
+/* =========================
+   TOAST
+========================= */
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-async function envio(i){
-  fecharMenu();
-  toast("Gerando envio...");
-}
-
-async function etiqueta(i){
-  fecharMenu();
-  toast("Gerando etiqueta...");
-}
-
-/* EVENTOS */
-busca.addEventListener("input",render);
-filtroStatus.addEventListener("change",render);
-filtroData.addEventListener("change",render);
+/* =========================
+   EVENTOS
+========================= */
+document.getElementById("busca").addEventListener("input",render);
+document.getElementById("filtroStatus").addEventListener("change",render);
+document.getElementById("filtroData").addEventListener("change",render);
 
 carregar();
 
