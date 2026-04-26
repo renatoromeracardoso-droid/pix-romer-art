@@ -12,73 +12,60 @@
   --bg:#020617;
   --card:#0f172a;
   --accent:#f97316;
-  --accent2:#22c55e;
-  --text:#e2e8f0;
+  --green:#22c55e;
+  --yellow:#f59e0b;
 }
 
 body{
   margin:0;
   font-family:'Segoe UI';
   background:linear-gradient(180deg,#020617,#020617,#0f172a);
-  color:var(--text);
+  color:#e2e8f0;
 }
 
 /* HEADER */
 header{
-  background:rgba(2,6,23,0.8);
-  backdrop-filter:blur(10px);
-  padding:15px 20px;
+  padding:18px;
   display:flex;
   justify-content:space-between;
   align-items:center;
-  border-bottom:1px solid #1e293b;
 }
 
 .btn-refresh{
-  background:linear-gradient(90deg,#f97316,#ea580c);
+  background:var(--accent);
   padding:10px 16px;
   border-radius:10px;
   cursor:pointer;
-  font-weight:bold;
-  transition:.2s;
 }
-.btn-refresh:hover{transform:scale(1.05);}
-
-/* CONTAINER */
-.container{padding:15px;}
 
 /* CARDS */
 .cards{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:12px;
+  gap:10px;
+  padding:10px;
 }
 
 .card{
-  background:rgba(15,23,42,0.8);
-  backdrop-filter:blur(8px);
-  padding:20px;
+  background:#0f172a;
+  padding:18px;
   border-radius:16px;
   text-align:center;
-  box-shadow:0 0 20px rgba(0,0,0,0.4);
-  transition:.2s;
 }
-.card:hover{transform:translateY(-3px);}
 
 .card h2{
   margin:0;
-  font-size:28px;
   color:var(--accent);
 }
 
-/* FILTROS */
+/* FILTRO */
 .filtros{
-  margin-top:15px;
+  padding:10px;
   display:flex;
   gap:10px;
 }
 
-.filtros input,.filtros select{
+input,select{
   flex:1;
   padding:12px;
   border-radius:10px;
@@ -89,55 +76,40 @@ header{
 
 /* TABELA */
 .table-container{
-  margin-top:15px;
-  overflow-x:auto;
-  border-radius:12px;
+  padding:10px;
 }
 
 table{
   width:100%;
-  border-collapse: collapse;
+  border-collapse:collapse;
 }
 
-th,td{
+td{
   padding:12px;
   border-bottom:1px solid #1e293b;
 }
 
-tr{
-  transition:.2s;
-}
-tr:hover{
-  background:#020617;
-}
-
-/* BADGES */
 .badge{
-  padding:6px 12px;
+  padding:5px 12px;
   border-radius:999px;
   font-size:11px;
   font-weight:bold;
 }
 
-.emitido{background:#22c55e;color:#000;}
-.pendente{background:#f59e0b;color:#000;}
+.emitido{background:var(--green);color:#000;}
+.pendente{background:var(--yellow);color:#000;}
 
 /* MENU */
 .menu-popup{
   position:absolute;
   background:#020617;
   border:1px solid #1e293b;
-  border-radius:12px;
-  padding:5px;
+  border-radius:14px;
+  padding:8px;
   display:flex;
   flex-direction:column;
   z-index:999;
   animation:fade .2s;
-}
-
-@keyframes fade{
-  from{opacity:0;transform:translateY(5px);}
-  to{opacity:1;}
 }
 
 .menu-popup button{
@@ -147,13 +119,11 @@ tr:hover{
   padding:12px;
   text-align:left;
   cursor:pointer;
-  border-radius:8px;
-  transition:.2s;
+  border-radius:10px;
 }
 
 .menu-popup button:hover{
   background:#1e293b;
-  padding-left:16px;
 }
 
 /* TOAST */
@@ -162,11 +132,10 @@ tr:hover{
   bottom:20px;
   left:50%;
   transform:translateX(-50%);
-  padding:14px 22px;
-  border-radius:12px;
+  padding:12px 20px;
+  border-radius:10px;
   opacity:0;
   transition:.3s;
-  font-weight:bold;
 }
 .toast.show{opacity:1;}
 
@@ -176,11 +145,9 @@ tr:hover{
 <body>
 
 <header>
-🚀 Sistema SaaS • RomerArt
+🚀 RomerArt • Sistema
 <div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </header>
-
-<div class="container">
 
 <div class="cards">
   <div class="card"><h2 id="total">0</h2>Total</div>
@@ -200,19 +167,8 @@ tr:hover{
 
 <div class="table-container">
 <table>
-<thead>
-<tr>
-<th>Pedido</th>
-<th>Cliente</th>
-<th>Valor</th>
-<th>Status</th>
-<th>Envio</th>
-</tr>
-</thead>
 <tbody id="tabela"></tbody>
 </table>
-</div>
-
 </div>
 
 <div id="toast" class="toast"></div>
@@ -237,26 +193,17 @@ function fecharMenu(){
   if(menuAtual){menuAtual.remove();menuAtual=null;}
 }
 
-document.addEventListener("click",e=>{
+document.addEventListener("click",(e)=>{
   if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
     fecharMenu();
   }
 });
 
 async function carregar(){
-  try{
-    const r=await fetch(API+"?t="+Date.now());
-    pedidos=await r.json();
-    atualizarCards();
-    render();
-  }catch{
-    toast("Erro ao carregar",true);
-  }
-}
-
-async function atualizarManual(){
-  toast("Atualizando...");
-  await carregar();
+  const r=await fetch(API);
+  pedidos=await r.json();
+  atualizarCards();
+  render();
 }
 
 function atualizarCards(){
@@ -271,16 +218,24 @@ function render(){
   pedidos.forEach((p,i)=>{
     tabela.innerHTML+=`
     <tr>
-      <td><button onclick="menu(${i},this)">⋮</button> ${p["ID Pedido"]}</td>
+      <td>
+        <button onclick="menu(${i},this)">⋮</button>
+        ${p["ID Pedido"]}
+      </td>
       <td>${p["Nome"]}</td>
       <td>R$ ${p["Valor"]}</td>
-      <td><span class="badge ${p["Status NF"]==="emitido"?"emitido":"pendente"}">${p["Status NF"]}</span></td>
+      <td>
+        <span class="badge ${p["Status NF"]==="emitido"?"emitido":"pendente"}">
+        ${p["Status NF"]}
+        </span>
+      </td>
       <td>${(p["Frete"]||p["Rastreio"])?"📦":"-"}</td>
     </tr>`;
   });
 }
 
 function menu(i,el){
+
   fecharMenu();
 
   const p=pedidos[i];
@@ -288,9 +243,12 @@ function menu(i,el){
   m.className="menu-popup";
 
   m.innerHTML=`
+    <button onclick="nota(${i})">👁 Ver Nota</button>
+    <button onclick="pdf(${i})">📄 PDF</button>
     <button onclick="emitir(${i})">📄 Emitir Nota</button>
     <button onclick="envio(${i})">📦 Gerar Envio</button>
-    <button onclick="etiqueta(${i})">🏷 Gerar Etiqueta</button>
+    <button onclick="etiqueta(${i})">🏷 Etiqueta</button>
+    <button onclick="declaracao(${i})">📦 Declaração</button>
   `;
 
   document.body.appendChild(m);
@@ -302,27 +260,11 @@ function menu(i,el){
   menuAtual=m;
 }
 
-async function etiqueta(i){
-  fecharMenu();
-  toast("Gerando etiqueta...");
+/* FUNÇÕES */
 
-  const res=await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
-  const txt=await res.text();
-
-  if(txt.startsWith("http")){
-    window.open(txt);
-    toast("Etiqueta pronta");
-  }else{
-    toast(txt,true);
-  }
-}
-
-async function envio(i){
-  fecharMenu();
-  toast("Gerando envio...");
-  await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
-  toast("Envio criado 🚀");
-  carregar();
+async function atualizarManual(){
+  toast("Atualizando...");
+  await carregar();
 }
 
 async function emitir(i){
@@ -330,6 +272,39 @@ async function emitir(i){
   await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
   toast("Nota emitida");
   carregar();
+}
+
+async function envio(i){
+  fecharMenu();
+  await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
+  toast("Envio criado");
+  carregar();
+}
+
+async function etiqueta(i){
+  fecharMenu();
+  const r=await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
+  const t=await r.text();
+
+  if(t.startsWith("http")){
+    window.open(t);
+    toast("Etiqueta pronta");
+  }else{
+    toast(t,true);
+  }
+}
+
+function nota(i){
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+}
+
+function pdf(i){
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
+}
+
+function declaracao(i){
+  const p=pedidos[i];
+  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
 document.getElementById("busca").addEventListener("input",render);
