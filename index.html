@@ -10,28 +10,49 @@
 body {margin:0;font-family:'Segoe UI';background:#0f172a;color:#e2e8f0;}
 header {background:#020617;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
 .btn-refresh {background:#3b82f6;padding:8px 14px;border-radius:8px;cursor:pointer;}
+
 .container {padding:15px;}
+
 .cards {display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .card {background:#020617;padding:15px;border-radius:12px;text-align:center;}
+
 .filtros{margin-top:15px;display:flex;gap:10px;}
-.filtros input, .filtros select{padding:10px;border-radius:8px;border:none;background:#020617;color:white;}
+.filtros input, .filtros select{
+  padding:10px;border-radius:8px;border:none;
+  background:#020617;color:white;
+}
+
 .table-container {margin-top:15px;overflow-x:auto;}
 table {width:100%;border-collapse: collapse;}
 th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
+
 .badge {padding:5px 12px;border-radius:999px;font-size:11px;font-weight:bold;}
 .emitido {background:#22c55e;color:#000;}
 .pendente {background:#f59e0b;color:#000;}
 
+/* 🔥 BOTÃO MENU */
+.menu-btn{
+  background:#1e293b;
+  border:none;
+  color:white;
+  border-radius:8px;
+  padding:5px 8px;
+  cursor:pointer;
+}
+.menu-btn:hover{background:#334155;}
+
+/* 🔥 MENU PREMIUM */
 .menu-popup {
   position:absolute;
   background:#020617;
-  border:1px solid #1e293b;
-  border-radius:12px;
-  padding:5px;
+  border-radius:14px;
+  padding:8px;
   display:flex;
   flex-direction:column;
   z-index:999;
-  min-width:180px;
+  min-width:200px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.5);
+  animation:fadeIn 0.2s ease;
 }
 
 .menu-popup button {
@@ -42,12 +63,19 @@ th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
   text-align:left;
   cursor:pointer;
   border-radius:8px;
+  transition:0.2s;
 }
 
 .menu-popup button:hover {
   background:#1e293b;
 }
 
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(-5px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* 🔥 TOAST */
 .toast {
   position:fixed;
   bottom:20px;
@@ -137,26 +165,16 @@ function fecharMenu(){
 }
 
 document.addEventListener("click",(e)=>{
-  if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
+  if(!e.target.closest(".menu-popup") && !e.target.closest(".menu-btn")){
     fecharMenu();
   }
 });
 
 async function carregar(){
-  try{
-    const res = await fetch(API+"?t="+Date.now());
-    pedidos = await res.json();
-    atualizarCards();
-    render();
-  }catch(e){
-    toast("Erro ao carregar ❌", true);
-  }
-}
-
-async function atualizarManual(){
-  toast("Atualizando...");
-  await carregar();
-  toast("Atualizado ✅");
+  const res = await fetch(API+"?t="+Date.now());
+  pedidos = await res.json();
+  atualizarCards();
+  render();
 }
 
 function atualizarCards(){
@@ -183,7 +201,7 @@ function render(){
     tabela.innerHTML+=`
     <tr>
       <td>
-        <button onclick="menu(${i},this)">⋮</button>
+        <button class="menu-btn" onclick="menu(${i},this)">⋮</button>
         ${p["ID Pedido"] || "-"}
       </td>
       <td>${p["Nome"] || "-"}</td>
@@ -202,23 +220,14 @@ function menu(i,el){
   const m = document.createElement("div");
   m.className="menu-popup";
 
-  let html="";
-
-  html+=`<button onclick="nota(${i})">👁 Ver Nota</button>`;
-  html+=`<button onclick="pdf(${i})">📥 PDF</button>`;
-
-  if(statusNF(p["Status NF"]) !== "emitido"){
-    html+=`<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
-  }
-
-  if(!p["Frete"] && !p["Rastreio"]){
-    html+=`<button onclick="envio(${i})">📦 Gerar Envio</button>`;
-  }
-
-  html+=`<button onclick="etiqueta(${i})">🏷 Gerar Etiqueta</button>`;
-  html+=`<button onclick="declaracao(${i})">📦 Declaração</button>`;
-
-  m.innerHTML=html;
+  m.innerHTML=`
+    <button onclick="nota(${i})">👁 Ver Nota</button>
+    <button onclick="pdf(${i})">📥 PDF</button>
+    ${statusNF(p["Status NF"]) !== "emitido" ? `<button onclick="emitir(${i})">📄 Emitir Nota</button>` : ""}
+    ${(!p["Frete"] && !p["Rastreio"]) ? `<button onclick="envio(${i})">📦 Gerar Envio</button>` : ""}
+    <button onclick="etiqueta(${i})">🏷 Gerar Etiqueta</button>
+    <button onclick="declaracao(${i})">📦 Declaração</button>
+  `;
 
   document.body.appendChild(m);
 
@@ -229,41 +238,39 @@ function menu(i,el){
   menuAtual=m;
 }
 
-// 🔥 CORREÇÃO PRINCIPAL AQUI
-async function etiqueta(i){
+/* ===== FUNÇÕES ===== */
 
+async function etiqueta(i){
   fecharMenu();
   toast("Gerando etiqueta...");
 
-  try{
+  const res = await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
+  const txt = await res.text();
 
-    const res = await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
-    const texto = await res.text();
-
-    console.log("Resposta:", texto);
-
-    if(texto.startsWith("http")){
-      window.open(texto);
-      toast("Etiqueta pronta 🚀");
-    } else {
-      // 👇 MOSTRA ERRO REAL
-      toast(texto || "Erro desconhecido", true);
-    }
-
-  }catch(err){
-    toast("Erro na conexão ❌", true);
+  if(txt.startsWith("http")){
+    window.open(txt);
+    toast("Etiqueta pronta 🚀");
+  } else {
+    toast(txt,true);
   }
 
   await carregar();
 }
 
 async function emitir(i){
+  toast("Emitindo nota...");
   await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
+  toast("Nota emitida ✅");
   await carregar();
 }
 
 async function envio(i){
+  fecharMenu();
+  toast("Gerando envio...");
+
   await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
+
+  toast("Envio criado 📦");
   await carregar();
 }
 
@@ -280,8 +287,8 @@ function declaracao(i){
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
-document.getElementById("busca").addEventListener("input", render);
-document.getElementById("filtro").addEventListener("change", render);
+busca.addEventListener("input", render);
+filtro.addEventListener("change", render);
 
 carregar();
 
