@@ -7,122 +7,186 @@
 <title>RomerArt • Sistema NF</title>
 
 <style>
-body {margin:0;font-family:'Segoe UI';background:#0b0f1a;color:#e2e8f0;}
 
-header {
-  background:#020617;
+:root{
+  --bg:#020617;
+  --card:#0f172a;
+  --accent:#f97316;
+  --accent2:#22c55e;
+  --text:#e2e8f0;
+}
+
+body{
+  margin:0;
+  font-family:'Segoe UI';
+  background:linear-gradient(180deg,#020617,#020617,#0f172a);
+  color:var(--text);
+}
+
+/* HEADER */
+header{
+  background:rgba(2,6,23,0.8);
+  backdrop-filter:blur(10px);
   padding:15px 20px;
   display:flex;
   justify-content:space-between;
   align-items:center;
+  border-bottom:1px solid #1e293b;
 }
 
-/* 🔥 COR ROMERART */
-.btn-refresh {
-  background:#f97316;
-  padding:8px 14px;
-  border-radius:8px;
+.btn-refresh{
+  background:linear-gradient(90deg,#f97316,#ea580c);
+  padding:10px 16px;
+  border-radius:10px;
   cursor:pointer;
   font-weight:bold;
+  transition:.2s;
 }
-.btn-refresh:hover{background:#ea580c;}
+.btn-refresh:hover{transform:scale(1.05);}
 
-.container {padding:15px;}
+/* CONTAINER */
+.container{padding:15px;}
 
-.cards {display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-.card {
-  background:#020617;
-  padding:15px;
-  border-radius:12px;
+/* CARDS */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+
+.card{
+  background:rgba(15,23,42,0.8);
+  backdrop-filter:blur(8px);
+  padding:20px;
+  border-radius:16px;
   text-align:center;
-  border:1px solid #1e293b;
+  box-shadow:0 0 20px rgba(0,0,0,0.4);
+  transition:.2s;
+}
+.card:hover{transform:translateY(-3px);}
+
+.card h2{
+  margin:0;
+  font-size:28px;
+  color:var(--accent);
 }
 
-.filtros{margin-top:15px;display:flex;gap:10px;}
-.filtros input, .filtros select{
-  padding:10px;
-  border-radius:8px;
+/* FILTROS */
+.filtros{
+  margin-top:15px;
+  display:flex;
+  gap:10px;
+}
+
+.filtros input,.filtros select{
+  flex:1;
+  padding:12px;
+  border-radius:10px;
   border:none;
   background:#020617;
   color:white;
 }
 
-table {width:100%;border-collapse: collapse;}
-th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
-
-.badge {padding:5px 12px;border-radius:999px;font-size:11px;font-weight:bold;}
-.emitido {background:#22c55e;color:#000;}
-.pendente {background:#f97316;color:#000;} /* 🔥 laranja */
-
-.menu-btn{
-  background:#1e293b;
-  border:none;
-  color:white;
-  border-radius:8px;
-  padding:5px 8px;
-  cursor:pointer;
+/* TABELA */
+.table-container{
+  margin-top:15px;
+  overflow-x:auto;
+  border-radius:12px;
 }
 
-.menu-popup {
+table{
+  width:100%;
+  border-collapse: collapse;
+}
+
+th,td{
+  padding:12px;
+  border-bottom:1px solid #1e293b;
+}
+
+tr{
+  transition:.2s;
+}
+tr:hover{
+  background:#020617;
+}
+
+/* BADGES */
+.badge{
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:bold;
+}
+
+.emitido{background:#22c55e;color:#000;}
+.pendente{background:#f59e0b;color:#000;}
+
+/* MENU */
+.menu-popup{
   position:absolute;
   background:#020617;
-  border-radius:14px;
-  padding:8px;
+  border:1px solid #1e293b;
+  border-radius:12px;
+  padding:5px;
   display:flex;
   flex-direction:column;
   z-index:999;
-  min-width:200px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.6);
+  animation:fade .2s;
 }
 
-.menu-popup button {
+@keyframes fade{
+  from{opacity:0;transform:translateY(5px);}
+  to{opacity:1;}
+}
+
+.menu-popup button{
   background:none;
   border:none;
   color:white;
-  padding:10px;
+  padding:12px;
   text-align:left;
   cursor:pointer;
   border-radius:8px;
+  transition:.2s;
 }
 
-.menu-popup button:hover {
-  background:#f97316;
-  color:black;
+.menu-popup button:hover{
+  background:#1e293b;
+  padding-left:16px;
 }
 
-/* 🔥 TOAST */
-.toast {
+/* TOAST */
+.toast{
   position:fixed;
   bottom:20px;
   left:50%;
   transform:translateX(-50%);
-  background:#f97316;
-  color:black;
-  padding:12px 20px;
-  border-radius:10px;
+  padding:14px 22px;
+  border-radius:12px;
   opacity:0;
-  transition:0.3s;
+  transition:.3s;
   font-weight:bold;
 }
+.toast.show{opacity:1;}
 
-.toast.show {opacity:1;}
 </style>
 </head>
 
 <body>
 
 <header>
-🚀 Sistema SaaS • Notas
+🚀 Sistema SaaS • RomerArt
 <div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </header>
 
 <div class="container">
 
 <div class="cards">
-  <div class="card"><h2 id="total">0</h2><span>Total</span></div>
-  <div class="card"><h2 id="pendentes">0</h2><span>Pendentes</span></div>
-  <div class="card"><h2 id="emitidos">0</h2><span>Emitidos</span></div>
-  <div class="card"><h2 id="envios">0</h2><span>Envios</span></div>
+  <div class="card"><h2 id="total">0</h2>Total</div>
+  <div class="card"><h2 id="pendentes">0</h2>Pendentes</div>
+  <div class="card"><h2 id="emitidos">0</h2>Emitidos</div>
+  <div class="card"><h2 id="envios">0</h2>Envios</div>
 </div>
 
 <div class="filtros">
@@ -134,6 +198,7 @@ th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
   </select>
 </div>
 
+<div class="table-container">
 <table>
 <thead>
 <tr>
@@ -146,6 +211,7 @@ th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
 </thead>
 <tbody id="tabela"></tbody>
 </table>
+</div>
 
 </div>
 
@@ -154,95 +220,77 @@ th, td {padding:10px;border-bottom:1px solid #1e293b;font-size:13px;}
 <script>
 
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
-
 const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbzQeZfOaSKql1r7NrsLcEs6wMO5knXEZWQBxHdopu7K5wk2NSQPdg5_C-3OUiJ4x_7qxA/exec";
 
-let pedidos = [];
-let menuAtual = null;
+let pedidos=[];
+let menuAtual=null;
 
-/* 🔥 CORREÇÃO DO BOTÃO ATUALIZAR */
-async function atualizarManual(){
-  toast("Atualizando...");
-  await carregar();
-  toast("Atualizado com sucesso 🚀");
-}
-
-/* 🔥 TOAST */
-function toast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
+function toast(msg,erro=false){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.style.background=erro?"#ef4444":"#22c55e";
   t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),2500);
 }
 
-/* 🔥 FECHAR MENU SEM BUG */
 function fecharMenu(){
-  if(menuAtual){
-    menuAtual.remove();
-    menuAtual=null;
-  }
+  if(menuAtual){menuAtual.remove();menuAtual=null;}
 }
 
-/* 🔥 FECHA AO CLICAR FORA */
-document.addEventListener("click",(e)=>{
-  if(!e.target.closest(".menu-popup") && !e.target.closest(".menu-btn")){
+document.addEventListener("click",e=>{
+  if(!e.target.closest(".menu-popup") && !e.target.closest("button")){
     fecharMenu();
   }
 });
 
-/* 🔥 CARREGAR */
 async function carregar(){
-  const res = await fetch(API+"?t="+Date.now());
-  pedidos = await res.json();
-  atualizarCards();
-  render();
+  try{
+    const r=await fetch(API+"?t="+Date.now());
+    pedidos=await r.json();
+    atualizarCards();
+    render();
+  }catch{
+    toast("Erro ao carregar",true);
+  }
+}
+
+async function atualizarManual(){
+  toast("Atualizando...");
+  await carregar();
 }
 
 function atualizarCards(){
-  total.innerText = pedidos.length;
-  pendentes.innerText = pedidos.filter(p=>p["Status NF"]!="emitido").length;
-  emitidos.innerText = pedidos.filter(p=>p["Status NF"]=="emitido").length;
-  envios.innerText = pedidos.filter(p=>p["Frete"] || p["Rastreio"]).length;
+  total.innerText=pedidos.length;
+  pendentes.innerText=pedidos.filter(p=>p["Status NF"]!=="emitido").length;
+  emitidos.innerText=pedidos.filter(p=>p["Status NF"]==="emitido").length;
+  envios.innerText=pedidos.filter(p=>p["Frete"]||p["Rastreio"]).length;
 }
 
-/* 🔥 RENDER */
 function render(){
-
   tabela.innerHTML="";
-
   pedidos.forEach((p,i)=>{
-
-    const status = (p["Status NF"]=="emitido") ? "emitido" : "pendente";
-
     tabela.innerHTML+=`
     <tr>
-      <td>
-        <button class="menu-btn" onclick="menu(${i},this)">⋮</button>
-        ${p["ID Pedido"]}
-      </td>
+      <td><button onclick="menu(${i},this)">⋮</button> ${p["ID Pedido"]}</td>
       <td>${p["Nome"]}</td>
       <td>R$ ${p["Valor"]}</td>
-      <td><span class="badge ${status}">${status}</span></td>
-      <td>${(p["Frete"] || p["Rastreio"]) ? "📦" : "-"}</td>
+      <td><span class="badge ${p["Status NF"]==="emitido"?"emitido":"pendente"}">${p["Status NF"]}</span></td>
+      <td>${(p["Frete"]||p["Rastreio"])?"📦":"-"}</td>
     </tr>`;
   });
 }
 
-/* 🔥 MENU MELHORADO */
 function menu(i,el){
-
   fecharMenu();
 
-  const p = pedidos[i];
-  const m = document.createElement("div");
+  const p=pedidos[i];
+  const m=document.createElement("div");
   m.className="menu-popup";
 
   m.innerHTML=`
-    <button onclick="acao('nota',${i})">👁 Ver Nota</button>
-    <button onclick="acao('pdf',${i})">📄 PDF</button>
-    <button onclick="acao('emitir',${i})">🧾 Emitir Nota</button>
-    <button onclick="acao('envio',${i})">📦 Gerar Envio</button>
-    <button onclick="acao('etiqueta',${i})">🏷 Gerar Etiqueta</button>
+    <button onclick="emitir(${i})">📄 Emitir Nota</button>
+    <button onclick="envio(${i})">📦 Gerar Envio</button>
+    <button onclick="etiqueta(${i})">🏷 Gerar Etiqueta</button>
   `;
 
   document.body.appendChild(m);
@@ -254,48 +302,38 @@ function menu(i,el){
   menuAtual=m;
 }
 
-/* 🔥 CENTRAL DE AÇÕES (RESOLVE O BUG DO MENU) */
-async function acao(tipo,i){
+async function etiqueta(i){
+  fecharMenu();
+  toast("Gerando etiqueta...");
 
-  fecharMenu(); // 👈 ESSENCIAL (resolve seu bug)
+  const res=await fetch(API_ETIQUETA+"?id="+pedidos[i]["ID Pedido"]);
+  const txt=await res.text();
 
-  const id = pedidos[i]["ID Pedido"];
-
-  if(tipo==="envio"){
-    toast("Gerando envio...");
-    await fetch(API+"?acao=envio&id="+id);
-    toast("Envio criado 📦");
+  if(txt.startsWith("http")){
+    window.open(txt);
+    toast("Etiqueta pronta");
+  }else{
+    toast(txt,true);
   }
-
-  if(tipo==="etiqueta"){
-    toast("Gerando etiqueta...");
-    const res = await fetch(API_ETIQUETA+"?id="+id);
-    const txt = await res.text();
-
-    if(txt.startsWith("http")){
-      window.open(txt);
-      toast("Etiqueta pronta 🚀");
-    }else{
-      toast(txt);
-    }
-  }
-
-  if(tipo==="emitir"){
-    toast("Emitindo...");
-    await fetch(API+"?acao=emitir&id="+id);
-    toast("Nota emitida");
-  }
-
-  if(tipo==="nota"){
-    window.open("nota.html?id="+id);
-  }
-
-  if(tipo==="pdf"){
-    window.open("nota.html?id="+id+"&pdf=1");
-  }
-
-  await carregar();
 }
+
+async function envio(i){
+  fecharMenu();
+  toast("Gerando envio...");
+  await fetch(API+"?acao=envio&id="+pedidos[i]["ID Pedido"]);
+  toast("Envio criado 🚀");
+  carregar();
+}
+
+async function emitir(i){
+  fecharMenu();
+  await fetch(API+"?acao=emitir&id="+pedidos[i]["ID Pedido"]);
+  toast("Nota emitida");
+  carregar();
+}
+
+document.getElementById("busca").addEventListener("input",render);
+document.getElementById("filtro").addEventListener("change",render);
 
 carregar();
 
