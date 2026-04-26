@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>RomerArt • Sistema NF</title>
 
 <style>
@@ -24,11 +23,9 @@ header{
   align-items:center;
 }
 
-/* 🔔 SININHO */
 .bell{
   position:relative;
   font-size:20px;
-  cursor:pointer;
 }
 
 .bell span{
@@ -176,13 +173,29 @@ input,select{
 
 <script>
 
+/* =========================
+   CONFIG
+========================= */
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
 const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbzQeZfOaSKql1r7NrsLcEs6wMO5knXEZWQBxHdopu7K5wk2NSQPdg5_C-3OUiJ4x_7qxA/exec";
 
 let pedidos=[];
 let menuAtual=null;
 
-/* LOAD */
+/* =========================
+   REGRA PENDENTE
+========================= */
+function ehPendente(p){
+  return (
+    (p["Status NF"] || "").toLowerCase() !== "emitido" &&
+    !p["Frete"] &&
+    !p["Rastreio"]
+  );
+}
+
+/* =========================
+   LOAD
+========================= */
 async function carregar(){
   const r = await fetch(API + "?t=" + Date.now());
   pedidos = await r.json();
@@ -196,21 +209,24 @@ async function atualizarManual(){
   toast("Atualizado");
 }
 
-/* CARDS + 🔔 */
+/* =========================
+   CARDS + 🔔
+========================= */
 function atualizarCards(){
+
+  const pend = pedidos.filter(p => ehPendente(p)).length;
+
   total.innerText = pedidos.length;
-
-  const pend = pedidos.filter(p=>p["Status NF"]!=="emitido").length;
-
   pendentes.innerText = pend;
   emitidos.innerText = pedidos.filter(p=>p["Status NF"]==="emitido").length;
   envios.innerText = pedidos.filter(p=>p["Frete"]||p["Rastreio"]).length;
 
-  // 🔔 atualizar sino
   document.getElementById("alerta").innerText = pend;
 }
 
-/* MENU */
+/* =========================
+   MENU
+========================= */
 function fecharMenu(){
   if(menuAtual){
     menuAtual.remove();
@@ -261,7 +277,9 @@ function abrirMenu(i,el){
   menuAtual = m;
 }
 
-/* ALERTA ATRASO */
+/* =========================
+   ALERTA ATRASO
+========================= */
 function diasSemEnvio(data){
   if(!data) return 0;
   const d = new Date(data);
@@ -269,7 +287,9 @@ function diasSemEnvio(data){
   return Math.floor((hoje-d)/(1000*60*60*24));
 }
 
-/* RENDER */
+/* =========================
+   RENDER
+========================= */
 function render(){
 
   const busca = document.getElementById("busca").value.toLowerCase();
@@ -281,11 +301,11 @@ function render(){
 
     if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
 
-    if(status==="pendente" && p["Status NF"]==="emitido") return;
+    if(status==="pendente" && !ehPendente(p)) return;
     if(status==="emitido" && p["Status NF"]!=="emitido") return;
 
     const dias = diasSemEnvio(p["Data"]);
-    const alerta = (!p["Frete"] && dias>=2)
+    const alerta = (ehPendente(p) && dias>=2)
       ? `<div class="alerta">⚠ ${dias} dias sem envio</div>`
       : "";
 
@@ -314,7 +334,9 @@ function render(){
   });
 }
 
-/* AÇÕES */
+/* =========================
+   AÇÕES
+========================= */
 async function emitir(i){
   fecharMenu();
   const id = pedidos[i]["ID Pedido"];
@@ -359,7 +381,9 @@ function declaracao(i){
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
-/* TOAST */
+/* =========================
+   TOAST
+========================= */
 function toast(msg){
   const t=document.getElementById("toast");
   t.innerText=msg;
@@ -367,7 +391,9 @@ function toast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-/* EVENTOS */
+/* =========================
+   EVENTOS
+========================= */
 document.getElementById("busca").addEventListener("input",render);
 document.getElementById("filtroStatus").addEventListener("change",render);
 
