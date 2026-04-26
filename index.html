@@ -54,7 +54,13 @@ header{
   padding:15px;
 }
 
-.card{padding:20px;border-radius:14px;}
+.card{
+  padding:20px;
+  border-radius:14px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
 .card:nth-child(1){background:#dbeafe;}
 .card:nth-child(2){background:#fef3c7;}
 .card:nth-child(3){background:#dcfce7;}
@@ -62,12 +68,10 @@ header{
 
 .filtros{
   padding:10px 15px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
 }
 
-input,select{
+input{
+  width:100%;
   padding:12px;
   border-radius:10px;
   border:none;
@@ -142,29 +146,21 @@ input,select{
 🚀 RomerArt
 
 <div class="top-right">
-  <div class="bell">
-    🔔 <span id="alerta">0</span>
-  </div>
+  <div class="bell">🔔 <span id="alerta">0</span></div>
   <div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </div>
 
 </header>
 
 <div class="cards">
-  <div class="card">Total: <span id="total">0</span></div>
-  <div class="card">Pendentes: <span id="pendentes">0</span></div>
-  <div class="card">Emitidos: <span id="emitidos">0</span></div>
-  <div class="card">Envios: <span id="envios">0</span></div>
+  <div class="card" onclick="filtrar('todos')">Total: <span id="total">0</span></div>
+  <div class="card" onclick="filtrar('pendente')">Pendentes: <span id="pendentes">0</span></div>
+  <div class="card" onclick="filtrar('emitido')">Emitidos: <span id="emitidos">0</span></div>
+  <div class="card" onclick="filtrar('envio')">Envios: <span id="envios">0</span></div>
 </div>
 
 <div class="filtros">
   <input id="busca" placeholder="Buscar cliente...">
-  
-  <select id="filtroStatus">
-    <option value="todos">Todos</option>
-    <option value="pendente">Pendentes</option>
-    <option value="emitido">Emitidos</option>
-  </select>
 </div>
 
 <div id="lista"></div>
@@ -173,18 +169,14 @@ input,select{
 
 <script>
 
-/* =========================
-   CONFIG
-========================= */
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
 const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbzQeZfOaSKql1r7NrsLcEs6wMO5knXEZWQBxHdopu7K5wk2NSQPdg5_C-3OUiJ4x_7qxA/exec";
 
 let pedidos=[];
 let menuAtual=null;
+let filtroAtual="todos";
 
-/* =========================
-   REGRA PENDENTE
-========================= */
+/* REGRA PENDENTE */
 function ehPendente(p){
   return (
     (p["Status NF"] || "").toLowerCase() !== "emitido" &&
@@ -193,9 +185,7 @@ function ehPendente(p){
   );
 }
 
-/* =========================
-   LOAD
-========================= */
+/* LOAD */
 async function carregar(){
   const r = await fetch(API + "?t=" + Date.now());
   pedidos = await r.json();
@@ -209,9 +199,7 @@ async function atualizarManual(){
   toast("Atualizado");
 }
 
-/* =========================
-   CARDS + 🔔
-========================= */
+/* CARDS */
 function atualizarCards(){
 
   const pend = pedidos.filter(p => ehPendente(p)).length;
@@ -221,12 +209,16 @@ function atualizarCards(){
   emitidos.innerText = pedidos.filter(p=>p["Status NF"]==="emitido").length;
   envios.innerText = pedidos.filter(p=>p["Frete"]||p["Rastreio"]).length;
 
-  document.getElementById("alerta").innerText = pend;
+  alerta.innerText = pend;
 }
 
-/* =========================
-   MENU
-========================= */
+/* FILTRO */
+function filtrar(tipo){
+  filtroAtual = tipo;
+  render();
+}
+
+/* MENU */
 function fecharMenu(){
   if(menuAtual){
     menuAtual.remove();
@@ -277,9 +269,7 @@ function abrirMenu(i,el){
   menuAtual = m;
 }
 
-/* =========================
-   ALERTA ATRASO
-========================= */
+/* ALERTA */
 function diasSemEnvio(data){
   if(!data) return 0;
   const d = new Date(data);
@@ -287,13 +277,10 @@ function diasSemEnvio(data){
   return Math.floor((hoje-d)/(1000*60*60*24));
 }
 
-/* =========================
-   RENDER
-========================= */
+/* RENDER */
 function render(){
 
   const busca = document.getElementById("busca").value.toLowerCase();
-  const status = document.getElementById("filtroStatus").value;
 
   lista.innerHTML="";
 
@@ -301,8 +288,9 @@ function render(){
 
     if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
 
-    if(status==="pendente" && !ehPendente(p)) return;
-    if(status==="emitido" && p["Status NF"]!=="emitido") return;
+    if(filtroAtual==="pendente" && !ehPendente(p)) return;
+    if(filtroAtual==="emitido" && p["Status NF"]!=="emitido") return;
+    if(filtroAtual==="envio" && !(p["Frete"]||p["Rastreio"])) return;
 
     const dias = diasSemEnvio(p["Data"]);
     const alerta = (ehPendente(p) && dias>=2)
@@ -334,9 +322,7 @@ function render(){
   });
 }
 
-/* =========================
-   AÇÕES
-========================= */
+/* AÇÕES */
 async function emitir(i){
   fecharMenu();
   const id = pedidos[i]["ID Pedido"];
@@ -381,9 +367,6 @@ function declaracao(i){
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
-/* =========================
-   TOAST
-========================= */
 function toast(msg){
   const t=document.getElementById("toast");
   t.innerText=msg;
@@ -391,11 +374,7 @@ function toast(msg){
   setTimeout(()=>t.classList.remove("show"),2000);
 }
 
-/* =========================
-   EVENTOS
-========================= */
 document.getElementById("busca").addEventListener("input",render);
-document.getElementById("filtroStatus").addEventListener("change",render);
 
 carregar();
 
