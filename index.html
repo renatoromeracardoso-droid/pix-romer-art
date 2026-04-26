@@ -7,17 +7,11 @@
 <title>RomerArt • Sistema NF</title>
 
 <style>
+body{margin:0;font-family:'Segoe UI';background:#f1f5f9;}
 
-body{
-  margin:0;
-  font-family:'Segoe UI';
-  background:#f1f5f9;
-}
-
-/* HEADER */
 header{
   background:white;
-  padding:18px;
+  padding:15px;
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -32,44 +26,23 @@ header{
   cursor:pointer;
 }
 
-/* 🔔 */
-.bell{
-  position:relative;
-  font-size:20px;
-}
-
-.bell span{
-  position:absolute;
-  top:-5px;
-  right:-5px;
-  background:red;
-  color:white;
-  font-size:10px;
-  padding:2px 6px;
-  border-radius:999px;
-}
-
-/* CARDS */
 .cards{
   display:grid;
   grid-template-columns:repeat(2,1fr);
-  gap:12px;
+  gap:10px;
   padding:15px;
 }
 
 .card{
   padding:20px;
-  border-radius:16px;
-  font-weight:bold;
+  border-radius:14px;
 }
 
-/* CORES SUAVES */
 .card:nth-child(1){background:#dbeafe;}
 .card:nth-child(2){background:#fef3c7;}
 .card:nth-child(3){background:#dcfce7;}
 .card:nth-child(4){background:#ede9fe;}
 
-/* FILTROS */
 .filtros{
   padding:10px 15px;
   display:flex;
@@ -79,12 +52,10 @@ header{
 
 input,select{
   padding:12px;
-  border-radius:12px;
+  border-radius:10px;
   border:none;
-  background:white;
 }
 
-/* LISTA */
 .item{
   background:white;
   margin:10px 15px;
@@ -102,9 +73,9 @@ input,select{
 
 .menu-btn{
   cursor:pointer;
+  font-size:18px;
 }
 
-/* STATUS */
 .badge{
   padding:5px 10px;
   border-radius:999px;
@@ -114,23 +85,33 @@ input,select{
 .emitido{background:#22c55e;color:white;}
 .pendente{background:#f59e0b;color:white;}
 
-/* ALERTA */
 .alerta{
   color:red;
   font-size:12px;
-  margin-top:5px;
 }
 
 /* MENU */
 .menu-popup{
   position:absolute;
   background:white;
-  border-radius:14px;
+  border-radius:12px;
   padding:8px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.1);
-  display:flex;
-  flex-direction:column;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
   z-index:999;
+}
+
+.menu-popup button{
+  display:block;
+  width:100%;
+  border:none;
+  background:none;
+  padding:10px;
+  text-align:left;
+  cursor:pointer;
+}
+
+.menu-popup button:hover{
+  background:#f1f5f9;
 }
 
 /* TOAST */
@@ -147,7 +128,6 @@ input,select{
   transition:.3s;
 }
 .toast.show{opacity:1;}
-
 </style>
 </head>
 
@@ -155,12 +135,7 @@ input,select{
 
 <header>
 🚀 RomerArt
-
-<div style="display:flex;gap:10px;">
-  <div class="bell">🔔 <span id="alerta">0</span></div>
-  <div class="btn-refresh" onclick="carregar()">Atualizar</div>
-</div>
-
+<div class="btn-refresh" onclick="carregar()">Atualizar</div>
 </header>
 
 <div class="cards">
@@ -179,7 +154,6 @@ input,select{
     <option value="emitido">Emitidos</option>
   </select>
 
-  <!-- NOVO -->
   <input type="date" id="filtroData">
 </div>
 
@@ -190,9 +164,9 @@ input,select{
 <script>
 
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
-const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbzQeZfOaSKql1r7NrsLcEs6wMO5knXEZWQBxHdopu7K5wk2NSQPdg5_C-3OUiJ4x_7qxA/exec";
 
 let pedidos=[];
+let menuAtual=null;
 
 function toast(msg){
   const t=document.getElementById("toast");
@@ -202,7 +176,7 @@ function toast(msg){
 }
 
 async function carregar(){
-  const r=await fetch(API);
+  const r=await fetch(API+"?t="+Date.now());
   pedidos=await r.json();
   atualizarCards();
   render();
@@ -210,21 +184,53 @@ async function carregar(){
 
 function atualizarCards(){
   total.innerText=pedidos.length;
-
-  const pend=pedidos.filter(p=>p["Status NF"]!=="emitido").length;
-  pendentes.innerText=pend;
-
+  pendentes.innerText=pedidos.filter(p=>p["Status NF"]!=="emitido").length;
   emitidos.innerText=pedidos.filter(p=>p["Status NF"]==="emitido").length;
   envios.innerText=pedidos.filter(p=>p["Frete"]||p["Rastreio"]).length;
-
-  alerta.innerText=pend;
 }
 
-function diasSemEnvio(data){
-  if(!data) return 0;
-  const d=new Date(data);
-  const hoje=new Date();
-  return Math.floor((hoje-d)/(1000*60*60*24));
+function fecharMenu(){
+  if(menuAtual){
+    menuAtual.remove();
+    menuAtual=null;
+  }
+}
+
+document.addEventListener("click",(e)=>{
+  if(!e.target.closest(".menu-btn") && !e.target.closest(".menu-popup")){
+    fecharMenu();
+  }
+});
+
+/* MENU FUNCIONANDO */
+function abrirMenu(i,el){
+
+  fecharMenu();
+
+  const p=pedidos[i];
+
+  const m=document.createElement("div");
+  m.className="menu-popup";
+
+  m.innerHTML=`
+    <button onclick="emitir(${i})">📄 Emitir Nota</button>
+    <button onclick="envio(${i})">📦 Gerar Envio</button>
+    <button onclick="etiqueta(${i})">🏷 Etiqueta</button>
+  `;
+
+  document.body.appendChild(m);
+
+  const r=el.getBoundingClientRect();
+  m.style.top=r.bottom+"px";
+  m.style.left=r.left+"px";
+
+  menuAtual=m;
+}
+
+/* DATA CORRIGIDA */
+function formatarData(d){
+  if(!d) return "";
+  return d.split(" ")[0]; // remove hora
 }
 
 function render(){
@@ -244,26 +250,20 @@ function render(){
     if(status==="pendente" && p["Status NF"]==="emitido") return;
     if(status==="emitido" && p["Status NF"]!=="emitido") return;
 
-    if(dataFiltro && p["Data"]){
-      const dataPedido=p["Data"].split(" ")[0];
+    if(dataFiltro){
+      const dataPedido=formatarData(p["Data"]);
       if(dataPedido!==dataFiltro) return;
     }
-
-    const dias=diasSemEnvio(p["Data"]);
-    const alerta = (!p["Frete"] && dias>=2)
-      ? `<div class="alerta">⚠ ${dias} dias sem envio</div>`
-      : "";
 
     lista.innerHTML+=`
     <div class="item">
 
       <div class="left">
-        <div class="menu-btn">⋮</div>
+        <div class="menu-btn" onclick="abrirMenu(${i},this)">⋮</div>
 
         <div>
           <strong>Pedido ${p["ID Pedido"]}</strong><br>
           ${p["Nome"]}
-          ${alerta}
         </div>
       </div>
 
@@ -279,10 +279,26 @@ function render(){
   });
 }
 
+/* AÇÕES */
+async function emitir(i){
+  fecharMenu();
+  toast("Emitindo...");
+}
+
+async function envio(i){
+  fecharMenu();
+  toast("Gerando envio...");
+}
+
+async function etiqueta(i){
+  fecharMenu();
+  toast("Etiqueta...");
+}
+
 /* EVENTOS */
-document.getElementById("busca").addEventListener("input",render);
-document.getElementById("filtroStatus").addEventListener("change",render);
-document.getElementById("filtroData").addEventListener("change",render);
+busca.addEventListener("input",render);
+filtroStatus.addEventListener("change",render);
+filtroData.addEventListener("change",render);
 
 carregar();
 
