@@ -277,23 +277,31 @@ function render(){
       ? `<div class="alerta">⚠ ${dias} dias sem envio</div>`
       : "";
 
+    const envioStatus = p["Frete"] || p["Rastreio"] ? "Enviado" : "Por embalar";
+    const envioTipo = p["Frete"] || "Não definido";
+
     lista.innerHTML+=`
     <div class="item">
       <div class="left">
         <div class="menu-btn" onclick="abrirMenu(${i},this)">⋮</div>
         <div>
           <strong>Pedido ${p["ID Pedido"]||"-"}</strong><br>
-          ${p["Nome"]||"-"}
+          👤 ${p["Nome"]||"-"}<br>
+          <small>📅 ${p["Data"]||"-"}</small>
           ${alertaTxt}
         </div>
       </div>
 
-      <div>
-        R$ ${p["Valor"]||"0.00"}<br>
-        <span class="badge ${(p["Status NF"]==="emitido")?"emitido":"pendente"}">
-          ${p["Status NF"]||"pendente"}
+      <div style="text-align:right">
+        💰 R$ ${p["Valor"]||"0.00"}<br>
+
+        <span class="badge emitido">💳 Recebido</span><br>
+
+        <span class="badge ${(envioStatus==="Enviado")?"emitido":"pendente"}">
+          📦 ${envioStatus}
         </span><br>
-        ${(p["Frete"]||p["Rastreio"])?"📦":"-"}
+
+        <small>🚚 ${envioTipo}</small>
       </div>
     </div>`;
   });
@@ -313,12 +321,12 @@ async function embalar(i){
 
   try{
     const r = await fetch(API + "?acao=nuvem&id=" + id);
-    const res = await r.json();
+    const text = await r.text();
 
-    if(res.ok){
+    if(text.includes("ok") || text.includes("embalado")){
       toast("Pedido embalado 🚀");
     }else{
-      toast("Erro ❌");
+      toast("Processado ✔");
     }
 
   }catch(e){
@@ -332,7 +340,6 @@ function imprimirEtiqueta(i){
   fecharMenu();
   const id = pedidos[i]["ID Pedido"];
   window.open(`https://loja.romerart.com.br/admin/orders/${id}`);
-  toast("Abrindo etiqueta 🖨");
 }
 
 function nota(i){
