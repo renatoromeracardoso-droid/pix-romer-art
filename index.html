@@ -17,6 +17,7 @@ header{
   box-shadow:0 2px 10px rgba(0,0,0,0.05);
 }
 
+.logo{display:flex;align-items:center;gap:10px;}
 .logo img{height:36px;}
 
 .top-right{display:flex;gap:12px;align-items:center;}
@@ -48,7 +49,13 @@ header{
   padding:15px;
 }
 
-.card{padding:20px;border-radius:14px;font-weight:bold;cursor:pointer;}
+.card{
+  padding:20px;
+  border-radius:14px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
 .card:nth-child(1){background:#dbeafe;}
 .card:nth-child(2){background:#fef3c7;}
 .card:nth-child(3){background:#dcfce7;}
@@ -68,23 +75,24 @@ input{
   margin:10px 15px;
   padding:15px;
   border-radius:14px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.05);
   display:flex;
   justify-content:space-between;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
 }
 
 .left{display:flex;gap:10px;}
-
 .menu-btn{cursor:pointer;font-size:18px;}
 
 .badge{
-  padding:4px 8px;
+  padding:5px 10px;
   border-radius:999px;
   font-size:11px;
 }
 
 .emitido{background:#22c55e;color:white;}
 .pendente{background:#f59e0b;color:white;}
+
+.alerta{color:red;font-size:12px;}
 
 .menu-popup{
   position:absolute;
@@ -152,14 +160,14 @@ input{
 
 <script>
 
-const API = "COLE_AQUI_SEU_LINK_WEBAPP";
+const API = "https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
 
 let pedidos=[];
 let menuAtual=null;
 let filtroAtual="todos";
 
 function ehPendente(p){
-  return !p["Frete"] && !p["Rastreio"];
+  return ((p["Status NF"]||"").toLowerCase()!=="emitido" && !p["Frete"] && !p["Rastreio"]);
 }
 
 async function carregar(){
@@ -173,12 +181,21 @@ async function carregar(){
   }
 }
 
+async function atualizarManual(){
+  toast("Atualizando...");
+  await carregar();
+  toast("Atualizado");
+}
+
 function atualizarCards(){
+  const pend = pedidos.filter(p => ehPendente(p)).length;
+
   total.innerText = pedidos.length;
-  pendentes.innerText = pedidos.filter(p=>ehPendente(p)).length;
+  pendentes.innerText = pend;
   emitidos.innerText = pedidos.filter(p=>p["Status NF"]==="emitido").length;
   envios.innerText = pedidos.filter(p=>p["Frete"]||p["Rastreio"]).length;
-  alerta.innerText = pendentes.innerText;
+
+  alerta.innerText = pend;
 }
 
 function filtrar(tipo){
@@ -187,7 +204,10 @@ function filtrar(tipo){
 }
 
 function fecharMenu(){
-  if(menuAtual){menuAtual.remove();menuAtual=null;}
+  if(menuAtual){
+    menuAtual.remove();
+    menuAtual=null;
+  }
 }
 
 document.addEventListener("click",(e)=>{
@@ -199,15 +219,22 @@ document.addEventListener("click",(e)=>{
 function abrirMenu(i,el){
 
   fecharMenu();
+
   const p = pedidos[i];
 
   let html = `
-    <button onclick="nota(${i})">👁 Nota</button>
-    <button onclick="pdf(${i})">📄 PDF</button>
-    <button onclick="emitir(${i})">📄 Emitir Nota</button>
-    <button onclick="marcarEmbalado(${i})">📦 Marcar como embalado</button>
-    <button onclick="etiqueta(${i})">🏷 Imprimir etiqueta</button>
-    <button onclick="declaracao(${i})">📦 Declaração</button>
+    <button onclick="nota(${i});fecharMenu()">👁 Nota</button>
+    <button onclick="pdf(${i});fecharMenu()">📄 PDF</button>
+  `;
+
+  if(p["Status NF"] !== "emitido"){
+    html += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
+  }
+
+  html += `
+    <button onclick="embalar(${i})">📦 Marcar como embalada</button>
+    <button onclick="imprimirEtiqueta(${i})">🖨 Imprimir etiqueta</button>
+    <button onclick="declaracao(${i});fecharMenu()">📦 Declaração</button>
   `;
 
   const m = document.createElement("div");
@@ -223,65 +250,89 @@ function abrirMenu(i,el){
   menuAtual = m;
 }
 
+function diasSemEnvio(data){
+  if(!data) return 0;
+  const d = new Date(data);
+  if(isNaN(d)) return 0;
+  const hoje = new Date();
+  return Math.floor((hoje-d)/(1000*60*60*24));
+}
+
 function render(){
 
   const busca = document.getElementById("busca").value.toLowerCase();
+
   lista.innerHTML="";
 
   pedidos.forEach((p,i)=>{
 
     if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
 
-    const envioStatus = p["Frete"] || p["Rastreio"] ? "Enviado" : "Por embalar";
-    const envioTipo = p["Frete"] || "Não definido";
+    if(filtroAtual==="pendente" && !ehPendente(p)) return;
+    if(filtroAtual==="emitido" && p["Status NF"]!=="emitido") return;
+    if(filtroAtual==="envio" && !(p["Frete"]||p["Rastreio"])) return;
+
+    const dias = diasSemEnvio(p["Data"]);
+    const alertaTxt = (ehPendente(p) && dias>=2)
+      ? `<div class="alerta">⚠ ${dias} dias sem envio</div>`
+      : "";
 
     lista.innerHTML+=`
     <div class="item">
-
       <div class="left">
         <div class="menu-btn" onclick="abrirMenu(${i},this)">⋮</div>
-
         <div>
-          <strong>Pedido #${p["ID Pedido"]||"-"}</strong><br>
-          👤 ${p["Nome"]||"-"}<br>
-          <small>📅 ${p["Data"]||"-"}</small>
+          <strong>Pedido ${p["ID Pedido"]||"-"}</strong><br>
+          ${p["Nome"]||"-"}
+          ${alertaTxt}
         </div>
       </div>
 
-      <div style="text-align:right">
-
-        💰 <strong>R$ ${p["Valor"]||"0.00"}</strong><br>
-
-        <span class="badge emitido">💳 Recebido</span><br>
-
-        <span class="badge ${(envioStatus==="Enviado")?"emitido":"pendente"}">
-          📦 ${envioStatus}
+      <div>
+        R$ ${p["Valor"]||"0.00"}<br>
+        <span class="badge ${(p["Status NF"]==="emitido")?"emitido":"pendente"}">
+          ${p["Status NF"]||"pendente"}
         </span><br>
-
-        <small>🚚 ${envioTipo}</small>
-
+        ${(p["Frete"]||p["Rastreio"])?"📦":"-"}
       </div>
-
     </div>`;
   });
 }
 
 async function emitir(i){
+  fecharMenu();
   const id = pedidos[i]["ID Pedido"];
   await fetch(API + "?acao=emitir&id=" + id);
   toast("Nota emitida");
   carregar();
 }
 
-async function marcarEmbalado(i){
+async function embalar(i){
+  fecharMenu();
   const id = pedidos[i]["ID Pedido"];
-  await fetch(API + "?acao=nuvem&id=" + id);
-  toast("Pedido embalado + notificado 🚀");
+
+  try{
+    const r = await fetch(API + "?acao=nuvem&id=" + id);
+    const res = await r.json();
+
+    if(res.ok){
+      toast("Pedido embalado 🚀");
+    }else{
+      toast("Erro ❌");
+    }
+
+  }catch(e){
+    toast("Erro conexão ❌");
+  }
+
   carregar();
 }
 
-async function etiqueta(i){
-  marcarEmbalado(i);
+function imprimirEtiqueta(i){
+  fecharMenu();
+  const id = pedidos[i]["ID Pedido"];
+  window.open(`https://loja.romerart.com.br/admin/orders/${id}`);
+  toast("Abrindo etiqueta 🖨");
 }
 
 function nota(i){
