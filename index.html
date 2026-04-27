@@ -231,12 +231,9 @@ function abrirMenu(i,el){
     html += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
   }
 
-  if(!p["Frete"] && !p["Rastreio"]){
-    html += `<button onclick="envio(${i})">📦 Gerar Envio</button>`;
-  }
-
   html += `
-    <button onclick="etiqueta(${i})">🏷 Etiqueta</button>
+    <button onclick="embalar(${i})">📦 Marcar como embalada</button>
+    <button onclick="imprimirEtiqueta(${i})">🖨 Imprimir etiqueta</button>
     <button onclick="declaracao(${i});fecharMenu()">📦 Declaração</button>
   `;
 
@@ -310,19 +307,18 @@ async function emitir(i){
   carregar();
 }
 
-async function envio(i){
+async function embalar(i){
   fecharMenu();
   const id = pedidos[i]["ID Pedido"];
 
   try{
-    const r = await fetch(API + "?acao=envio&id=" + id);
-    const link = await r.text();
+    const r = await fetch(API + "?acao=nuvem&id=" + id);
+    const res = await r.json();
 
-    if(link.includes("http")){
-      window.open(link);
-      toast("Etiqueta pronta 🚀");
+    if(res.ok){
+      toast("Pedido embalado 🚀");
     }else{
-      toast(link);
+      toast("Erro ❌");
     }
 
   }catch(e){
@@ -332,8 +328,11 @@ async function envio(i){
   carregar();
 }
 
-async function etiqueta(i){
-  envio(i); // 🔥 reaproveita fluxo correto
+function imprimirEtiqueta(i){
+  fecharMenu();
+  const id = pedidos[i]["ID Pedido"];
+  window.open(`https://loja.romerart.com.br/admin/orders/${id}`);
+  toast("Abrindo etiqueta 🖨");
 }
 
 function nota(i){
