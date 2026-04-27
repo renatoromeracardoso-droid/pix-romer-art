@@ -17,27 +17,12 @@ header{
   box-shadow:0 2px 10px rgba(0,0,0,0.05);
 }
 
-.logo{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo img{height:36px;}
 
-.logo img{
-  height:36px;
-}
+.top-right{display:flex;gap:12px;align-items:center;}
 
-.top-right{
-  display:flex;
-  gap:12px;
-  align-items:center;
-}
-
-.bell{
-  position:relative;
-  font-size:20px;
-}
-
+.bell{position:relative;font-size:20px;}
 .bell span{
   position:absolute;
   top:-5px;
@@ -76,9 +61,7 @@ header{
 .card:nth-child(3){background:#dcfce7;}
 .card:nth-child(4){background:#ede9fe;}
 
-.filtros{
-  padding:10px 15px;
-}
+.filtros{padding:10px 15px;}
 
 input{
   width:100%;
@@ -130,9 +113,7 @@ input{
   cursor:pointer;
 }
 
-.menu-popup button:hover{
-  background:#f1f5f9;
-}
+.menu-popup button:hover{background:#f1f5f9;}
 
 .toast{
   position:fixed;
@@ -153,7 +134,6 @@ input{
 <body>
 
 <header>
-
 <div class="logo">
   <img src="RomerArt.png">
 </div>
@@ -162,7 +142,6 @@ input{
   <div class="bell">🔔 <span id="alerta">0</span></div>
   <div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
 </div>
-
 </header>
 
 <div class="cards">
@@ -177,7 +156,6 @@ input{
 </div>
 
 <div id="lista"></div>
-
 <div id="toast" class="toast"></div>
 
 <script>
@@ -190,18 +168,18 @@ let menuAtual=null;
 let filtroAtual="todos";
 
 function ehPendente(p){
-  return (
-    (p["Status NF"] || "").toLowerCase() !== "emitido" &&
-    !p["Frete"] &&
-    !p["Rastreio"]
-  );
+  return ((p["Status NF"]||"").toLowerCase()!=="emitido" && !p["Frete"] && !p["Rastreio"]);
 }
 
 async function carregar(){
-  const r = await fetch(API + "?t=" + Date.now());
-  pedidos = await r.json();
-  atualizarCards();
-  render();
+  try{
+    const r = await fetch(API + "?t=" + Date.now());
+    pedidos = await r.json();
+    atualizarCards();
+    render();
+  }catch(e){
+    toast("Erro ao carregar ❌");
+  }
 }
 
 async function atualizarManual(){
@@ -246,8 +224,8 @@ function abrirMenu(i,el){
   const p = pedidos[i];
 
   let html = `
-    <button onclick="nota(${i})">👁 Nota</button>
-    <button onclick="pdf(${i})">📄 PDF</button>
+    <button onclick="nota(${i});fecharMenu()">👁 Nota</button>
+    <button onclick="pdf(${i});fecharMenu()">📄 PDF</button>
   `;
 
   if(p["Status NF"] !== "emitido"){
@@ -260,7 +238,7 @@ function abrirMenu(i,el){
 
   html += `
     <button onclick="etiqueta(${i})">🏷 Etiqueta</button>
-    <button onclick="declaracao(${i})">📦 Declaração</button>
+    <button onclick="declaracao(${i});fecharMenu()">📦 Declaração</button>
   `;
 
   const m = document.createElement("div");
@@ -279,6 +257,7 @@ function abrirMenu(i,el){
 function diasSemEnvio(data){
   if(!data) return 0;
   const d = new Date(data);
+  if(isNaN(d)) return 0;
   const hoje = new Date();
   return Math.floor((hoje-d)/(1000*60*60*24));
 }
@@ -298,31 +277,28 @@ function render(){
     if(filtroAtual==="envio" && !(p["Frete"]||p["Rastreio"])) return;
 
     const dias = diasSemEnvio(p["Data"]);
-    const alerta = (ehPendente(p) && dias>=2)
+    const alertaTxt = (ehPendente(p) && dias>=2)
       ? `<div class="alerta">⚠ ${dias} dias sem envio</div>`
       : "";
 
     lista.innerHTML+=`
     <div class="item">
-
       <div class="left">
         <div class="menu-btn" onclick="abrirMenu(${i},this)">⋮</div>
-
         <div>
-          <strong>Pedido ${p["ID Pedido"]}</strong><br>
-          ${p["Nome"]}
-          ${alerta}
+          <strong>Pedido ${p["ID Pedido"]||"-"}</strong><br>
+          ${p["Nome"]||"-"}
+          ${alertaTxt}
         </div>
       </div>
 
       <div>
-        R$ ${p["Valor"]}<br>
-        <span class="badge ${p["Status NF"]==="emitido"?"emitido":"pendente"}">
-          ${p["Status NF"]}
+        R$ ${p["Valor"]||"0.00"}<br>
+        <span class="badge ${(p["Status NF"]==="emitido")?"emitido":"pendente"}">
+          ${p["Status NF"]||"pendente"}
         </span><br>
         ${(p["Frete"]||p["Rastreio"])?"📦":"-"}
       </div>
-
     </div>`;
   });
 }
@@ -347,14 +323,18 @@ async function etiqueta(i){
   fecharMenu();
   const id = pedidos[i]["ID Pedido"];
 
-  const r = await fetch(API_ETIQUETA + "?id=" + id);
-  const t = await r.text();
+  try{
+    const r = await fetch(API_ETIQUETA + "?id=" + id);
+    const t = await r.text();
 
-  if(t.startsWith("http")){
-    window.open(t);
-    toast("Etiqueta pronta");
-  }else{
-    toast(t);
+    if(t.startsWith("http")){
+      window.open(t);
+      toast("Etiqueta pronta");
+    }else{
+      toast(t || "Erro etiqueta");
+    }
+  }catch(e){
+    toast("Erro conexão ❌");
   }
 }
 
