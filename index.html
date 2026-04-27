@@ -161,7 +161,6 @@ input{
 <script>
 
 const API = "https://script.google.com/macros/s/AKfycbwEY9Ybci7rULdNEiS49_vcXPi2_vsPtwk-R5s1ndNjSn3qx4Y4o7GWpVpXAxDm_8LwZQ/exec";
-const API_ETIQUETA = "https://script.google.com/macros/s/AKfycbxMV6xIUBslHPqzlECxQK092xkjSgdct4gikupzoYHkS_kt2NAJI6qyXHKVGqlMT53GaQ/exec";
 
 let pedidos=[];
 let menuAtual=null;
@@ -314,28 +313,27 @@ async function emitir(i){
 async function envio(i){
   fecharMenu();
   const id = pedidos[i]["ID Pedido"];
-  await fetch(API + "?acao=envio&id=" + id);
-  toast("Envio criado 📦");
+
+  try{
+    const r = await fetch(API + "?acao=envio&id=" + id);
+    const link = await r.text();
+
+    if(link.includes("http")){
+      window.open(link);
+      toast("Etiqueta pronta 🚀");
+    }else{
+      toast(link);
+    }
+
+  }catch(e){
+    toast("Erro conexão ❌");
+  }
+
   carregar();
 }
 
 async function etiqueta(i){
-  fecharMenu();
-  const id = pedidos[i]["ID Pedido"];
-
-  try{
-    const r = await fetch(API_ETIQUETA + "?id=" + id);
-    const t = await r.text();
-
-    if(t.startsWith("http")){
-      window.open(t);
-      toast("Etiqueta pronta");
-    }else{
-      toast(t || "Erro etiqueta");
-    }
-  }catch(e){
-    toast("Erro conexão ❌");
-  }
+  envio(i); // 🔥 reaproveita fluxo correto
 }
 
 function nota(i){
