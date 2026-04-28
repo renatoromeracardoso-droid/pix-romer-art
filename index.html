@@ -21,8 +21,22 @@ header{
 
 .logo img{height:50px;}
 
+.top-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
 .btn-refresh{
   background:#f97316;
+  color:white;
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.btn-relatorio{
+  background:#3b82f6;
   color:white;
   padding:8px 14px;
   border-radius:8px;
@@ -138,7 +152,11 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   <div class="logo">
     <img src="RomerArt.png">
   </div>
-  <div class="btn-refresh" onclick="carregar()">Atualizar</div>
+
+  <div class="top-actions">
+    <div class="btn-relatorio" onclick="abrirRelatorio()">📊 Relatório</div>
+    <div class="btn-refresh" onclick="carregar()">🔄 Atualizar</div>
+  </div>
 </header>
 
 <div class="cards">
@@ -166,6 +184,10 @@ const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIH
 
 let pedidos=[],menu=null,filtro="todos";
 
+function abrirRelatorio(){
+  window.open("relatorio-mei.html");
+}
+
 async function carregar(){
   const r=await fetch(API);
   pedidos=await r.json();
@@ -187,7 +209,6 @@ function render(){
   lista.innerHTML="";
   const b=busca.value.toLowerCase();
 
-  // ⭐ contar compras por CPF
   const cpfCount={};
   pedidos.forEach(p=>{
     const cpf=p["CPF/CNPJ"];
@@ -202,25 +223,7 @@ function render(){
     if(filtro==="enviado" && !p["Frete"]) return;
 
     const enviado=p["Frete"];
-
-    // ⭐ VIP
     const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
-
-    // 💳 pagamento
-    let pagamento="💰";
-    const metodo=(p["Método pagamento"]||"").toLowerCase();
-    if(metodo.includes("pix")) pagamento="🟢 PIX";
-    else if(metodo.includes("cart")) pagamento="💳";
-
-    // 🚀 tipo envio
-    let tipo="";
-    const envio=(p["Escolha Envio"]||"").toLowerCase();
-    if(envio.includes("sedex")) tipo="🚀 Sedex";
-    else if(envio.includes("pac")) tipo="📦 PAC";
-
-    // ⚠️ atraso
-    const dias = Math.floor((new Date() - new Date(p["Data"]))/86400000);
-    const alerta = (!enviado && dias>=2) ? `<div class="alerta">⚠ ${dias} dias parado</div>` : "";
 
     lista.innerHTML+=`
     <div class="item">
@@ -228,9 +231,7 @@ function render(){
         <div class="menu-btn" onclick="abrirMenu(event,${i})">⋮</div>
         <div onclick="abrirModal(${i})">
           <strong>#${p["ID Pedido"]}</strong><br>
-          ${p["Nome"]} ${vip}<br>
-          <small>${pagamento} • ${tipo}</small>
-          ${alerta}
+          ${p["Nome"]} ${vip}
         </div>
       </div>
 
@@ -245,7 +246,6 @@ function render(){
   });
 }
 
-/* MENU COM ÍCONES */
 function abrirMenu(e,i){
   e.stopPropagation();
   if(menu) menu.remove();
@@ -268,7 +268,6 @@ function abrirMenu(e,i){
 
 document.addEventListener("click",()=>{if(menu)menu.remove();});
 
-/* MODAL COMPLETO COM ÍCONES */
 function abrirModal(i){
   const p = pedidos[i];
 
@@ -306,18 +305,6 @@ function abrirModal(i){
       <p>${p["Rastreio"]||"-"}</p>
     </div>
 
-    <div class="box">
-      <h3>📏 Medidas</h3>
-      <p>Peso: ${p["Peso"]}</p>
-      <p>${p["Largura"]} x ${p["Altura"]} x ${p["Comprimento"]}</p>
-    </div>
-
-    <div class="box">
-      <h3>🧾 Fiscal</h3>
-      <p>${p["Codigo Barra"]||"-"}</p>
-      <p>${p["Número chave"]||"-"}</p>
-    </div>
-
   </div>
 
   <div style="margin-top:20px;display:flex;gap:10px;">
@@ -333,7 +320,6 @@ function abrirModal(i){
 
 function fecharModal(){modal.style.display="none";}
 
-/* AÇÕES */
 async function embalar(i){
   const id=pedidos[i]["ID Pedido"];
   await fetch(API+"?acao=nuvem&id="+id);
