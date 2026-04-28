@@ -3,163 +3,129 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RomerArt • Painel</title>
+<title>RomerArt • Sistema</title>
 
 <style>
+body{margin:0;font-family:'Segoe UI';background:#f8fafc;}
 
-body{
-  margin:0;
-  font-family:'Segoe UI';
-  background:#f8fafc;
-}
-
-/* HEADER FIXO */
 header{
-  position:fixed;
+  position:sticky;
   top:0;
-  width:100%;
   background:white;
-  padding:18px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  box-shadow:0 2px 10px rgba(0,0,0,0.06);
-  z-index:999;
-}
-
-.logo img{height:48px;}
-
-.container{margin-top:90px;}
-
-/* CARDS CLEAN */
-.cards{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:10px;
-  padding:12px;
-}
-
-.card{
-  background:white;
-  padding:14px;
-  border-radius:14px;
-  cursor:pointer;
-  box-shadow:0 4px 10px rgba(0,0,0,0.04);
-  display:flex;
-  flex-direction:column;
-}
-
-.label{
-  font-size:11px;
-  color:#64748b;
-}
-
-.value{
-  font-size:22px;
-  font-weight:bold;
-  color:#0f172a;
-}
-
-.total{border-left:4px solid #93c5fd;}
-.pago{border-left:4px solid #86efac;}
-.pendente{border-left:4px solid #fde68a;}
-.enviado{border-left:4px solid #c4b5fd;}
-
-/* BUSCA */
-input{
-  width:calc(100% - 30px);
-  margin:10px 15px;
-  padding:12px;
-  border-radius:10px;
-  border:none;
-  background:white;
-}
-
-/* LISTA */
-.item{
-  background:white;
-  margin:10px 15px;
-  padding:14px;
-  border-radius:14px;
+  padding:10px 15px;
   display:flex;
   justify-content:space-between;
   align-items:center;
-  box-shadow:0 5px 15px rgba(0,0,0,0.04);
+  box-shadow:0 2px 10px rgba(0,0,0,0.05);
+  z-index:999;
+}
+
+.logo img{height:45px;}
+
+.top-actions{
+  display:flex;
+  gap:8px;
+}
+
+.btn{
+  background:#f1f5f9;
+  padding:8px 12px;
+  border-radius:8px;
   cursor:pointer;
+  font-size:13px;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  padding:10px;
+}
+
+.card{
+  background:#eef2f7;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+  cursor:pointer;
+}
+
+.card small{font-size:11px;color:#64748b;}
+.card strong{font-size:18px;}
+
+.filtros{padding:10px;}
+input{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+}
+
+.item{
+  background:white;
+  margin:8px 10px;
+  padding:12px;
+  border-radius:12px;
+  display:flex;
+  justify-content:space-between;
+  box-shadow:0 3px 10px rgba(0,0,0,0.05);
 }
 
 .left{display:flex;flex-direction:column;}
 .id{font-weight:bold;}
-.nome{font-size:13px;color:#64748b;}
+.nome{font-size:14px;}
 
 .right{text-align:right;}
 
-.valor{
-  font-weight:bold;
-  font-size:16px;
-}
+.valor{font-weight:bold;}
 
-.badges{
-  margin-top:5px;
-  display:flex;
-  gap:5px;
-  justify-content:flex-end;
-}
+.badges{display:flex;gap:5px;justify-content:flex-end;margin-top:5px;}
 
 .badge{
   padding:3px 8px;
   border-radius:999px;
   font-size:10px;
-  color:white;
 }
 
-.pago-b{background:#22c55e;}
-.embalar-b{background:#f59e0b;}
-.enviado-b{background:#3b82f6;}
+.pago-b{background:#22c55e;color:white;}
+.embalar-b{background:#f59e0b;color:white;}
+.enviado-b{background:#3b82f6;color:white;}
 
-/* MODAL */
-.modal{
-  position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  justify-content:center;
-  align-items:center;
+.alerta{
+  color:#ef4444;
+  font-size:11px;
 }
 
-.modal-box{
+.menu-popup{
+  position:absolute;
   background:white;
-  width:92%;
-  max-width:520px;
-  max-height:90%;
-  overflow:auto;
-  border-radius:16px;
-  padding:20px;
-}
-
-.section{
-  background:#f1f5f9;
-  padding:12px;
-  border-radius:12px;
-  margin-bottom:10px;
-  font-size:13px;
-}
-
-button{
-  width:100%;
-  padding:12px;
-  border:none;
   border-radius:10px;
-  margin-top:8px;
-  color:white;
-  font-weight:bold;
+  padding:5px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
 }
 
-.btn-blue{background:#2563eb;}
-.btn-green{background:#16a34a;}
-.btn-gray{background:#64748b;}
+.menu-popup button{
+  display:block;
+  width:100%;
+  border:none;
+  background:none;
+  padding:8px;
+  text-align:left;
+}
 
+.toast{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#22c55e;
+  color:white;
+  padding:10px 20px;
+  border-radius:10px;
+  opacity:0;
+  transition:.3s;
+}
+.toast.show{opacity:1;}
 </style>
 </head>
 
@@ -169,69 +135,70 @@ button{
   <div class="logo">
     <img src="RomerArt.png">
   </div>
+
+  <div class="top-actions">
+    <div class="btn" onclick="window.open('nota.html')">Nota</div>
+    <div class="btn" onclick="window.open('declaracao.html')">Declaração</div>
+    <div class="btn" onclick="carregar()">Atualizar</div>
+  </div>
 </header>
 
-<div class="container">
-
 <div class="cards">
-
-  <div class="card total" onclick="filtrar('todos')">
-    <div class="label">Total</div>
-    <div class="value" id="total">0</div>
+  <div class="card" onclick="filtrar('todos')">
+    <small>Total</small><br><strong id="total">0</strong>
   </div>
-
-  <div class="card pago" onclick="filtrar('pago')">
-    <div class="label">Pagos</div>
-    <div class="value" id="pagos">0</div>
+  <div class="card" onclick="filtrar('pagos')">
+    <small>Pagos</small><br><strong id="pagos">0</strong>
   </div>
-
-  <div class="card pendente" onclick="filtrar('pendente')">
-    <div class="label">Embalar</div>
-    <div class="value" id="pendentes">0</div>
+  <div class="card" onclick="filtrar('embalar')">
+    <small>Embalar</small><br><strong id="embalar">0</strong>
   </div>
-
-  <div class="card enviado" onclick="filtrar('enviado')">
-    <div class="label">Enviados</div>
-    <div class="value" id="enviados">0</div>
+  <div class="card" onclick="filtrar('enviado')">
+    <small>Enviados</small><br><strong id="enviados">0</strong>
   </div>
-
 </div>
 
-<input id="busca" placeholder="Buscar cliente...">
+<div class="filtros">
+  <input id="busca" placeholder="Buscar cliente...">
+</div>
 
 <div id="lista"></div>
-
-</div>
-
-<div id="modal" class="modal" onclick="fechar(event)">
-  <div class="modal-box" id="conteudo"></div>
-</div>
+<div id="toast" class="toast"></div>
 
 <script>
 
-const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
+const API = "https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
 
 let pedidos=[];
 let filtro="todos";
 
-function filtrar(f){filtro=f;render();}
-
 async function carregar(){
   try{
-    const r=await fetch(API);
-    pedidos=await r.json();
-    atualizar();
+    const r = await fetch(API);
+    pedidos = await r.json();
+    atualizarCards();
     render();
   }catch(e){
-    alert("Erro ao carregar dados");
+    toast("Erro ❌");
   }
 }
 
-function atualizar(){
-  total.innerText=pedidos.length;
-  pagos.innerText=pedidos.length;
-  pendentes.innerText=pedidos.filter(p=>!p["Frete"]).length;
-  enviados.innerText=pedidos.filter(p=>p["Frete"]).length;
+function atualizarCards(){
+  total.innerText = pedidos.length;
+  pagos.innerText = pedidos.length;
+  embalar.innerText = pedidos.filter(p=>!p["Frete"]).length;
+  enviados.innerText = pedidos.filter(p=>p["Frete"]).length;
+}
+
+function filtrar(f){
+  filtro=f;
+  render();
+}
+
+function diasSemEnvio(data){
+  if(!data) return 0;
+  const d=new Date(data);
+  return Math.floor((new Date()-d)/86400000);
 }
 
 function render(){
@@ -239,21 +206,39 @@ function render(){
   const b=busca.value.toLowerCase();
   lista.innerHTML="";
 
+  const cpfCount={};
+  pedidos.forEach(p=>{
+    cpfCount[p["CPF/CNPJ"]] = (cpfCount[p["CPF/CNPJ"]]||0)+1;
+  });
+
   pedidos.forEach((p,i)=>{
 
     if(b && !(p["Nome"]||"").toLowerCase().includes(b)) return;
 
-    if(filtro==="pendente" && p["Frete"]) return;
+    if(filtro==="embalar" && p["Frete"]) return;
     if(filtro==="enviado" && !p["Frete"]) return;
 
-    const enviado = p["Frete"];
+    const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
+
+    const metodo=(p["Método pagamento"]||"").toLowerCase();
+    let iconePag="💰";
+    if(metodo.includes("pix")) iconePag="🟢 PIX";
+    else if(metodo.includes("cart")) iconePag="💳";
+
+    const enviado=p["Frete"];
+    const dias=diasSemEnvio(p["Data"]);
+
+    const alerta = (!enviado && dias>=2)
+      ? `<div class="alerta">⚠ ${dias} dias parado</div>`
+      : "";
 
     lista.innerHTML+=`
-    <div class="item" onclick="abrir(${i})">
-
+    <div class="item" onclick="abrirMenu(${i},this)">
       <div class="left">
         <div class="id">#${p["ID Pedido"]}</div>
-        <div class="nome">${p["Nome"]}</div>
+        <div class="nome">${p["Nome"]} ${vip}</div>
+        <div style="font-size:11px;color:#64748b">${iconePag}</div>
+        ${alerta}
       </div>
 
       <div class="right">
@@ -261,101 +246,68 @@ function render(){
 
         <div class="badges">
           <div class="badge pago-b">Pago</div>
-          <div class="badge ${enviado ? 'enviado-b':'embalar-b'}">
-            ${enviado ? 'Enviado':'Embalar'}
+          <div class="badge ${enviado?'enviado-b':'embalar-b'}">
+            ${enviado?'🚚':'📦'}
           </div>
         </div>
       </div>
-
     </div>`;
   });
 }
 
-function abrir(i){
+function abrirMenu(i,el){
+  const p=pedidos[i];
 
-  const p = pedidos[i];
+  const m=document.createElement("div");
+  m.className="menu-popup";
 
-  conteudo.innerHTML = `
-
-  <h2>Pedido #${p["ID Pedido"]}</h2>
-
-  <div class="section">
-    <b>👤 Cliente</b><br>
-    ${p["Nome"]}<br>
-    📧 ${p["Email"] || "-"}<br>
-    📞 ${p["Telefone"] || "-"}<br>
-    🪪 ${p["CPF/CNPJ"] || "-"}
-  </div>
-
-  <div class="section">
-    <b>📦 Produto</b><br>
-    ${p["Serviço"] || "-"}<br>
-    💰 R$ ${p["Valor"] || "0.00"}
-  </div>
-
-  <div class="section">
-    <b>📍 Endereço</b><br>
-    ${p["Endereço"] || "-"}, ${p["Numero"] || ""}<br>
-    ${p["Complemento"] || ""}<br>
-    ${p["Bairro"] || ""} - ${p["Cidade"] || ""}<br>
-    CEP: ${p["CEP"] || "-"}
-  </div>
-
-  <div class="section">
-    <b>🚚 Envio</b><br>
-    ${p["Frete"] || "Não definido"}<br>
-    🔗 ${p["Rastreio"] || "Sem rastreio"}
-  </div>
-
-  <div class="section">
-    <b>📦 Dimensões</b><br>
-    Peso: ${p["Peso"] || "0"} g<br>
-    ${p["Largura"] || 0} x ${p["Altura"] || 0} x ${p["Comprimento"] || 0}
-  </div>
-
-  <div class="section">
-    <b>🧾 Fiscal</b><br>
-    Código: ${p["Codigo Barra"] || "-"}<br>
-    Chave NF: ${p["Número chave"] || "-"}
-  </div>
-
-  <button class="btn-blue" onclick="embalar(${i})">📦 Marcar como embalado</button>
-  <button class="btn-green" onclick="etiqueta(${i})">🖨 Imprimir etiqueta</button>
-  <button class="btn-gray" onclick="abrirNota('${p["Link Nota"]}')">📄 Ver Nota</button>
-  <button class="btn-gray" onclick="declaracao(${i})">📦 Declaração</button>
-
+  m.innerHTML=`
+    <button onclick="nota(${i})">Nota</button>
+    <button onclick="pdf(${i})">PDF</button>
+    <button onclick="embalar(${i})">Marcar embalada</button>
+    <button onclick="etiqueta(${i})">Etiqueta</button>
+    <button onclick="declaracao(${i})">Declaração</button>
   `;
 
-  modal.style.display="flex";
-}
-
-function fechar(e){
-  if(e.target.id==="modal") modal.style.display="none";
+  document.body.appendChild(m);
+  const r=el.getBoundingClientRect();
+  m.style.top=r.bottom+"px";
+  m.style.left=r.left+"px";
 }
 
 async function embalar(i){
-  await fetch(API+"?acao=nuvem&id="+pedidos[i]["ID Pedido"]);
+  const id=pedidos[i]["ID Pedido"];
+  await fetch(API+"?acao=nuvem&id="+id);
+  toast("Embalado");
   carregar();
 }
 
 function etiqueta(i){
-  window.open("https://loja.romerart.com.br/admin/orders/"+pedidos[i]["ID Pedido"]);
+  const id=pedidos[i]["ID Pedido"];
+  window.open(`https://loja.romerart.com.br/admin/orders/${id}`);
 }
 
-function abrirNota(link){
-  if(link && link.includes("http")){
-    window.open(link);
-  }else{
-    alert("Nota não disponível");
-  }
+function nota(i){
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+}
+
+function pdf(i){
+  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
 }
 
 function declaracao(i){
-  const p = pedidos[i];
+  const p=pedidos[i];
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
-busca.oninput=render;
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
+
+busca.addEventListener("input",render);
 
 carregar();
 
