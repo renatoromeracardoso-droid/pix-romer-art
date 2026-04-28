@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RomerArt • Sistema NF</title>
+<title>RomerArt • Sistema</title>
 
 <style>
-
 body{margin:0;font-family:'Segoe UI';background:#f1f5f9;}
 
 header{
@@ -20,29 +19,6 @@ header{
 
 .logo img{height:36px;}
 
-.top-right{display:flex;gap:12px;align-items:center;}
-
-.bell{position:relative;font-size:20px;}
-.bell span{
-  position:absolute;
-  top:-5px;
-  right:-8px;
-  background:red;
-  color:white;
-  font-size:10px;
-  padding:2px 6px;
-  border-radius:999px;
-}
-
-.btn-refresh{
-  background:#f97316;
-  color:white;
-  padding:10px 16px;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-/* CARDS BONITOS */
 .cards{
   display:grid;
   grid-template-columns:repeat(2,1fr);
@@ -51,47 +27,37 @@ header{
 }
 
 .card{
-  padding:20px;
+  padding:18px;
   border-radius:16px;
   font-weight:bold;
-  color:#111;
   cursor:pointer;
-  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+  box-shadow:0 8px 20px rgba(0,0,0,0.08);
   transition:.2s;
 }
 .card:hover{transform:scale(1.03);}
 
-.card.total{background:linear-gradient(135deg,#dbeafe,#93c5fd);}
-.card.pendente{background:linear-gradient(135deg,#fef3c7,#fde68a);}
-.card.emitido{background:linear-gradient(135deg,#dcfce7,#86efac);}
-.card.envio{background:linear-gradient(135deg,#ede9fe,#c4b5fd);}
+.total{background:linear-gradient(135deg,#60a5fa,#2563eb);color:white;}
+.pago{background:linear-gradient(135deg,#34d399,#059669);color:white;}
+.pendente{background:linear-gradient(135deg,#fbbf24,#d97706);color:white;}
+.enviado{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:white;}
 
-/* BUSCA */
-.filtros{padding:10px 15px;}
 input{
-  width:100%;
+  width:calc(100% - 30px);
+  margin:10px 15px;
   padding:12px;
   border-radius:10px;
   border:none;
 }
 
-/* LISTA */
 .item{
   background:white;
   margin:10px 15px;
   padding:15px;
   border-radius:16px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.05);
-  cursor:pointer;
+  box-shadow:0 8px 20px rgba(0,0,0,0.05);
   display:flex;
   justify-content:space-between;
-}
-
-.left{display:flex;gap:10px;}
-
-.valor{
-  font-weight:bold;
-  font-size:16px;
+  cursor:pointer;
 }
 
 .badge{
@@ -101,22 +67,9 @@ input{
   color:white;
 }
 
-.recebido{background:#22c55e;}
-.embalar{background:#f59e0b;}
-.enviado{background:#3b82f6;}
-
-.toast{
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#22c55e;
-  color:white;
-  padding:12px 20px;
-  border-radius:10px;
-  opacity:0;
-}
-.toast.show{opacity:1;}
+.ok{background:#22c55e;}
+.warn{background:#f59e0b;}
+.info{background:#3b82f6;}
 
 .modal{
   position:fixed;
@@ -130,13 +83,33 @@ input{
 
 .modal-content{
   background:white;
-  padding:20px;
-  border-radius:14px;
-  width:90%;
-  max-width:500px;
+  width:92%;
+  max-width:520px;
   max-height:90%;
   overflow:auto;
+  border-radius:16px;
+  padding:20px;
 }
+
+.section{
+  background:#f8fafc;
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:10px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  margin-top:8px;
+  color:white;
+  font-weight:bold;
+}
+
+.btn1{background:#2563eb;}
+.btn2{background:#16a34a;}
 
 </style>
 </head>
@@ -144,160 +117,129 @@ input{
 <body>
 
 <header>
-  <div class="logo">
-    <img src="RomerArt.png">
-  </div>
-
-  <div class="top-right">
-    <div class="bell">🔔 <span id="alerta">0</span></div>
-    <div class="btn-refresh" onclick="carregar()">Atualizar</div>
-  </div>
+  <div class="logo"><img src="RomerArt.png"></div>
 </header>
 
 <div class="cards">
-  <div class="card total" onclick="filtrar('todos')">
-    Total<br><span id="total">0</span>
-  </div>
-
-  <div class="card pendente" onclick="filtrar('pendente')">
-    Pendentes<br><span id="pendentes">0</span>
-  </div>
-
-  <div class="card emitido" onclick="filtrar('emitido')">
-    Emitidos<br><span id="emitidos">0</span>
-  </div>
-
-  <div class="card envio" onclick="filtrar('envio')">
-    Envios<br><span id="envios">0</span>
-  </div>
+  <div class="card total" onclick="filtrar('todos')">Total<br><span id="total">0</span></div>
+  <div class="card pago" onclick="filtrar('pago')">Pagos<br><span id="pagos">0</span></div>
+  <div class="card pendente" onclick="filtrar('pendente')">Pendentes<br><span id="pendentes">0</span></div>
+  <div class="card enviado" onclick="filtrar('enviado')">Enviados<br><span id="enviados">0</span></div>
 </div>
 
-<div class="filtros">
-  <input id="busca" placeholder="Buscar cliente...">
-</div>
+<input id="busca" placeholder="Buscar cliente...">
 
 <div id="lista"></div>
-<div id="toast" class="toast"></div>
 
-<div id="modalPedido" class="modal" onclick="fecharModal(event)">
-  <div class="modal-content" id="conteudoModal"></div>
+<div id="modal" class="modal" onclick="fecharModal(event)">
+  <div class="modal-content" id="conteudo"></div>
 </div>
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
+const "https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
 
 let pedidos=[];
-let filtroAtual="todos";
+let filtro="todos";
 
-/* FILTRO */
-function filtrar(tipo){
-  filtroAtual = tipo;
+function filtrar(f){
+  filtro=f;
   render();
 }
 
-/* CARREGAR */
 async function carregar(){
-  try{
-    const r = await fetch(API + "?t=" + Date.now());
-    pedidos = await r.json();
-    atualizarCards();
-    render();
-  }catch(e){
-    toast("Erro ao carregar ❌");
-  }
+  const r=await fetch(API);
+  pedidos=await r.json();
+  atualizar();
+  render();
 }
 
-/* CARDS */
-function atualizarCards(){
-  total.innerText = pedidos.length;
+function atualizar(){
+  total.innerText=pedidos.length;
 
-  const pend = pedidos.filter(p=>!p["Frete"]).length;
-  pendentes.innerText = pend;
-
-  emitidos.innerText = pedidos.filter(p=>p["Status NF"]==="emitido").length;
-  envios.innerText = pedidos.filter(p=>p["Frete"]).length;
-
-  alerta.innerText = pend;
+  pagos.innerText=pedidos.filter(p=>p["Valor"]).length;
+  pendentes.innerText=pedidos.filter(p=>!p["Frete"]).length;
+  enviados.innerText=pedidos.filter(p=>p["Frete"]).length;
 }
 
-/* RENDER */
 function render(){
 
-  const busca = document.getElementById("busca").value.toLowerCase();
+  const b=busca.value.toLowerCase();
   lista.innerHTML="";
 
   pedidos.forEach((p,i)=>{
 
-    if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
+    if(b && !(p["Nome"]||"").toLowerCase().includes(b)) return;
 
-    if(filtroAtual==="pendente" && p["Frete"]) return;
-    if(filtroAtual==="emitido" && p["Status NF"]!=="emitido") return;
-    if(filtroAtual==="envio" && !p["Frete"]) return;
+    if(filtro==="pendente" && p["Frete"]) return;
+    if(filtro==="enviado" && !p["Frete"]) return;
 
     lista.innerHTML+=`
-    <div class="item" onclick="abrirPedido(${i})">
-      <div class="left">
-        <div>
-          <strong>Pedido ${p["ID Pedido"]}</strong><br>
-          ${p["Nome"]}
-        </div>
+    <div class="item" onclick="abrir(${i})">
+      <div>
+        <b>#${p["ID Pedido"]}</b><br>
+        ${p["Nome"]}
       </div>
 
       <div>
-        <div class="valor">R$ ${p["Valor"]}</div>
-        <div class="badge recebido">Recebido</div>
-        <div class="badge embalar">Por embalar</div>
+        <b>R$ ${p["Valor"]}</b><br>
+        <span class="badge ok">Pago</span>
       </div>
     </div>`;
   });
 }
 
-/* MODAL */
-function abrirPedido(i){
-  const p = pedidos[i];
+function abrir(i){
 
-  conteudoModal.innerHTML = `
-    <h2>Pedido #${p["ID Pedido"]}</h2>
+  const p=pedidos[i];
 
-    <p><b>Cliente:</b> ${p["Nome"]}</p>
-    <p><b>Valor:</b> R$ ${p["Valor"]}</p>
+  conteudo.innerHTML=`
 
-    <button onclick="embalar(${i})">📦 Marcar como embalado</button>
-    <button onclick="imprimirEtiqueta(${i})">🖨 Imprimir etiqueta</button>
+  <h2>Pedido #${p["ID Pedido"]}</h2>
+
+  <div class="section">
+    <b>👤 Cliente</b><br>
+    ${p["Nome"]}
+  </div>
+
+  <div class="section">
+    <b>💰 Pagamento</b><br>
+    R$ ${p["Valor"]}<br>
+    PIX
+  </div>
+
+  <div class="section">
+    <b>📦 Produto</b><br>
+    ${p["Produto"]||"Produto"}
+  </div>
+
+  <div class="section">
+    <b>🚚 Envio</b><br>
+    ${p["Frete"]||"Não definido"}
+  </div>
+
+  <button class="btn1" onclick="embalar(${i})">📦 Marcar como embalado</button>
+  <button class="btn2" onclick="etiqueta(${i})">🖨 Imprimir etiqueta</button>
+
   `;
 
-  modalPedido.style.display="flex";
+  modal.style.display="flex";
 }
 
 function fecharModal(e){
-  if(e.target.id==="modalPedido"){
-    modalPedido.style.display="none";
-  }
+  if(e.target.id==="modal") modal.style.display="none";
 }
 
-/* AÇÕES */
 async function embalar(i){
-  const id = pedidos[i]["ID Pedido"];
-  await fetch(API + "?acao=nuvem&id=" + id);
-  toast("Embalado 🚀");
+  await fetch(API+"?acao=nuvem&id="+pedidos[i]["ID Pedido"]);
   carregar();
 }
 
-function imprimirEtiqueta(i){
-  const id = pedidos[i]["ID Pedido"];
-  window.open(`https://loja.romerart.com.br/admin/orders/${id}`);
+function etiqueta(i){
+  window.open("https://loja.romerart.com.br/admin/orders/"+pedidos[i]["ID Pedido"]);
 }
 
-/* TOAST */
-function toast(msg){
-  const t=document.getElementById("toast");
-  t.innerText=msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
-}
-
-document.getElementById("busca").addEventListener("input",render);
+busca.oninput=render;
 
 carregar();
 
