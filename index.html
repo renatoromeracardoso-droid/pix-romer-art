@@ -206,44 +206,71 @@ menu.remove();
 function abrirModal(i){
 const p = pedidos[i];
 
+// 💳 tipo pagamento
+let pagamentoIcon="💰";
+const metodo=(p["Método pagamento"]||"").toLowerCase();
+if(metodo.includes("pix")) pagamentoIcon="🟢 PIX";
+else if(metodo.includes("cart")) pagamentoIcon="💳 Cartão";
+else if(metodo.includes("din")) pagamentoIcon="💵 Dinheiro";
+
+// 🚚 envio
+let envioIcon="📦";
+const envio=(p["Escolha Envio"]||"").toLowerCase();
+if(envio.includes("sedex")) envioIcon="🚀 Sedex";
+else if(envio.includes("pac")) envioIcon="📦 PAC";
+
+// 📦 status envio
+const statusEnvio = p["Frete"] ? "🚚 Enviado" : "📦 Aguardando envio";
+
 modalContent.innerHTML=`
-<h2>📦 Pedido #${p["ID Pedido"]}</h2>
+
+<h2 style="margin-bottom:10px;">📦 Pedido #${p["ID Pedido"]}</h2>
 
 <div class="modal-grid">
-<div class="box">
-<h3>👤 Cliente</h3>
-<p>${p["Nome"]}</p>
-<p>${p["Email"]||"-"}</p>
-<p>${p["Telefone"]||"-"}</p>
-<p>${p["CPF/CNPJ"]||"-"}</p>
+
+  <div class="box">
+    <h3>👤 Cliente</h3>
+    <p>👤 ${p["Nome"]}</p>
+    <p>📧 ${p["Email"]||"-"}</p>
+    <p>📞 ${p["Telefone"]||"-"}</p>
+    <p>🪪 ${p["CPF/CNPJ"]||"-"}</p>
+  </div>
+
+  <div class="box">
+    <h3>💳 Pagamento</h3>
+    <p>${pagamentoIcon}</p>
+    <p>💰 R$ ${p["Valor"]}</p>
+    <p>📅 ${p["Data"]}</p>
+  </div>
+
+  <div class="box">
+    <h3>📍 Endereço</h3>
+    <p>📍 ${p["Endereço"]}, ${p["Numero"]||""}</p>
+    <p>🏙 ${p["Bairro"]||""}</p>
+    <p>🌎 ${p["Cidade"]||""} - ${p["CEP"]||""}</p>
+  </div>
+
+  <div class="box">
+    <h3>🚚 Envio</h3>
+    <p>${envioIcon}</p>
+    <p>${statusEnvio}</p>
+    <p>📦 Frete: ${p["Frete"]||"Não gerado"}</p>
+    <p>🔎 Rastreio: ${p["Rastreio"]||"-"}</p>
+  </div>
+
 </div>
 
-<div class="box">
-<h3>💳 Pagamento</h3>
-<p>${p["Método pagamento"]}</p>
-<p>R$ ${p["Valor"]}</p>
-<p>${p["Data"]}</p>
+<div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;">
+  <button onclick="embalar(${i})">📦 Embalar</button>
+  <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
+  <button onclick="nota(${i})">📄 Nota</button>
+  <button onclick="declaracao(${i})">📋 Declaração</button>
 </div>
 
-<div class="box">
-<h3>📍 Endereço</h3>
-<p>${p["Endereço"]}</p>
-<p>${p["Cidade"]}</p>
-</div>
-
-<div class="box">
-<h3>🚚 Envio</h3>
-<p>${p["Frete"]||"Não gerado"}</p>
-<p>${p["Rastreio"]||"-"}</p>
-</div>
-</div>
 `;
 
 modal.style.display="flex";
 }
-
-function fecharModal(){modal.style.display="none";}
-
 /* AÇÕES */
 async function embalar(i){
 const id=pedidos[i]["ID Pedido"];
