@@ -8,47 +8,62 @@
 <style>
 body{
   font-family:Arial;
+  background:#fff;
   padding:20px;
-  background:#f8fafc;
 }
 
 .container{
-  max-width:800px;
+  max-width:900px;
   margin:auto;
-  background:white;
-  padding:20px;
-  border-radius:10px;
-  box-shadow:0 5px 20px rgba(0,0,0,0.1);
 }
 
-h1{
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+
+td{
+  border:2px solid black;
+  padding:6px;
+}
+
+.title{
   text-align:center;
-  margin-bottom:20px;
-}
-
-.linha{
-  display:flex;
-  justify-content:space-between;
-  margin:8px 0;
-  padding:8px;
-  border-bottom:1px solid #eee;
-}
-
-.total{
   font-weight:bold;
-  font-size:18px;
+  font-size:16px;
+  background:#eee;
 }
 
-button{
+.section{
+  font-weight:bold;
+  background:#f5f5f5;
+}
+
+.right{
+  text-align:right;
+  width:120px;
+}
+
+input{
+  border:none;
+  width:100%;
+}
+
+.btn{
   margin-top:20px;
   padding:12px;
   width:100%;
   background:#22c55e;
   color:white;
   border:none;
+  font-size:16px;
   border-radius:8px;
   cursor:pointer;
-  font-size:16px;
+}
+
+@media print{
+  .btn{display:none;}
 }
 </style>
 </head>
@@ -57,24 +72,102 @@ button{
 
 <div class="container">
 
-<h1>📊 Relatório Mensal MEI</h1>
+<table>
 
-<div class="linha">
-  <span>Receita com NF:</span>
-  <span id="nf">R$ 0</span>
-</div>
+<tr>
+  <td colspan="3" class="title">RELATÓRIO MENSAL DAS RECEITAS BRUTAS</td>
+</tr>
 
-<div class="linha">
-  <span>Receita sem NF:</span>
-  <span id="semnf">R$ 0</span>
-</div>
+<tr>
+  <td colspan="3">CNPJ: <span id="cnpj">-</span></td>
+</tr>
 
-<div class="linha total">
-  <span>Total:</span>
-  <span id="total">R$ 0</span>
-</div>
+<tr>
+  <td colspan="3">Empreendedor individual: <span id="nome">-</span></td>
+</tr>
 
-<button onclick="window.print()">🖨 Imprimir Relatório</button>
+<tr>
+  <td colspan="3">Período de apuração: <span id="periodo">-</span></td>
+</tr>
+
+<tr class="section">
+  <td colspan="3">RECEITA BRUTA MENSAL – REVENDA DE MERCADORIAS (COMÉRCIO)</td>
+</tr>
+
+<tr>
+  <td>I – Revenda de mercadorias com dispensa de emissão de documento fiscal</td>
+  <td class="right" id="r1">R$ 0,00</td>
+</tr>
+
+<tr>
+  <td>II – Revenda de mercadorias com documento fiscal emitido</td>
+  <td class="right" id="r2">R$ 0,00</td>
+</tr>
+
+<tr>
+  <td>III – Total das receitas com revenda de mercadorias (I + II)</td>
+  <td class="right" id="r3">R$ 0,00</td>
+</tr>
+
+<tr class="section">
+  <td colspan="3">RECEITA BRUTA MENSAL – VENDA DE PRODUTOS INDUSTRIALIZADOS (INDÚSTRIA)</td>
+</tr>
+
+<tr>
+  <td>IV – Venda de produtos industrializados com dispensa de emissão de documento fiscal</td>
+  <td class="right">R$ 0,00</td>
+</tr>
+
+<tr>
+  <td>V – Venda de produtos industrializados com documento fiscal emitido</td>
+  <td class="right">R$ 0,00</td>
+</tr>
+
+<tr>
+  <td>VI – Total das receitas com venda de produtos industrializados (IV + V)</td>
+  <td class="right">R$ 0,00</td>
+</tr>
+
+<tr class="section">
+  <td colspan="3">RECEITA BRUTA MENSAL – PRESTAÇÃO DE SERVIÇOS</td>
+</tr>
+
+<tr>
+  <td>VII – Receita com prestação de serviços com dispensa de emissão de documento fiscal</td>
+  <td class="right">R$ 0,00</td>
+</tr>
+
+<tr>
+  <td>VIII – Receita com prestação de serviços com documento fiscal emitido</td>
+  <td class="right">R$ 0,00</td>
+</tr>
+
+<tr>
+  <td>IX – Total das receitas com prestação de serviços (VII + VIII)</td>
+  <td class="right">R$ 0,00</td>
+</tr>
+
+<tr class="section">
+  <td>X - Total geral das receitas brutas no mês (III + VI + IX)</td>
+  <td class="right" id="total">R$ 0,00</td>
+</tr>
+
+<tr>
+  <td>LOCAL E DATA:</td>
+  <td colspan="2">ASSINATURA DO EMPRESÁRIO:</td>
+</tr>
+
+<tr>
+  <td colspan="3">
+    ENCONTRAM-SE ANEXADOS ESTE RELATÓRIO:<br>
+    - Os documentos fiscais comprobatórios das entradas de mercadorias e serviços tomados referentes ao período;<br>
+    - As notas fiscais relativas às operações ou prestações realizadas eventualmente emitidas.
+  </td>
+</tr>
+
+</table>
+
+<button class="btn" onclick="window.print()">🖨 Imprimir Relatório</button>
 
 </div>
 
@@ -87,22 +180,28 @@ async function carregar(){
   const r = await fetch(API);
   const dados = await r.json();
 
-  let nf = 0;
-  let semnf = 0;
+  let comNF = 0;
+  let semNF = 0;
 
   dados.forEach(p=>{
-    const valor = parseFloat(p["Valor"] || 0);
+    const valor = parseFloat(p["Valor"]||0);
 
     if((p["Status NF"]||"").toLowerCase()=="emitido"){
-      nf += valor;
+      comNF += valor;
     }else{
-      semnf += valor;
+      semNF += valor;
     }
   });
 
-  document.getElementById("nf").innerText = "R$ " + nf.toFixed(2);
-  document.getElementById("semnf").innerText = "R$ " + semnf.toFixed(2);
-  document.getElementById("total").innerText = "R$ " + (nf+semnf).toFixed(2);
+  document.getElementById("r1").innerText = "R$ " + semNF.toFixed(2);
+  document.getElementById("r2").innerText = "R$ " + comNF.toFixed(2);
+  document.getElementById("r3").innerText = "R$ " + (semNF+comNF).toFixed(2);
+  document.getElementById("total").innerText = "R$ " + (semNF+comNF).toFixed(2);
+
+  // preencher dados fixos (você pode puxar da planilha depois)
+  document.getElementById("nome").innerText = "RomerArt";
+  document.getElementById("cnpj").innerText = "SEU CNPJ";
+  document.getElementById("periodo").innerText = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
 
 }
 
