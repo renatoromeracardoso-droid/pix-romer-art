@@ -13,98 +13,37 @@ header{position:sticky;top:0;background:white;padding:12px;display:flex;justify-
 .btn-refresh{background:#f97316;color:white;padding:8px 14px;border-radius:8px;cursor:pointer;}
 .btn-relatorio{background:#3b82f6;color:white;padding:8px 14px;border-radius:8px;cursor:pointer;}
 .btn-sair{background:#ef4444;color:white;padding:8px 14px;border-radius:8px;cursor:pointer;}
+
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px;}
 .card{padding:10px;border-radius:10px;text-align:center;cursor:pointer;}
 .card:nth-child(1){background:#e2e8f0;}
 .card:nth-child(2){background:#dcfce7;}
 .card:nth-child(3){background:#fef3c7;}
 .card:nth-child(4){background:#dbeafe;}
+
 input{width:100%;padding:10px;border-radius:8px;border:none;}
 
-.item{
-background:white;
-margin:8px 10px;
-padding:12px;
-border-radius:12px;
-display:flex;
-justify-content:space-between;
-box-shadow:0 3px 10px rgba(0,0,0,0.05);
-}
-
+.item{background:white;margin:8px 10px;padding:12px;border-radius:12px;display:flex;justify-content:space-between;box-shadow:0 3px 10px rgba(0,0,0,0.05);}
 .menu-btn{cursor:pointer;font-size:18px;margin-right:8px;}
 .left{display:flex;gap:8px;}
 .right{text-align:right;}
 
-.badge{
-padding:3px 8px;
-border-radius:999px;
-font-size:10px;
-}
-
+.badge{padding:3px 8px;border-radius:999px;font-size:10px;}
 .pago{background:#22c55e;color:white;}
 .embalar{background:#f59e0b;color:white;}
 .enviado{background:#3b82f6;color:white;}
 
-.menu-popup{
-position:absolute;
-background:white;
-border-radius:10px;
-padding:5px;
-box-shadow:0 10px 30px rgba(0,0,0,0.2);
-z-index:999;
-}
+.menu-popup{position:absolute;background:white;border-radius:10px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:999;}
 
-.modal{
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:rgba(0,0,0,0.5);
-display:none;
-justify-content:center;
-align-items:center;
-}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;}
+.modal-content{background:white;width:95%;max-height:90%;overflow:auto;border-radius:12px;padding:20px;position:relative;}
 
-.modal-content{
-background:white;
-width:95%;
-max-height:90%;
-overflow:auto;
-border-radius:12px;
-padding:20px;
-position:relative;
-}
+.close-btn{position:absolute;top:10px;right:15px;font-size:20px;cursor:pointer;}
 
-.close-btn{
-position:absolute;
-top:10px;
-right:15px;
-font-size:20px;
-cursor:pointer;
-}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.box{background:#f1f5f9;padding:12px;border-radius:10px;}
 
-.modal-grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:12px;
-}
-
-.box{
-background:#f1f5f9;
-padding:12px;
-border-radius:10px;
-}
-
-.toast{
-position:fixed;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
-background:#22c55e;
-color:white;
-padding:10px 20px;
-border-radius:10px;
-opacity:0;
-}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:10px 20px;border-radius:10px;opacity:0;}
 .toast.show{opacity:1;}
 </style>
 </head>
@@ -114,6 +53,7 @@ opacity:0;
 <script>
 const API="https://script.google.com/macros/s/AKfycbyx7oLhI8Pt7lqFqc6ilEoa5vS10_Zx6g-nOgzM9VbGqyQSgJOcvie-dJJhnfrVG7oZVg/exec";
 
+/* 🔐 PROTEÇÃO */
 const token = localStorage.getItem("token");
 
 if(!token){
@@ -125,6 +65,9 @@ if(!token){
       if(!res.ok){
         localStorage.removeItem("token");
         window.location.href="login.html";
+      }else{
+        localStorage.setItem("usuario", res.usuario);
+        localStorage.setItem("nivel", res.nivel);
       }
     });
 }
@@ -136,6 +79,12 @@ if(!token){
 </div>
 
 <div class="top-actions">
+
+<div style="font-size:12px;background:#f1f5f9;padding:6px 10px;border-radius:8px;">
+👤 <span id="userNome"></span>
+<span id="userNivel"></span>
+</div>
+
 <div class="btn-relatorio" onclick="abrirRelatorio()">📊 Relatório</div>
 <div class="btn-refresh" onclick="carregar()">🔄 Atualizar</div>
 <div class="btn-sair" onclick="sair()">🚪 Sair</div>
@@ -143,10 +92,10 @@ if(!token){
 </header>
 
 <div class="cards">
-<div class="card"><small>Total</small><br><strong id="total">0</strong></div>
-<div class="card"><small>Pagos</small><br><strong id="pagos">0</strong></div>
-<div class="card"><small>Embalar</small><br><strong id="embalar">0</strong></div>
-<div class="card"><small>Enviados</small><br><strong id="enviados">0</strong></div>
+<div class="card" onclick="filtrar('todos')"><small>Total</small><br><strong id="total">0</strong></div>
+<div class="card" onclick="filtrar('pagos')"><small>Pagos</small><br><strong id="pagos">0</strong></div>
+<div class="card" onclick="filtrar('embalar')"><small>Embalar</small><br><strong id="embalar">0</strong></div>
+<div class="card" onclick="filtrar('enviado')"><small>Enviados</small><br><strong id="enviados">0</strong></div>
 </div>
 
 <div class="filtros">
@@ -163,12 +112,24 @@ if(!token){
 
 <script>
 
+/* USUÁRIO */
+document.addEventListener("DOMContentLoaded",()=>{
+  userNome.innerText = localStorage.getItem("usuario") || "Usuário";
+  const nivel = localStorage.getItem("nivel") || "operador";
+  userNivel.innerText = nivel==="admin"?"(ADMIN)":"(OPERADOR)";
+});
+
+/* FUNÇÕES */
 function sair(){
 localStorage.removeItem("token");
 window.location.href="login.html";
 }
 
-let pedidos=[],menu=null;
+function abrirRelatorio(){
+window.open("relatorio-mei.html");
+}
+
+let pedidos=[],menu=null,filtro="todos";
 
 async function carregar(){
 const r=await fetch(API);
@@ -184,6 +145,9 @@ enviados.innerText=pedidos.filter(p=>p["Frete"]).length;
 render();
 }
 
+function filtrar(f){filtro=f;render();}
+
+/* LISTA CORRIGIDA */
 function render(){
 
 lista.innerHTML="";
@@ -198,6 +162,8 @@ if(cpf) cpfCount[cpf]=(cpfCount[cpf]||0)+1;
 pedidos.forEach((p,i)=>{
 
 if(b && !(p["Nome"]||"").toLowerCase().includes(b)) return;
+if(filtro==="embalar" && p["Frete"]) return;
+if(filtro==="enviado" && !p["Frete"]) return;
 
 const enviado=p["Frete"];
 const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
@@ -223,7 +189,30 @@ ${enviado?'🚚 Enviado':'📦 Embalar'}
 });
 }
 
-/* MODAL */
+/* MENU */
+function abrirMenu(e,i){
+e.stopPropagation();
+if(menu) menu.remove();
+
+menu=document.createElement("div");
+menu.className="menu-popup";
+
+menu.innerHTML=`
+<button onclick="nota(${i})">📄 Nota</button>
+<button onclick="pdf(${i})">📑 PDF</button>
+<button onclick="embalar(${i})">📦 Embalar</button>
+<button onclick="etiqueta(${i})">🖨 Etiqueta</button>
+<button onclick="declaracao(${i})">📋 Declaração</button>
+`;
+
+document.body.appendChild(menu);
+menu.style.top=e.pageY+"px";
+menu.style.left=e.pageX+"px";
+}
+
+document.addEventListener("click",()=>{if(menu)menu.remove();});
+
+/* MODAL COMPLETO */
 function abrirModal(i){
 
 const p = pedidos[i];
@@ -257,6 +246,13 @@ modalContent.innerHTML=`
 <p>${p["Frete"]||"Não enviado"}</p>
 </div>
 </div>
+
+<div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;">
+<button onclick="embalar(${i})">📦 Embalar</button>
+<button onclick="etiqueta(${i})">🖨 Etiqueta</button>
+<button onclick="nota(${i})">📄 Nota</button>
+<button onclick="declaracao(${i})">📋 Declaração</button>
+</div>
 `;
 
 modal.style.display="flex";
@@ -266,29 +262,6 @@ function fecharModal(){
 modal.style.display="none";
 }
 
-/* MENU */
-function abrirMenu(e,i){
-e.stopPropagation();
-
-if(menu) menu.remove();
-
-menu=document.createElement("div");
-menu.className="menu-popup";
-
-menu.innerHTML=`
-<button onclick="nota(${i})">📄 Nota</button>
-<button onclick="embalar(${i})">📦 Embalar</button>
-`;
-
-document.body.appendChild(menu);
-menu.style.top=e.pageY+"px";
-menu.style.left=e.pageX+"px";
-}
-
-document.addEventListener("click",()=>{
-if(menu) menu.remove();
-});
-
 /* AÇÕES */
 async function embalar(i){
 const id=pedidos[i]["ID Pedido"];
@@ -297,8 +270,21 @@ toast("Embalado");
 carregar();
 }
 
+function etiqueta(i){
+window.open(`https://loja.romerart.com.br/admin/orders/${pedidos[i]["ID Pedido"]}`);
+}
+
 function nota(i){
 window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+}
+
+function pdf(i){
+window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
+}
+
+function declaracao(i){
+const p=pedidos[i];
+window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
 function toast(msg){
