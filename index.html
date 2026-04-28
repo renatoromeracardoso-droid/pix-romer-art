@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RomerArt • Sistema</title>
+<title>RomerArt • Painel Pro</title>
 
 <style>
 body{margin:0;font-family:'Segoe UI';background:#f1f5f9;}
@@ -13,11 +13,10 @@ header{
   padding:15px;
   display:flex;
   justify-content:space-between;
-  align-items:center;
   box-shadow:0 2px 10px rgba(0,0,0,0.05);
 }
 
-.logo img{height:36px;}
+.logo img{height:34px;}
 
 .cards{
   display:grid;
@@ -30,16 +29,17 @@ header{
   padding:18px;
   border-radius:16px;
   font-weight:bold;
+  color:white;
   cursor:pointer;
-  box-shadow:0 8px 20px rgba(0,0,0,0.08);
+  box-shadow:0 10px 25px rgba(0,0,0,0.1);
   transition:.2s;
 }
-.card:hover{transform:scale(1.03);}
+.card:hover{transform:scale(1.04);}
 
-.total{background:linear-gradient(135deg,#60a5fa,#2563eb);color:white;}
-.pago{background:linear-gradient(135deg,#34d399,#059669);color:white;}
-.pendente{background:linear-gradient(135deg,#fbbf24,#d97706);color:white;}
-.enviado{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:white;}
+.total{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
+.pago{background:linear-gradient(135deg,#22c55e,#15803d);}
+.pendente{background:linear-gradient(135deg,#f59e0b,#b45309);}
+.enviado{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
 
 input{
   width:calc(100% - 30px);
@@ -54,9 +54,9 @@ input{
   margin:10px 15px;
   padding:15px;
   border-radius:16px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.05);
   display:flex;
   justify-content:space-between;
+  box-shadow:0 10px 25px rgba(0,0,0,0.05);
   cursor:pointer;
 }
 
@@ -81,7 +81,7 @@ input{
   align-items:center;
 }
 
-.modal-content{
+.modal-box{
   background:white;
   width:92%;
   max-width:520px;
@@ -95,6 +95,14 @@ input{
   background:#f8fafc;
   padding:12px;
   border-radius:12px;
+  margin-bottom:12px;
+}
+
+.timeline{
+  border-left:3px solid #e5e7eb;
+  padding-left:10px;
+}
+.timeline div{
   margin-bottom:10px;
 }
 
@@ -108,8 +116,8 @@ button{
   font-weight:bold;
 }
 
-.btn1{background:#2563eb;}
-.btn2{background:#16a34a;}
+.btn-blue{background:#2563eb;}
+.btn-green{background:#16a34a;}
 
 </style>
 </head>
@@ -117,13 +125,15 @@ button{
 <body>
 
 <header>
-  <div class="logo"><img src="RomerArt.png"></div>
+  <div class="logo">
+    <img src="RomerArt.png">
+  </div>
 </header>
 
 <div class="cards">
   <div class="card total" onclick="filtrar('todos')">Total<br><span id="total">0</span></div>
   <div class="card pago" onclick="filtrar('pago')">Pagos<br><span id="pagos">0</span></div>
-  <div class="card pendente" onclick="filtrar('pendente')">Pendentes<br><span id="pendentes">0</span></div>
+  <div class="card pendente" onclick="filtrar('pendente')">Embalar<br><span id="pendentes">0</span></div>
   <div class="card enviado" onclick="filtrar('enviado')">Enviados<br><span id="enviados">0</span></div>
 </div>
 
@@ -131,8 +141,8 @@ button{
 
 <div id="lista"></div>
 
-<div id="modal" class="modal" onclick="fecharModal(event)">
-  <div class="modal-content" id="conteudo"></div>
+<div id="modal" class="modal" onclick="fechar(event)">
+  <div class="modal-box" id="conteudo"></div>
 </div>
 
 <script>
@@ -142,13 +152,10 @@ const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIH
 let pedidos=[];
 let filtro="todos";
 
-function filtrar(f){
-  filtro=f;
-  render();
-}
+function filtrar(f){filtro=f;render();}
 
 async function carregar(){
-  const r=await fetch(API);
+  const r=await fetch(API+"?t="+Date.now());
   pedidos=await r.json();
   atualizar();
   render();
@@ -156,14 +163,12 @@ async function carregar(){
 
 function atualizar(){
   total.innerText=pedidos.length;
-
   pagos.innerText=pedidos.filter(p=>p["Valor"]).length;
   pendentes.innerText=pedidos.filter(p=>!p["Frete"]).length;
   enviados.innerText=pedidos.filter(p=>p["Frete"]).length;
 }
 
 function render(){
-
   const b=busca.value.toLowerCase();
   lista.innerHTML="";
 
@@ -198,8 +203,8 @@ function abrir(i){
   <h2>Pedido #${p["ID Pedido"]}</h2>
 
   <div class="section">
-    <b>👤 Cliente</b><br>
-    ${p["Nome"]}
+    <b>📦 Produto</b><br>
+    ${p["Produto"]||"-"}
   </div>
 
   <div class="section">
@@ -209,8 +214,15 @@ function abrir(i){
   </div>
 
   <div class="section">
-    <b>📦 Produto</b><br>
-    ${p["Produto"]||"Produto"}
+    <b>👤 Cliente</b><br>
+    ${p["Nome"]}<br>
+    ${p["Email"]||"-"}
+  </div>
+
+  <div class="section">
+    <b>📍 Endereço</b><br>
+    ${p["Endereco"]||"-"}<br>
+    ${p["Cidade"]||""} - ${p["Estado"]||""}
   </div>
 
   <div class="section">
@@ -218,15 +230,24 @@ function abrir(i){
     ${p["Frete"]||"Não definido"}
   </div>
 
-  <button class="btn1" onclick="embalar(${i})">📦 Marcar como embalado</button>
-  <button class="btn2" onclick="etiqueta(${i})">🖨 Imprimir etiqueta</button>
+  <div class="section">
+    <b>📊 Status</b>
+    <div class="timeline">
+      <div>💰 Pagamento recebido</div>
+      <div>📦 Aguardando envio</div>
+      <div>🚚 Enviado</div>
+    </div>
+  </div>
+
+  <button class="btn-blue" onclick="embalar(${i})">📦 Marcar como embalado</button>
+  <button class="btn-green" onclick="etiqueta(${i})">🖨 Imprimir etiqueta</button>
 
   `;
 
   modal.style.display="flex";
 }
 
-function fecharModal(e){
+function fechar(e){
   if(e.target.id==="modal") modal.style.display="none";
 }
 
