@@ -27,13 +27,9 @@ header{
   z-index:999;
 }
 
-.logo img{
-  height:48px;
-}
+.logo img{height:48px;}
 
-.container{
-  margin-top:90px;
-}
+.container{margin-top:90px;}
 
 /* CARDS CLEAN */
 .cards{
@@ -51,10 +47,6 @@ header{
   box-shadow:0 4px 10px rgba(0,0,0,0.04);
   display:flex;
   flex-direction:column;
-}
-
-.card:hover{
-  transform:scale(1.02);
 }
 
 .label{
@@ -96,11 +88,7 @@ input{
   cursor:pointer;
 }
 
-.left{
-  display:flex;
-  flex-direction:column;
-}
-
+.left{display:flex;flex-direction:column;}
 .id{font-weight:bold;}
 .nome{font-size:13px;color:#64748b;}
 
@@ -143,7 +131,7 @@ input{
 .modal-box{
   background:white;
   width:92%;
-  max-width:500px;
+  max-width:520px;
   max-height:90%;
   overflow:auto;
   border-radius:16px;
@@ -155,6 +143,7 @@ input{
   padding:12px;
   border-radius:12px;
   margin-bottom:10px;
+  font-size:13px;
 }
 
 button{
@@ -228,10 +217,14 @@ let filtro="todos";
 function filtrar(f){filtro=f;render();}
 
 async function carregar(){
-  const r=await fetch(API);
-  pedidos=await r.json();
-  atualizar();
-  render();
+  try{
+    const r=await fetch(API);
+    pedidos=await r.json();
+    atualizar();
+    render();
+  }catch(e){
+    alert("Erro ao carregar dados");
+  }
 }
 
 function atualizar(){
@@ -280,20 +273,55 @@ function render(){
 
 function abrir(i){
 
-  const p=pedidos[i];
+  const p = pedidos[i];
 
-  conteudo.innerHTML=`
+  conteudo.innerHTML = `
 
   <h2>Pedido #${p["ID Pedido"]}</h2>
 
-  <div class="section"><b>Cliente</b><br>${p["Nome"]}</div>
-  <div class="section"><b>Valor</b><br>R$ ${p["Valor"]}</div>
-  <div class="section"><b>Produto</b><br>${p["Produto"]||"-"}</div>
-  <div class="section"><b>Envio</b><br>${p["Frete"]||"Não definido"}</div>
+  <div class="section">
+    <b>👤 Cliente</b><br>
+    ${p["Nome"]}<br>
+    📧 ${p["Email"] || "-"}<br>
+    📞 ${p["Telefone"] || "-"}<br>
+    🪪 ${p["CPF/CNPJ"] || "-"}
+  </div>
 
-  <button class="btn-blue" onclick="embalar(${i})">📦 Embalar</button>
-  <button class="btn-green" onclick="etiqueta(${i})">🖨 Etiqueta</button>
-  <button class="btn-gray" onclick="nota(${i})">📄 Nota</button>
+  <div class="section">
+    <b>📦 Produto</b><br>
+    ${p["Serviço"] || "-"}<br>
+    💰 R$ ${p["Valor"] || "0.00"}
+  </div>
+
+  <div class="section">
+    <b>📍 Endereço</b><br>
+    ${p["Endereço"] || "-"}, ${p["Numero"] || ""}<br>
+    ${p["Complemento"] || ""}<br>
+    ${p["Bairro"] || ""} - ${p["Cidade"] || ""}<br>
+    CEP: ${p["CEP"] || "-"}
+  </div>
+
+  <div class="section">
+    <b>🚚 Envio</b><br>
+    ${p["Frete"] || "Não definido"}<br>
+    🔗 ${p["Rastreio"] || "Sem rastreio"}
+  </div>
+
+  <div class="section">
+    <b>📦 Dimensões</b><br>
+    Peso: ${p["Peso"] || "0"} g<br>
+    ${p["Largura"] || 0} x ${p["Altura"] || 0} x ${p["Comprimento"] || 0}
+  </div>
+
+  <div class="section">
+    <b>🧾 Fiscal</b><br>
+    Código: ${p["Codigo Barra"] || "-"}<br>
+    Chave NF: ${p["Número chave"] || "-"}
+  </div>
+
+  <button class="btn-blue" onclick="embalar(${i})">📦 Marcar como embalado</button>
+  <button class="btn-green" onclick="etiqueta(${i})">🖨 Imprimir etiqueta</button>
+  <button class="btn-gray" onclick="abrirNota('${p["Link Nota"]}')">📄 Ver Nota</button>
   <button class="btn-gray" onclick="declaracao(${i})">📦 Declaração</button>
 
   `;
@@ -314,8 +342,12 @@ function etiqueta(i){
   window.open("https://loja.romerart.com.br/admin/orders/"+pedidos[i]["ID Pedido"]);
 }
 
-function nota(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+function abrirNota(link){
+  if(link && link.includes("http")){
+    window.open(link);
+  }else{
+    alert("Nota não disponível");
+  }
 }
 
 function declaracao(i){
