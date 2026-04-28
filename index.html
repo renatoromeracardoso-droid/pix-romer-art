@@ -157,9 +157,25 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
 <body>
 
 <script>
-/* 🔐 PROTEÇÃO LOGIN */
-if(localStorage.getItem("logado") !== "1"){
+/* 🔐 PROTEÇÃO SAAS COM TOKEN */
+const API="https://script.google.com/macros/s/AKfycbwdU7T--tD0wk3OJNcIthOiH4ag8E0lK50F_-s7sCBOrB-yKJw7mF8EENeIbfnt6PQP/exec";
+
+const token = localStorage.getItem("token");
+
+if(!token){
   window.location.href = "login.html";
+}else{
+  fetch(API + "?acao=validar&token=" + token)
+    .then(r=>r.json())
+    .then(res=>{
+      if(!res.ok){
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+      }
+    })
+    .catch(()=>{
+      window.location.href = "login.html";
+    });
 }
 </script>
 
@@ -196,14 +212,13 @@ if(localStorage.getItem("logado") !== "1"){
 
 <script>
 
-const API="https://script.google.com/macros/s/AKfycbz6RX4O-p8sP1OKrvMTUqHAYfjN6puGaAF3EY4OpvH3bN062igCS-Vltb8S8DxBGrJb1w/exec";
-
-let pedidos=[],menu=null,filtro="todos";
-
+/* 🔐 LOGOUT SAAS */
 function sair(){
-  localStorage.removeItem("logado");
+  localStorage.removeItem("token");
   window.location.href="login.html";
 }
+
+let pedidos=[],menu=null,filtro="todos";
 
 function abrirRelatorio(){
   window.open("relatorio-mei.html");
@@ -265,111 +280,6 @@ function render(){
       </div>
     </div>`;
   });
-}
-
-function abrirMenu(e,i){
-  e.stopPropagation();
-  if(menu) menu.remove();
-
-  menu=document.createElement("div");
-  menu.className="menu-popup";
-
-  menu.innerHTML=`
-    <button onclick="nota(${i})">📄 Nota</button>
-    <button onclick="pdf(${i})">📑 PDF</button>
-    <button onclick="embalar(${i})">📦 Embalar</button>
-    <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
-    <button onclick="declaracao(${i})">📋 Declaração</button>
-  `;
-
-  document.body.appendChild(menu);
-  menu.style.top=e.pageY+"px";
-  menu.style.left=e.pageX+"px";
-}
-
-document.addEventListener("click",()=>{if(menu)menu.remove();});
-
-function abrirModal(i){
-  const p = pedidos[i];
-
-  modalContent.innerHTML = `
-  <h2>📦 Pedido #${p["ID Pedido"]}</h2>
-
-  <div class="modal-grid">
-
-    <div class="box">
-      <h3>👤 Cliente</h3>
-      <p>${p["Nome"]}</p>
-      <p>📧 ${p["Email"]||"-"}</p>
-      <p>📞 ${p["Telefone"]||"-"}</p>
-      <p>🪪 ${p["CPF/CNPJ"]||"-"}</p>
-    </div>
-
-    <div class="box">
-      <h3>💳 Pagamento</h3>
-      <p>${p["Método pagamento"]}</p>
-      <p>💰 R$ ${p["Valor"]}</p>
-      <p>📅 ${p["Data"]}</p>
-    </div>
-
-    <div class="box">
-      <h3>📍 Endereço</h3>
-      <p>${p["Endereço"]}, ${p["Numero"]}</p>
-      <p>${p["Bairro"]}</p>
-      <p>${p["Cidade"]} - ${p["CEP"]}</p>
-    </div>
-
-    <div class="box">
-      <h3>🚚 Envio</h3>
-      <p>${p["Escolha Envio"]}</p>
-      <p>${p["Frete"]||"Não gerado"}</p>
-      <p>${p["Rastreio"]||"-"}</p>
-    </div>
-
-  </div>
-
-  <div style="margin-top:20px;display:flex;gap:10px;">
-    <button onclick="embalar(${i})">📦 Embalar</button>
-    <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
-    <button onclick="nota(${i})">📄 Nota</button>
-    <button onclick="declaracao(${i})">📋 Declaração</button>
-  </div>
-  `;
-
-  modal.style.display="flex";
-}
-
-function fecharModal(){modal.style.display="none";}
-
-async function embalar(i){
-  const id=pedidos[i]["ID Pedido"];
-  await fetch(API+"?acao=nuvem&id="+id);
-  toast("Embalado");
-  carregar();
-}
-
-function etiqueta(i){
-  window.open(`https://loja.romerart.com.br/admin/orders/${pedidos[i]["ID Pedido"]}`);
-}
-
-function nota(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
-}
-
-function pdf(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
-}
-
-function declaracao(i){
-  const p=pedidos[i];
-  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
-}
-
-function toast(msg){
-  const t=document.getElementById("toast");
-  t.innerText=msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
 }
 
 busca.addEventListener("input",render);
