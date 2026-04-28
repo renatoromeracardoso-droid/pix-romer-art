@@ -6,12 +6,13 @@
 <title>Relatório MEI Oficial</title>
 
 <style>
-body{font-family:Arial;background:white;padding:20px;}
+body{
+  font-family:Arial;
+  background:white;
+  padding:20px;
+}
 
-.topo{margin-bottom:10px;}
-
-input{padding:6px;}
-
+/* 🔥 PAINEL DAS */
 .painel{
   background:#f1f5f9;
   border-radius:10px;
@@ -23,12 +24,10 @@ input{padding:6px;}
   gap:10px;
 }
 
-.painel strong{font-size:16px;}
-
 .badge{
   background:#ef4444;
   color:white;
-  padding:4px 8px;
+  padding:4px 10px;
   border-radius:999px;
   font-size:12px;
 }
@@ -43,12 +42,42 @@ input{padding:6px;}
   text-decoration:none;
 }
 
-table{width:100%;border-collapse:collapse;font-size:13px;}
-td{border:2px solid black;padding:6px;}
+/* 📅 TOPO */
+.topo{
+  margin-bottom:10px;
+}
 
-.titulo{text-align:center;font-weight:bold;background:#e5e5e5;}
-.secao{background:#efefef;font-weight:bold;}
-.valor{text-align:right;width:120px;}
+input{
+  padding:6px;
+}
+
+/* 📄 RELATÓRIO */
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+
+td{
+  border:2px solid black;
+  padding:6px;
+}
+
+.titulo{
+  text-align:center;
+  font-weight:bold;
+  background:#e5e5e5;
+}
+
+.secao{
+  background:#efefef;
+  font-weight:bold;
+}
+
+.valor{
+  width:140px;
+  text-align:right;
+}
 
 .btn{
   margin-top:15px;
@@ -69,8 +98,9 @@ td{border:2px solid black;padding:6px;}
 
 <body>
 
-<!-- 🔥 PAINEL DAS -->
+<!-- 🔥 PAINEL DAS COMPLETO -->
 <div class="painel">
+
   <div>
     <strong>📅 DAS vence dia 20</strong><br>
     <span id="contador"></span>
@@ -80,11 +110,15 @@ td{border:2px solid black;padding:6px;}
 
   <button onclick="marcarPago()">✅ Já paguei</button>
 
-  <a class="link-btn" href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/pgmei.app/Identificacao" target="_blank">
-    🔗 Abrir DAS
+  <a class="link-btn"
+     href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/pgmei.app/Identificacao"
+     target="_blank">
+     🔗 Abrir DAS
   </a>
+
 </div>
 
+<!-- 📅 FILTRO -->
 <div class="topo">
 📅 Período:
 <input type="month" id="mes" onchange="carregar()">
@@ -92,111 +126,31 @@ td{border:2px solid black;padding:6px;}
 
 <table>
 
-<tr><td colspan="2" class="titulo">RELATÓRIO MENSAL DAS RECEITAS BRUTAS</td></tr>
+<tr>
+<td colspan="2" class="titulo">RELATÓRIO MENSAL DAS RECEITAS BRUTAS</td>
+</tr>
 
-<tr><td colspan="2">CNPJ: <strong>66.252.416/0001-05</strong></td></tr>
-<tr><td colspan="2">Empreendedor individual: <strong>66.252.416 GISLEINE LOCATELI LEMOS CARDOSO</strong></td></tr>
-<tr><td colspan="2">Período de apuração: <span id="periodo"></span></td></tr>
+<tr>
+<td colspan="2">CNPJ: <strong>66.252.416/0001-05</strong></td>
+</tr>
 
-<tr class="secao"><td colspan="2">REVENDA DE MERCADORIAS (COMÉRCIO)</td></tr>
-<tr><td>I – Sem nota</td><td class="valor" id="r1">R$ 0</td></tr>
-<tr><td>II – Com nota</td><td class="valor" id="r2">R$ 0</td></tr>
-<tr><td>III – Total</td><td class="valor" id="r3">R$ 0</td></tr>
+<tr>
+<td colspan="2">Empreendedor individual: <strong>66.252.416 GISLEINE LOCATELI LEMOS CARDOSO</strong></td>
+</tr>
 
-<tr class="secao"><td>X - Total geral</td><td class="valor" id="total">R$ 0</td></tr>
+<tr>
+<td colspan="2">Período de apuração: <span id="periodo"></span></td>
+</tr>
 
-<tr><td>LOCAL E DATA:</td><td>ASSINATURA DO EMPRESÁRIO:</td></tr>
+<tr class="secao">
+<td colspan="2">RECEITA BRUTA MENSAL – REVENDA DE MERCADORIAS (COMÉRCIO)</td>
+</tr>
 
-</table>
+<tr>
+<td>I – Revenda de mercadorias com dispensa de emissão de documento fiscal</td>
+<td class="valor" id="r1">R$ 0,00</td>
+</tr>
 
-<button class="btn" onclick="window.print()">🖨 Imprimir</button>
-
-<script>
-
-const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
-
-/* 📅 CONTADOR DAS */
-function atualizarDAS(){
-
-  const hoje=new Date();
-  const vencimento=new Date(hoje.getFullYear(),hoje.getMonth(),20);
-
-  const diff=Math.ceil((vencimento-hoje)/(1000*60*60*24));
-
-  const pago=localStorage.getItem("dasPago");
-
-  if(pago==="true"){
-    statusDAS.innerText="Pago ✔️";
-    statusDAS.className="badge ok";
-    contador.innerText="";
-    return;
-  }
-
-  if(diff<=0){
-    contador.innerText="⚠ Vencido!";
-  }else{
-    contador.innerText="Faltam "+diff+" dias";
-  }
-
-  if(diff<=5){
-    statusDAS.className="badge";
-  }
-
-}
-
-function marcarPago(){
-  localStorage.setItem("dasPago","true");
-  atualizarDAS();
-}
-
-/* 📊 RELATÓRIO */
-const hoje=new Date();
-mes.value=hoje.toISOString().slice(0,7);
-
-async function carregar(){
-
-  const mesSelecionado=mes.value;
-
-  const r=await fetch(API);
-  const dados=await r.json();
-
-  let comNF=0,semNF=0;
-
-  dados.forEach(p=>{
-
-    if(!p["Data"]) return;
-
-    const data=new Date(p["Data"]);
-    const m=data.toISOString().slice(0,7);
-
-    if(m!==mesSelecionado) return;
-
-    const valor=parseFloat(p["Valor"]||0);
-
-    if((p["Status NF"]||"").toLowerCase()=="emitido"){
-      comNF+=valor;
-    }else{
-      semNF+=valor;
-    }
-
-  });
-
-  r1.innerText="R$ "+semNF.toFixed(2);
-  r2.innerText="R$ "+comNF.toFixed(2);
-  r3.innerText="R$ "+(semNF+comNF).toFixed(2);
-  total.innerText="R$ "+(semNF+comNF).toFixed(2);
-
-  const [ano,m]=mesSelecionado.split("-");
-  const nomeMes=new Date(ano,m-1).toLocaleDateString('pt-BR',{month:'long'});
-  periodo.innerText=nomeMes+" / "+ano;
-
-}
-
-/* INIT */
-carregar();
-atualizarDAS();
-
-</script>
-
-</body>
-</html>
+<tr>
+<td>II – Revenda de mercadorias com documento fiscal emitido</td>
+<td class="valor" id="r
