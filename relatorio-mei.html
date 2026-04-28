@@ -153,4 +153,156 @@ td{
 
 <tr>
 <td>II – Revenda de mercadorias com documento fiscal emitido</td>
-<td class="valor" id="r
+<td class="valor" id="r2">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>III – Total das receitas com revenda de mercadorias (I + II)</td>
+<td class="valor" id="r3">R$ 0,00</td>
+</tr>
+
+<tr class="secao">
+<td colspan="2">RECEITA BRUTA MENSAL – VENDA DE PRODUTOS INDUSTRIALIZADOS (INDÚSTRIA)</td>
+</tr>
+
+<tr>
+<td>IV – Venda de produtos industrializados com dispensa de emissão de documento fiscal</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>V – Venda de produtos industrializados com documento fiscal emitido</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>VI – Total das receitas com venda de produtos industrializados (IV + V)</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr class="secao">
+<td colspan="2">RECEITA BRUTA MENSAL – PRESTAÇÃO DE SERVIÇOS</td>
+</tr>
+
+<tr>
+<td>VII – Receita com prestação de serviços com dispensa de emissão de documento fiscal</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>VIII – Receita com prestação de serviços com documento fiscal emitido</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>IX – Total das receitas com prestação de serviços (VII + VIII)</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr class="secao">
+<td>X - Total geral das receitas brutas no mês (III + VI + IX)</td>
+<td class="valor" id="total">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>LOCAL E DATA:</td>
+<td>ASSINATURA DO EMPRESÁRIO:</td>
+</tr>
+
+<tr>
+<td colspan="2">
+ENCONTRAM-SE ANEXADOS ESTE RELATÓRIO:<br>
+- Os documentos fiscais comprobatórios das entradas<br>
+- As notas fiscais relativas às operações realizadas
+</td>
+</tr>
+
+</table>
+
+<button class="btn" onclick="window.print()">🖨 Imprimir</button>
+
+<script>
+
+const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
+
+/* 🔥 DAS */
+function atualizarDAS(){
+
+  const hoje=new Date();
+  const venc=new Date(hoje.getFullYear(),hoje.getMonth(),20);
+
+  const dias=Math.ceil((venc-hoje)/86400000);
+
+  const pago=localStorage.getItem("dasPago");
+
+  if(pago==="true"){
+    statusDAS.innerText="Pago ✔";
+    statusDAS.className="badge ok";
+    contador.innerText="";
+    return;
+  }
+
+  if(dias<0){
+    contador.innerText="⚠ Vencido!";
+  }else{
+    contador.innerText="Faltam "+dias+" dias";
+  }
+
+}
+
+function marcarPago(){
+  localStorage.setItem("dasPago","true");
+  atualizarDAS();
+}
+
+/* 📊 RELATÓRIO */
+const hoje=new Date();
+mes.value=hoje.toISOString().slice(0,7);
+
+async function carregar(){
+
+  const mesSel=mes.value;
+
+  const r=await fetch(API);
+  const dados=await r.json();
+
+  let comNF=0,semNF=0;
+
+  dados.forEach(p=>{
+
+    if(!p["Data"]) return;
+
+    const data=new Date(p["Data"]);
+    const m=data.toISOString().slice(0,7);
+
+    if(m!==mesSel) return;
+
+    const v=parseFloat(p["Valor"]||0);
+
+    if((p["Status NF"]||"").toLowerCase()=="emitido"){
+      comNF+=v;
+    }else{
+      semNF+=v;
+    }
+
+  });
+
+  r1.innerText="R$ "+semNF.toFixed(2);
+  r2.innerText="R$ "+comNF.toFixed(2);
+  r3.innerText="R$ "+(semNF+comNF).toFixed(2);
+  total.innerText="R$ "+(semNF+comNF).toFixed(2);
+
+  const [ano,m]=mesSel.split("-");
+  const nomeMes=new Date(ano,m-1).toLocaleDateString('pt-BR',{month:'long'});
+  periodo.innerText=nomeMes+" / "+ano;
+
+}
+
+/* INIT */
+carregar();
+atualizarDAS();
+
+</script>
+
+</body>
+</html>
