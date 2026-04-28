@@ -3,36 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Relatório MEI</title>
+<title>Relatório MEI Oficial</title>
 
 <style>
 body{
   font-family:Arial;
-  background:#fff;
+  background:white;
   padding:20px;
 }
 
-.container{
-  max-width:900px;
-  margin:auto;
-}
-
 .topo{
-  margin-bottom:15px;
-  display:flex;
-  gap:10px;
-  align-items:center;
+  margin-bottom:10px;
 }
 
-select{
-  padding:8px;
-  border-radius:6px;
+input{
+  padding:6px;
 }
 
 table{
   width:100%;
   border-collapse:collapse;
-  font-size:14px;
+  font-size:13px;
 }
 
 td{
@@ -40,29 +31,30 @@ td{
   padding:6px;
 }
 
-.title{
+.titulo{
   text-align:center;
   font-weight:bold;
-  background:#eee;
+  background:#e5e5e5;
 }
 
-.section{
+.secao{
+  background:#efefef;
   font-weight:bold;
-  background:#f5f5f5;
 }
 
-.right{
+.valor{
+  width:120px;
   text-align:right;
 }
 
 .btn{
-  margin-top:20px;
-  padding:12px;
+  margin-top:15px;
+  padding:10px;
   width:100%;
   background:#22c55e;
   color:white;
   border:none;
-  border-radius:8px;
+  border-radius:6px;
   cursor:pointer;
 }
 
@@ -74,111 +66,154 @@ td{
 
 <body>
 
-<div class="container">
-
 <div class="topo">
-  📅 Período:
-  <input type="month" id="mes" onchange="carregar()">
+📅 Período:
+<input type="month" id="mes" onchange="carregar()">
 </div>
 
 <table>
 
 <tr>
-  <td colspan="3" class="title">RELATÓRIO MENSAL DAS RECEITAS BRUTAS</td>
+<td colspan="2" class="titulo">RELATÓRIO MENSAL DAS RECEITAS BRUTAS</td>
 </tr>
 
 <tr>
-  <td colspan="3">CNPJ: <span id="cnpj">-</span></td>
+<td colspan="2">CNPJ: <strong>00.000.000/0001-00</strong></td>
 </tr>
 
 <tr>
-  <td colspan="3">Empreendedor individual: <span id="nome">-</span></td>
+<td colspan="2">Empreendedor individual: <strong>RomerArt</strong></td>
 </tr>
 
 <tr>
-  <td colspan="3">Período de apuração: <span id="periodo">-</span></td>
+<td colspan="2">Período de apuração: <span id="periodo"></span></td>
 </tr>
 
-<tr class="section">
-  <td colspan="3">REVENDA DE MERCADORIAS (COMÉRCIO)</td>
-</tr>
-
-<tr>
-  <td>I – Sem nota</td>
-  <td class="right" id="r1">R$ 0</td>
+<tr class="secao">
+<td colspan="2">RECEITA BRUTA MENSAL – REVENDA DE MERCADORIAS (COMÉRCIO)</td>
 </tr>
 
 <tr>
-  <td>II – Com nota</td>
-  <td class="right" id="r2">R$ 0</td>
+<td>I – Revenda sem nota fiscal</td>
+<td class="valor" id="r1">R$ 0,00</td>
 </tr>
 
 <tr>
-  <td>III – Total</td>
-  <td class="right" id="r3">R$ 0</td>
+<td>II – Revenda com nota fiscal emitida</td>
+<td class="valor" id="r2">R$ 0,00</td>
 </tr>
 
-<tr class="section">
-  <td>X - Total geral</td>
-  <td class="right" id="total">R$ 0</td>
+<tr>
+<td>III – Total (I + II)</td>
+<td class="valor" id="r3">R$ 0,00</td>
+</tr>
+
+<tr class="secao">
+<td colspan="2">RECEITA BRUTA MENSAL – VENDA DE PRODUTOS INDUSTRIALIZADOS (INDÚSTRIA)</td>
+</tr>
+
+<tr>
+<td>IV – Sem nota</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>V – Com nota</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>VI – Total</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr class="secao">
+<td colspan="2">RECEITA BRUTA MENSAL – PRESTAÇÃO DE SERVIÇOS</td>
+</tr>
+
+<tr>
+<td>VII – Sem nota</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>VIII – Com nota</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>IX – Total</td>
+<td class="valor">R$ 0,00</td>
+</tr>
+
+<tr class="secao">
+<td>X - Total geral das receitas brutas no mês (III + VI + IX)</td>
+<td class="valor" id="total">R$ 0,00</td>
+</tr>
+
+<tr>
+<td>LOCAL E DATA:</td>
+<td>ASSINATURA DO EMPRESÁRIO:</td>
+</tr>
+
+<tr>
+<td colspan="2">
+ENCONTRAM-SE ANEXADOS ESTE RELATÓRIO:<br>
+- Documentos fiscais de entrada<br>
+- Notas fiscais emitidas no período
+</td>
 </tr>
 
 </table>
 
 <button class="btn" onclick="window.print()">🖨 Imprimir</button>
 
-</div>
-
 <script>
 
 const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
 
-// define mês atual automático
-const hoje = new Date();
-document.getElementById("mes").value = hoje.toISOString().slice(0,7);
+// mês atual automático
+const hoje=new Date();
+document.getElementById("mes").value=hoje.toISOString().slice(0,7);
 
 async function carregar(){
 
-  const mesSelecionado = document.getElementById("mes").value;
+  const mesSelecionado=document.getElementById("mes").value;
 
-  const r = await fetch(API);
-  const dados = await r.json();
+  const r=await fetch(API);
+  const dados=await r.json();
 
-  let comNF = 0;
-  let semNF = 0;
+  let comNF=0;
+  let semNF=0;
 
   dados.forEach(p=>{
 
     if(!p["Data"]) return;
 
-    const data = new Date(p["Data"]);
-    const mesPedido = data.toISOString().slice(0,7);
+    const data=new Date(p["Data"]);
+    const mesPedido=data.toISOString().slice(0,7);
 
-    if(mesPedido !== mesSelecionado) return;
+    if(mesPedido!==mesSelecionado) return;
 
-    const valor = parseFloat(p["Valor"]||0);
+    const valor=parseFloat(p["Valor"]||0);
 
     if((p["Status NF"]||"").toLowerCase()=="emitido"){
-      comNF += valor;
+      comNF+=valor;
     }else{
-      semNF += valor;
+      semNF+=valor;
     }
 
   });
 
-  document.getElementById("r1").innerText = "R$ " + semNF.toFixed(2);
-  document.getElementById("r2").innerText = "R$ " + comNF.toFixed(2);
-  document.getElementById("r3").innerText = "R$ " + (semNF+comNF).toFixed(2);
-  document.getElementById("total").innerText = "R$ " + (semNF+comNF).toFixed(2);
+  document.getElementById("r1").innerText="R$ "+semNF.toFixed(2);
+  document.getElementById("r2").innerText="R$ "+comNF.toFixed(2);
+  document.getElementById("r3").innerText="R$ "+(semNF+comNF).toFixed(2);
+  document.getElementById("total").innerText="R$ "+(semNF+comNF).toFixed(2);
 
-  // Nome do mês bonito
-  const [ano,mes] = mesSelecionado.split("-");
-  const nomeMes = new Date(ano, mes-1).toLocaleDateString('pt-BR',{month:'long'});
+  const [ano,mes]=mesSelecionado.split("-");
+  const nomeMes=new Date(ano,mes-1).toLocaleDateString('pt-BR',{month:'long'});
 
-  document.getElementById("periodo").innerText = nomeMes + "/" + ano;
-
-  document.getElementById("nome").innerText = "RomerArt";
-  document.getElementById("cnpj").innerText = "SEU CNPJ";
+  document.getElementById("periodo").innerText=nomeMes+" / "+ano;
 
 }
 
