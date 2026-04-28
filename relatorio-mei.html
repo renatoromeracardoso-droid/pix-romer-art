@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório MEI</title>
+
+<style>
+body{
+  font-family:Arial;
+  padding:20px;
+  background:#f8fafc;
+}
+
+.container{
+  max-width:800px;
+  margin:auto;
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 5px 20px rgba(0,0,0,0.1);
+}
+
+h1{
+  text-align:center;
+  margin-bottom:20px;
+}
+
+.linha{
+  display:flex;
+  justify-content:space-between;
+  margin:8px 0;
+  padding:8px;
+  border-bottom:1px solid #eee;
+}
+
+.total{
+  font-weight:bold;
+  font-size:18px;
+}
+
+button{
+  margin-top:20px;
+  padding:12px;
+  width:100%;
+  background:#22c55e;
+  color:white;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:16px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📊 Relatório Mensal MEI</h1>
+
+<div class="linha">
+  <span>Receita com NF:</span>
+  <span id="nf">R$ 0</span>
+</div>
+
+<div class="linha">
+  <span>Receita sem NF:</span>
+  <span id="semnf">R$ 0</span>
+</div>
+
+<div class="linha total">
+  <span>Total:</span>
+  <span id="total">R$ 0</span>
+</div>
+
+<button onclick="window.print()">🖨 Imprimir Relatório</button>
+
+</div>
+
+<script>
+
+const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
+
+async function carregar(){
+
+  const r = await fetch(API);
+  const dados = await r.json();
+
+  let nf = 0;
+  let semnf = 0;
+
+  dados.forEach(p=>{
+    const valor = parseFloat(p["Valor"] || 0);
+
+    if((p["Status NF"]||"").toLowerCase()=="emitido"){
+      nf += valor;
+    }else{
+      semnf += valor;
+    }
+  });
+
+  document.getElementById("nf").innerText = "R$ " + nf.toFixed(2);
+  document.getElementById("semnf").innerText = "R$ " + semnf.toFixed(2);
+  document.getElementById("total").innerText = "R$ " + (nf+semnf).toFixed(2);
+
+}
+
+carregar();
+
+</script>
+
+</body>
+</html>
