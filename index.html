@@ -29,7 +29,6 @@ header{
   cursor:pointer;
 }
 
-/* CARDS */
 .cards{
   display:grid;
   grid-template-columns:repeat(4,1fr);
@@ -49,14 +48,8 @@ header{
 .card:nth-child(3){background:#fef3c7;}
 .card:nth-child(4){background:#dbeafe;}
 
-.card small{font-size:11px;}
-.card strong{font-size:18px;}
-
-/* BUSCA */
-.filtros{padding:10px;}
 input{width:100%;padding:10px;border-radius:8px;border:none;}
 
-/* LISTA */
 .item{
   background:white;
   margin:8px 10px;
@@ -84,7 +77,6 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
 
 .alerta{color:red;font-size:11px;}
 
-/* MENU */
 .menu-popup{
   position:absolute;
   background:white;
@@ -94,7 +86,6 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   z-index:999;
 }
 
-/* MODAL */
 .modal{
   position:fixed;
   top:0;left:0;
@@ -103,7 +94,6 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   display:none;
   justify-content:center;
   align-items:center;
-  z-index:1000;
 }
 
 .modal-content{
@@ -115,7 +105,6 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   padding:20px;
 }
 
-/* GRID MODAL */
 .modal-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -128,17 +117,6 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   border-radius:10px;
 }
 
-.box h3{
-  margin:0 0 8px;
-  font-size:14px;
-}
-
-.box p{
-  margin:2px 0;
-  font-size:13px;
-}
-
-/* TOAST */
 .toast{
   position:fixed;
   bottom:20px;
@@ -151,13 +129,6 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   opacity:0;
 }
 .toast.show{opacity:1;}
-
-button{
-  padding:8px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
 </style>
 </head>
 
@@ -216,6 +187,13 @@ function render(){
   lista.innerHTML="";
   const b=busca.value.toLowerCase();
 
+  // ⭐ contar compras por CPF
+  const cpfCount={};
+  pedidos.forEach(p=>{
+    const cpf=p["CPF/CNPJ"];
+    if(cpf) cpfCount[cpf]=(cpfCount[cpf]||0)+1;
+  });
+
   pedidos.forEach((p,i)=>{
 
     if(b && !(p["Nome"]||"").toLowerCase().includes(b)) return;
@@ -225,28 +203,49 @@ function render(){
 
     const enviado=p["Frete"];
 
+    // ⭐ VIP
+    const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
+
+    // 💳 pagamento
+    let pagamento="💰";
+    const metodo=(p["Método pagamento"]||"").toLowerCase();
+    if(metodo.includes("pix")) pagamento="🟢 PIX";
+    else if(metodo.includes("cart")) pagamento="💳";
+
+    // 🚀 tipo envio
+    let tipo="";
+    const envio=(p["Escolha Envio"]||"").toLowerCase();
+    if(envio.includes("sedex")) tipo="🚀 Sedex";
+    else if(envio.includes("pac")) tipo="📦 PAC";
+
+    // ⚠️ atraso
+    const dias = Math.floor((new Date() - new Date(p["Data"]))/86400000);
+    const alerta = (!enviado && dias>=2) ? `<div class="alerta">⚠ ${dias} dias parado</div>` : "";
+
     lista.innerHTML+=`
     <div class="item">
       <div class="left">
         <div class="menu-btn" onclick="abrirMenu(event,${i})">⋮</div>
         <div onclick="abrirModal(${i})">
           <strong>#${p["ID Pedido"]}</strong><br>
-          ${p["Nome"]}
+          ${p["Nome"]} ${vip}<br>
+          <small>${pagamento} • ${tipo}</small>
+          ${alerta}
         </div>
       </div>
 
       <div class="right">
         R$ ${p["Valor"]}<br>
-        <span class="badge pago">Pago</span>
+        <span class="badge pago">💰 Pago</span>
         <span class="badge ${enviado?'enviado':'embalar'}">
-          ${enviado?'🚚':'📦'}
+          ${enviado?'🚚 Enviado':'📦 Embalar'}
         </span>
       </div>
     </div>`;
   });
 }
 
-/* MENU */
+/* MENU COM ÍCONES */
 function abrirMenu(e,i){
   e.stopPropagation();
   if(menu) menu.remove();
@@ -255,11 +254,11 @@ function abrirMenu(e,i){
   menu.className="menu-popup";
 
   menu.innerHTML=`
-    <button onclick="nota(${i})">Nota</button>
-    <button onclick="pdf(${i})">PDF</button>
-    <button onclick="embalar(${i})">Marcar embalada</button>
-    <button onclick="etiqueta(${i})">Etiqueta</button>
-    <button onclick="declaracao(${i})">Declaração</button>
+    <button onclick="nota(${i})">📄 Nota</button>
+    <button onclick="pdf(${i})">📑 PDF</button>
+    <button onclick="embalar(${i})">📦 Embalar</button>
+    <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
+    <button onclick="declaracao(${i})">📋 Declaração</button>
   `;
 
   document.body.appendChild(menu);
@@ -269,29 +268,28 @@ function abrirMenu(e,i){
 
 document.addEventListener("click",()=>{if(menu)menu.remove();});
 
-/* MODAL COMPLETO */
+/* MODAL COMPLETO COM ÍCONES */
 function abrirModal(i){
   const p = pedidos[i];
 
   modalContent.innerHTML = `
-  <h2>#${p["ID Pedido"]}</h2>
+  <h2>📦 Pedido #${p["ID Pedido"]}</h2>
 
   <div class="modal-grid">
 
     <div class="box">
       <h3>👤 Cliente</h3>
       <p>${p["Nome"]}</p>
-      <p>${p["Email"] || "-"}</p>
-      <p>${p["Telefone"] || "-"}</p>
-      <p>${p["CPF/CNPJ"] || "-"}</p>
+      <p>📧 ${p["Email"]||"-"}</p>
+      <p>📞 ${p["Telefone"]||"-"}</p>
+      <p>🪪 ${p["CPF/CNPJ"]||"-"}</p>
     </div>
 
     <div class="box">
-      <h3>📦 Pedido</h3>
-      <p>${p["Serviço"]}</p>
-      <p>R$ ${p["Valor"]}</p>
+      <h3>💳 Pagamento</h3>
       <p>${p["Método pagamento"]}</p>
-      <p>${p["Data"]}</p>
+      <p>💰 R$ ${p["Valor"]}</p>
+      <p>📅 ${p["Data"]}</p>
     </div>
 
     <div class="box">
@@ -304,8 +302,8 @@ function abrirModal(i){
     <div class="box">
       <h3>🚚 Envio</h3>
       <p>${p["Escolha Envio"]}</p>
-      <p>${p["Frete"] || "Não gerado"}</p>
-      <p>${p["Rastreio"] || "-"}</p>
+      <p>${p["Frete"]||"Não gerado"}</p>
+      <p>${p["Rastreio"]||"-"}</p>
     </div>
 
     <div class="box">
@@ -316,8 +314,8 @@ function abrirModal(i){
 
     <div class="box">
       <h3>🧾 Fiscal</h3>
-      <p>${p["Codigo Barra"] || "-"}</p>
-      <p>${p["Número chave"] || "-"}</p>
+      <p>${p["Codigo Barra"]||"-"}</p>
+      <p>${p["Número chave"]||"-"}</p>
     </div>
 
   </div>
@@ -326,7 +324,7 @@ function abrirModal(i){
     <button onclick="embalar(${i})">📦 Embalar</button>
     <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
     <button onclick="nota(${i})">📄 Nota</button>
-    <button onclick="declaracao(${i})">📦 Declaração</button>
+    <button onclick="declaracao(${i})">📋 Declaração</button>
   </div>
   `;
 
@@ -360,7 +358,6 @@ function declaracao(i){
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
-/* TOAST */
 function toast(msg){
   const t=document.getElementById("toast");
   t.innerText=msg;
