@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login • RomerArt</title>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI';
+  background:#f1f5f9;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.box{
+  background:white;
+  padding:30px;
+  border-radius:12px;
+  width:300px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.1);
+}
+
+h2{text-align:center;margin-bottom:20px;}
+
+input{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#f97316;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.erro{
+  color:red;
+  font-size:12px;
+  text-align:center;
+  margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>🔐 Login</h2>
+
+  <input id="user" placeholder="Usuário">
+  <input id="pass" type="password" placeholder="Senha">
+
+  <button onclick="logar()">Entrar</button>
+
+  <div id="erro" class="erro"></div>
+</div>
+
+<script>
+
+const API = "https://script.google.com/macros/s/AKfycbwdU7T--tD0wk3OJNcIthOiH4ag8E0lK50F_-s7sCBOrB-yKJw7mF8EENeIbfnt6PQP/exec"; // 🔴 coloca seu link do script
+
+async function logar(){
+
+  const user = document.getElementById("user").value;
+  const pass = document.getElementById("pass").value;
+
+  const r = await fetch(`${API}?acao=login&user=${user}&pass=${pass}`);
+  const res = await r.json();
+
+  if(res.ok){
+    localStorage.setItem("logado","1");
+    window.location.href = "index.html";
+  }else{
+    erro.innerText = "Usuário ou senha inválidos";
+  }
+}
+
+</script>
+
+</body>
+</html>
