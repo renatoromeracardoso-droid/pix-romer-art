@@ -69,22 +69,48 @@ button{
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbz6RX4O-p8sP1OKrvMTUqHAYfjN6puGaAF3EY4OpvH3bN062igCS-Vltb8S8DxBGrJb1w/exec"; // 🔴 coloca seu link do script
+const API = "https://script.google.com/macros/s/AKfycbz6RX4O-p8sP1OKrvMTUqHAYfjN6puGaAF3EY4OpvH3bN062igCS-Vltb8S8DxBGrJb1w/exec";
 
+/* 🔐 LOGIN SAAS */
 async function logar(){
 
   const user = document.getElementById("user").value;
   const pass = document.getElementById("pass").value;
 
+  if(!user || !pass){
+    erro.innerText = "Preencha usuário e senha";
+    return;
+  }
+
   const r = await fetch(`${API}?acao=login&user=${user}&pass=${pass}`);
   const res = await r.json();
 
   if(res.ok){
-    localStorage.setItem("logado","1");
+
+    // 🔥 salva token (agora é profissional)
+    localStorage.setItem("token", res.token);
+    localStorage.setItem("usuario", res.usuario);
+
     window.location.href = "index.html";
+
   }else{
     erro.innerText = "Usuário ou senha inválidos";
   }
+}
+
+/* 🔁 AUTO LOGIN */
+const token = localStorage.getItem("token");
+
+if(token){
+  fetch(API + "?acao=validar&token=" + token)
+    .then(r=>r.json())
+    .then(res=>{
+      if(res.ok){
+        window.location.href="index.html";
+      }else{
+        localStorage.removeItem("token");
+      }
+    });
 }
 
 </script>
