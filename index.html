@@ -20,16 +20,39 @@ header{position:sticky;top:0;background:white;padding:12px;display:flex;justify-
 .card:nth-child(3){background:#fef3c7;}
 .card:nth-child(4){background:#dbeafe;}
 input{width:100%;padding:10px;border-radius:8px;border:none;}
-.item{background:white;margin:8px 10px;padding:12px;border-radius:12px;display:flex;justify-content:space-between;box-shadow:0 3px 10px rgba(0,0,0,0.05);}
+
+.item{
+background:white;
+margin:8px 10px;
+padding:12px;
+border-radius:12px;
+display:flex;
+justify-content:space-between;
+box-shadow:0 3px 10px rgba(0,0,0,0.05);
+}
+
 .menu-btn{cursor:pointer;font-size:18px;margin-right:8px;}
 .left{display:flex;gap:8px;}
 .right{text-align:right;}
-.badge{padding:3px 8px;border-radius:999px;font-size:10px;}
+
+.badge{
+padding:3px 8px;
+border-radius:999px;
+font-size:10px;
+}
+
 .pago{background:#22c55e;color:white;}
 .embalar{background:#f59e0b;color:white;}
 .enviado{background:#3b82f6;color:white;}
-.alerta{color:red;font-size:11px;}
-.menu-popup{position:absolute;background:white;border-radius:10px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:999;}
+
+.menu-popup{
+position:absolute;
+background:white;
+border-radius:10px;
+padding:5px;
+box-shadow:0 10px 30px rgba(0,0,0,0.2);
+z-index:999;
+}
 
 .modal{
 position:fixed;
@@ -39,7 +62,6 @@ background:rgba(0,0,0,0.5);
 display:none;
 justify-content:center;
 align-items:center;
-z-index:1000;
 }
 
 .modal-content{
@@ -60,8 +82,17 @@ font-size:20px;
 cursor:pointer;
 }
 
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.box{background:#f1f5f9;padding:12px;border-radius:10px;}
+.modal-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+}
+
+.box{
+background:#f1f5f9;
+padding:12px;
+border-radius:10px;
+}
 
 .toast{
 position:fixed;
@@ -83,7 +114,6 @@ opacity:0;
 <script>
 const API="https://script.google.com/macros/s/AKfycbyx7oLhI8Pt7lqFqc6ilEoa5vS10_Zx6g-nOgzM9VbGqyQSgJOcvie-dJJhnfrVG7oZVg/exec";
 
-/* 🔐 LOGIN */
 const token = localStorage.getItem("token");
 
 if(!token){
@@ -95,19 +125,17 @@ if(!token){
       if(!res.ok){
         localStorage.removeItem("token");
         window.location.href="login.html";
-      }else{
-        localStorage.setItem("usuario", res.usuario);
-        localStorage.setItem("nivel", res.nivel);
       }
     });
 }
 </script>
 
 <header>
-<div class="logo"><img src="RomerArt.png"></div>
+<div class="logo">
+<img src="RomerArt.png">
+</div>
 
 <div class="top-actions">
-<div id="userBox">👤 <span id="userNome"></span> <span id="userNivel"></span></div>
 <div class="btn-relatorio" onclick="abrirRelatorio()">📊 Relatório</div>
 <div class="btn-refresh" onclick="carregar()">🔄 Atualizar</div>
 <div class="btn-sair" onclick="sair()">🚪 Sair</div>
@@ -115,10 +143,10 @@ if(!token){
 </header>
 
 <div class="cards">
-<div class="card" onclick="filtrar('todos')"><small>Total</small><br><strong id="total">0</strong></div>
-<div class="card" onclick="filtrar('pagos')"><small>Pagos</small><br><strong id="pagos">0</strong></div>
-<div class="card" onclick="filtrar('embalar')"><small>Embalar</small><br><strong id="embalar">0</strong></div>
-<div class="card" onclick="filtrar('enviado')"><small>Enviados</small><br><strong id="enviados">0</strong></div>
+<div class="card"><small>Total</small><br><strong id="total">0</strong></div>
+<div class="card"><small>Pagos</small><br><strong id="pagos">0</strong></div>
+<div class="card"><small>Embalar</small><br><strong id="embalar">0</strong></div>
+<div class="card"><small>Enviados</small><br><strong id="enviados">0</strong></div>
 </div>
 
 <div class="filtros">
@@ -127,67 +155,108 @@ if(!token){
 
 <div id="lista"></div>
 
-<div id="modal" class="modal" onclick="fecharModal()">
-<div class="modal-content" onclick="event.stopPropagation()" id="modalContent"></div>
+<div id="modal" class="modal">
+<div class="modal-content" id="modalContent"></div>
 </div>
 
 <div id="toast" class="toast"></div>
 
 <script>
 
-document.addEventListener("DOMContentLoaded",()=>{
-userNome.innerText = localStorage.getItem("usuario")||"Usuário";
+function sair(){
+localStorage.removeItem("token");
+window.location.href="login.html";
+}
+
+let pedidos=[],menu=null;
+
+async function carregar(){
+const r=await fetch(API);
+pedidos=await r.json();
+atualizar();
+}
+
+function atualizar(){
+total.innerText=pedidos.length;
+pagos.innerText=pedidos.length;
+embalar.innerText=pedidos.filter(p=>!p["Frete"]).length;
+enviados.innerText=pedidos.filter(p=>p["Frete"]).length;
+render();
+}
+
+function render(){
+
+lista.innerHTML="";
+const b=busca.value.toLowerCase();
+
+const cpfCount={};
+pedidos.forEach(p=>{
+const cpf=p["CPF/CNPJ"];
+if(cpf) cpfCount[cpf]=(cpfCount[cpf]||0)+1;
 });
 
-/* 🔥 CORREÇÃO DO MODAL */
+pedidos.forEach((p,i)=>{
+
+if(b && !(p["Nome"]||"").toLowerCase().includes(b)) return;
+
+const enviado=p["Frete"];
+const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
+
+lista.innerHTML+=`
+<div class="item">
+<div class="left">
+<div class="menu-btn" onclick="abrirMenu(event,${i})">⋮</div>
+<div onclick="abrirModal(${i})">
+<strong>#${p["ID Pedido"]}</strong><br>
+${p["Nome"]} ${vip}
+</div>
+</div>
+
+<div class="right">
+R$ ${p["Valor"]}<br>
+<span class="badge pago">💰 Pago</span>
+<span class="badge ${enviado?'enviado':'embalar'}">
+${enviado?'🚚 Enviado':'📦 Embalar'}
+</span>
+</div>
+</div>`;
+});
+}
+
+/* MODAL */
 function abrirModal(i){
 
 const p = pedidos[i];
 
-let pagamento="💰";
-const metodo=(p["Método pagamento"]||"").toLowerCase();
-if(metodo.includes("pix")) pagamento="🟢 PIX";
-if(metodo.includes("cart")) pagamento="💳 Cartão";
-
-let envio="📦";
-const tipo=(p["Escolha Envio"]||"").toLowerCase();
-if(tipo.includes("sedex")) envio="🚀 Sedex";
-
 modalContent.innerHTML=`
-
 <div class="close-btn" onclick="fecharModal()">❌</div>
 
 <h2>📦 Pedido #${p["ID Pedido"]}</h2>
 
 <div class="modal-grid">
-
 <div class="box">
 <h3>👤 Cliente</h3>
-<p>👤 ${p["Nome"]}</p>
+<p>${p["Nome"]}</p>
 <p>📧 ${p["Email"]||"-"}</p>
 <p>📞 ${p["Telefone"]||"-"}</p>
 </div>
 
 <div class="box">
 <h3>💳 Pagamento</h3>
-<p>${pagamento}</p>
 <p>💰 R$ ${p["Valor"]}</p>
 <p>📅 ${p["Data"]}</p>
 </div>
 
 <div class="box">
 <h3>📍 Endereço</h3>
-<p>${p["Cidade"]||""}</p>
+<p>${p["Endereço"]||""}</p>
 </div>
 
 <div class="box">
 <h3>🚚 Envio</h3>
-<p>${envio}</p>
 <p>${p["Frete"]||"Não enviado"}</p>
 </div>
-
 </div>
-
 `;
 
 modal.style.display="flex";
@@ -197,25 +266,49 @@ function fecharModal(){
 modal.style.display="none";
 }
 
-/* RESTO DO SEU SISTEMA */
-let pedidos=[];
+/* MENU */
+function abrirMenu(e,i){
+e.stopPropagation();
 
-async function carregar(){
-const r=await fetch(API);
-pedidos=await r.json();
-total.innerText=pedidos.length;
-render();
+if(menu) menu.remove();
+
+menu=document.createElement("div");
+menu.className="menu-popup";
+
+menu.innerHTML=`
+<button onclick="nota(${i})">📄 Nota</button>
+<button onclick="embalar(${i})">📦 Embalar</button>
+`;
+
+document.body.appendChild(menu);
+menu.style.top=e.pageY+"px";
+menu.style.left=e.pageX+"px";
 }
 
-function render(){
-lista.innerHTML="";
-pedidos.forEach((p,i)=>{
-lista.innerHTML+=`
-<div class="item" onclick="abrirModal(${i})">
-${p["Nome"]}
-</div>`;
+document.addEventListener("click",()=>{
+if(menu) menu.remove();
 });
+
+/* AÇÕES */
+async function embalar(i){
+const id=pedidos[i]["ID Pedido"];
+await fetch(API+"?acao=nuvem&id="+id);
+toast("Embalado");
+carregar();
 }
+
+function nota(i){
+window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+}
+
+function toast(msg){
+const t=document.getElementById("toast");
+t.innerText=msg;
+t.classList.add("show");
+setTimeout(()=>t.classList.remove("show"),2000);
+}
+
+busca.addEventListener("input",render);
 
 carregar();
 
