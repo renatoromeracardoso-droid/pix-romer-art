@@ -157,25 +157,32 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
 <body>
 
 <script>
-/* 🔐 PROTEÇÃO SAAS COM TOKEN */
-const API="https://script.google.com/macros/s/AKfycbwdU7T--tD0wk3OJNcIthOiH4ag8E0lK50F_-s7sCBOrB-yKJw7mF8EENeIbfnt6PQP/exec";
+/* 🔐 PROTEÇÃO SAAS (CORRIGIDA PARA MOBILE) */
+const API="https://script.google.com/macros/s/AKfycbz6RX4O-p8sP1OKrvMTUqHAYfjN6puGaAF3EY4OpvH3bN062igCS-Vltb8S8DxBGrJb1w/exec";
 
 const token = localStorage.getItem("token");
 
 if(!token){
   window.location.href = "login.html";
 }else{
-  fetch(API + "?acao=validar&token=" + token)
-    .then(r=>r.json())
-    .then(res=>{
-      if(!res.ok){
-        localStorage.removeItem("token");
-        window.location.href = "login.html";
-      }
-    })
-    .catch(()=>{
-      window.location.href = "login.html";
-    });
+
+  // 🔥 espera carregar antes de validar (resolve bug mobile)
+  setTimeout(()=>{
+
+    fetch(API + "?acao=validar&token=" + token)
+      .then(r=>r.json())
+      .then(res=>{
+        if(!res.ok){
+          localStorage.removeItem("token");
+          window.location.href = "login.html";
+        }
+      })
+      .catch(()=>{
+        console.log("⚠️ erro rede ignorado");
+        // 🔥 NÃO derruba usuário por erro de conexão
+      });
+
+  }, 500);
 }
 </script>
 
@@ -212,7 +219,7 @@ if(!token){
 
 <script>
 
-/* 🔐 LOGOUT SAAS */
+/* 🔐 LOGOUT */
 function sair(){
   localStorage.removeItem("token");
   window.location.href="login.html";
