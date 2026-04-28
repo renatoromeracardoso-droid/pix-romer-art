@@ -17,6 +17,18 @@ body{
   margin:auto;
 }
 
+.topo{
+  margin-bottom:15px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+select{
+  padding:8px;
+  border-radius:6px;
+}
+
 table{
   width:100%;
   border-collapse:collapse;
@@ -31,7 +43,6 @@ td{
 .title{
   text-align:center;
   font-weight:bold;
-  font-size:16px;
   background:#eee;
 }
 
@@ -42,12 +53,6 @@ td{
 
 .right{
   text-align:right;
-  width:120px;
-}
-
-input{
-  border:none;
-  width:100%;
 }
 
 .btn{
@@ -57,13 +62,12 @@ input{
   background:#22c55e;
   color:white;
   border:none;
-  font-size:16px;
   border-radius:8px;
   cursor:pointer;
 }
 
 @media print{
-  .btn{display:none;}
+  .btn,.topo{display:none;}
 }
 </style>
 </head>
@@ -71,6 +75,11 @@ input{
 <body>
 
 <div class="container">
+
+<div class="topo">
+  📅 Período:
+  <input type="month" id="mes" onchange="carregar()">
+</div>
 
 <table>
 
@@ -91,83 +100,32 @@ input{
 </tr>
 
 <tr class="section">
-  <td colspan="3">RECEITA BRUTA MENSAL – REVENDA DE MERCADORIAS (COMÉRCIO)</td>
+  <td colspan="3">REVENDA DE MERCADORIAS (COMÉRCIO)</td>
 </tr>
 
 <tr>
-  <td>I – Revenda de mercadorias com dispensa de emissão de documento fiscal</td>
-  <td class="right" id="r1">R$ 0,00</td>
+  <td>I – Sem nota</td>
+  <td class="right" id="r1">R$ 0</td>
 </tr>
 
 <tr>
-  <td>II – Revenda de mercadorias com documento fiscal emitido</td>
-  <td class="right" id="r2">R$ 0,00</td>
+  <td>II – Com nota</td>
+  <td class="right" id="r2">R$ 0</td>
 </tr>
 
 <tr>
-  <td>III – Total das receitas com revenda de mercadorias (I + II)</td>
-  <td class="right" id="r3">R$ 0,00</td>
+  <td>III – Total</td>
+  <td class="right" id="r3">R$ 0</td>
 </tr>
 
 <tr class="section">
-  <td colspan="3">RECEITA BRUTA MENSAL – VENDA DE PRODUTOS INDUSTRIALIZADOS (INDÚSTRIA)</td>
-</tr>
-
-<tr>
-  <td>IV – Venda de produtos industrializados com dispensa de emissão de documento fiscal</td>
-  <td class="right">R$ 0,00</td>
-</tr>
-
-<tr>
-  <td>V – Venda de produtos industrializados com documento fiscal emitido</td>
-  <td class="right">R$ 0,00</td>
-</tr>
-
-<tr>
-  <td>VI – Total das receitas com venda de produtos industrializados (IV + V)</td>
-  <td class="right">R$ 0,00</td>
-</tr>
-
-<tr class="section">
-  <td colspan="3">RECEITA BRUTA MENSAL – PRESTAÇÃO DE SERVIÇOS</td>
-</tr>
-
-<tr>
-  <td>VII – Receita com prestação de serviços com dispensa de emissão de documento fiscal</td>
-  <td class="right">R$ 0,00</td>
-</tr>
-
-<tr>
-  <td>VIII – Receita com prestação de serviços com documento fiscal emitido</td>
-  <td class="right">R$ 0,00</td>
-</tr>
-
-<tr>
-  <td>IX – Total das receitas com prestação de serviços (VII + VIII)</td>
-  <td class="right">R$ 0,00</td>
-</tr>
-
-<tr class="section">
-  <td>X - Total geral das receitas brutas no mês (III + VI + IX)</td>
-  <td class="right" id="total">R$ 0,00</td>
-</tr>
-
-<tr>
-  <td>LOCAL E DATA:</td>
-  <td colspan="2">ASSINATURA DO EMPRESÁRIO:</td>
-</tr>
-
-<tr>
-  <td colspan="3">
-    ENCONTRAM-SE ANEXADOS ESTE RELATÓRIO:<br>
-    - Os documentos fiscais comprobatórios das entradas de mercadorias e serviços tomados referentes ao período;<br>
-    - As notas fiscais relativas às operações ou prestações realizadas eventualmente emitidas.
-  </td>
+  <td>X - Total geral</td>
+  <td class="right" id="total">R$ 0</td>
 </tr>
 
 </table>
 
-<button class="btn" onclick="window.print()">🖨 Imprimir Relatório</button>
+<button class="btn" onclick="window.print()">🖨 Imprimir</button>
 
 </div>
 
@@ -175,7 +133,13 @@ input{
 
 const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
 
+// define mês atual automático
+const hoje = new Date();
+document.getElementById("mes").value = hoje.toISOString().slice(0,7);
+
 async function carregar(){
+
+  const mesSelecionado = document.getElementById("mes").value;
 
   const r = await fetch(API);
   const dados = await r.json();
@@ -184,6 +148,14 @@ async function carregar(){
   let semNF = 0;
 
   dados.forEach(p=>{
+
+    if(!p["Data"]) return;
+
+    const data = new Date(p["Data"]);
+    const mesPedido = data.toISOString().slice(0,7);
+
+    if(mesPedido !== mesSelecionado) return;
+
     const valor = parseFloat(p["Valor"]||0);
 
     if((p["Status NF"]||"").toLowerCase()=="emitido"){
@@ -191,6 +163,7 @@ async function carregar(){
     }else{
       semNF += valor;
     }
+
   });
 
   document.getElementById("r1").innerText = "R$ " + semNF.toFixed(2);
@@ -198,10 +171,14 @@ async function carregar(){
   document.getElementById("r3").innerText = "R$ " + (semNF+comNF).toFixed(2);
   document.getElementById("total").innerText = "R$ " + (semNF+comNF).toFixed(2);
 
-  // preencher dados fixos (você pode puxar da planilha depois)
+  // Nome do mês bonito
+  const [ano,mes] = mesSelecionado.split("-");
+  const nomeMes = new Date(ano, mes-1).toLocaleDateString('pt-BR',{month:'long'});
+
+  document.getElementById("periodo").innerText = nomeMes + "/" + ano;
+
   document.getElementById("nome").innerText = "RomerArt";
   document.getElementById("cnpj").innerText = "SEU CNPJ";
-  document.getElementById("periodo").innerText = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
 
 }
 
