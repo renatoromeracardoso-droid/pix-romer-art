@@ -12,27 +12,21 @@ header{
   position:sticky;
   top:0;
   background:white;
-  padding:10px 15px;
+  padding:12px;
   display:flex;
   justify-content:space-between;
   align-items:center;
   box-shadow:0 2px 10px rgba(0,0,0,0.05);
-  z-index:999;
 }
 
-.logo img{height:45px;}
+.logo img{height:50px;}
 
-.top-actions{
-  display:flex;
-  gap:8px;
-}
-
-.btn{
-  background:#f1f5f9;
-  padding:8px 12px;
+.btn-refresh{
+  background:#f97316;
+  color:white;
+  padding:8px 14px;
   border-radius:8px;
   cursor:pointer;
-  font-size:13px;
 }
 
 .cards{
@@ -43,23 +37,22 @@ header{
 }
 
 .card{
-  background:#eef2f7;
   padding:10px;
   border-radius:10px;
   text-align:center;
   cursor:pointer;
 }
 
-.card small{font-size:11px;color:#64748b;}
+.card:nth-child(1){background:#e2e8f0;}
+.card:nth-child(2){background:#dcfce7;}
+.card:nth-child(3){background:#fef3c7;}
+.card:nth-child(4){background:#dbeafe;}
+
+.card small{font-size:11px;}
 .card strong{font-size:18px;}
 
 .filtros{padding:10px;}
-input{
-  width:100%;
-  padding:10px;
-  border-radius:8px;
-  border:none;
-}
+input{width:100%;padding:10px;border-radius:8px;border:none;}
 
 .item{
   background:white;
@@ -71,15 +64,10 @@ input{
   box-shadow:0 3px 10px rgba(0,0,0,0.05);
 }
 
-.left{display:flex;flex-direction:column;}
-.id{font-weight:bold;}
-.nome{font-size:14px;}
+.menu-btn{cursor:pointer;font-size:18px;margin-right:8px;}
 
+.left{display:flex;gap:8px;}
 .right{text-align:right;}
-
-.valor{font-weight:bold;}
-
-.badges{display:flex;gap:5px;justify-content:flex-end;margin-top:5px;}
 
 .badge{
   padding:3px 8px;
@@ -87,14 +75,11 @@ input{
   font-size:10px;
 }
 
-.pago-b{background:#22c55e;color:white;}
-.embalar-b{background:#f59e0b;color:white;}
-.enviado-b{background:#3b82f6;color:white;}
+.pago{background:#22c55e;color:white;}
+.embalar{background:#f59e0b;color:white;}
+.enviado{background:#3b82f6;color:white;}
 
-.alerta{
-  color:#ef4444;
-  font-size:11px;
-}
+.alerta{color:red;font-size:11px;}
 
 .menu-popup{
   position:absolute;
@@ -102,6 +87,7 @@ input{
   border-radius:10px;
   padding:5px;
   box-shadow:0 10px 30px rgba(0,0,0,0.2);
+  z-index:999;
 }
 
 .menu-popup button{
@@ -111,6 +97,26 @@ input{
   background:none;
   padding:8px;
   text-align:left;
+}
+
+.modal{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,0.5);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:1000;
+}
+
+.modal-content{
+  background:white;
+  width:90%;
+  max-height:90%;
+  overflow:auto;
+  border-radius:12px;
+  padding:20px;
 }
 
 .toast{
@@ -123,7 +129,6 @@ input{
   padding:10px 20px;
   border-radius:10px;
   opacity:0;
-  transition:.3s;
 }
 .toast.show{opacity:1;}
 </style>
@@ -135,27 +140,14 @@ input{
   <div class="logo">
     <img src="RomerArt.png">
   </div>
-
-  <div class="top-actions">
-    <div class="btn" onclick="window.open('nota.html')">Nota</div>
-    <div class="btn" onclick="window.open('declaracao.html')">Declaração</div>
-    <div class="btn" onclick="carregar()">Atualizar</div>
-  </div>
+  <div class="btn-refresh" onclick="carregar()">Atualizar</div>
 </header>
 
 <div class="cards">
-  <div class="card" onclick="filtrar('todos')">
-    <small>Total</small><br><strong id="total">0</strong>
-  </div>
-  <div class="card" onclick="filtrar('pagos')">
-    <small>Pagos</small><br><strong id="pagos">0</strong>
-  </div>
-  <div class="card" onclick="filtrar('embalar')">
-    <small>Embalar</small><br><strong id="embalar">0</strong>
-  </div>
-  <div class="card" onclick="filtrar('enviado')">
-    <small>Enviados</small><br><strong id="enviados">0</strong>
-  </div>
+  <div class="card" onclick="filtrar('todos')"><small>Total</small><br><strong id="total">0</strong></div>
+  <div class="card" onclick="filtrar('pagos')"><small>Pagos</small><br><strong id="pagos">0</strong></div>
+  <div class="card" onclick="filtrar('embalar')"><small>Embalar</small><br><strong id="embalar">0</strong></div>
+  <div class="card" onclick="filtrar('enviado')"><small>Enviados</small><br><strong id="enviados">0</strong></div>
 </div>
 
 <div class="filtros">
@@ -163,53 +155,42 @@ input{
 </div>
 
 <div id="lista"></div>
+
+<div id="modal" class="modal" onclick="fecharModal()">
+  <div class="modal-content" onclick="event.stopPropagation()" id="modalContent"></div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
+const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
 
-let pedidos=[];
-let filtro="todos";
+let pedidos=[],menu=null,filtro="todos";
 
 async function carregar(){
-  try{
-    const r = await fetch(API);
-    pedidos = await r.json();
-    atualizarCards();
-    render();
-  }catch(e){
-    toast("Erro ❌");
-  }
+  const r=await fetch(API);
+  pedidos=await r.json();
+  atualizar();
 }
 
-function atualizarCards(){
-  total.innerText = pedidos.length;
-  pagos.innerText = pedidos.length;
-  embalar.innerText = pedidos.filter(p=>!p["Frete"]).length;
-  enviados.innerText = pedidos.filter(p=>p["Frete"]).length;
-}
-
-function filtrar(f){
-  filtro=f;
+function atualizar(){
+  total.innerText=pedidos.length;
+  pagos.innerText=pedidos.length;
+  embalar.innerText=pedidos.filter(p=>!p["Frete"]).length;
+  enviados.innerText=pedidos.filter(p=>p["Frete"]).length;
   render();
 }
 
-function diasSemEnvio(data){
-  if(!data) return 0;
-  const d=new Date(data);
-  return Math.floor((new Date()-d)/86400000);
-}
+function filtrar(f){filtro=f;render();}
 
 function render(){
 
-  const b=busca.value.toLowerCase();
   lista.innerHTML="";
+  const b=busca.value.toLowerCase();
 
   const cpfCount={};
-  pedidos.forEach(p=>{
-    cpfCount[p["CPF/CNPJ"]] = (cpfCount[p["CPF/CNPJ"]]||0)+1;
-  });
+  pedidos.forEach(p=>cpfCount[p["CPF/CNPJ"]]=(cpfCount[p["CPF/CNPJ"]]||0)+1);
 
   pedidos.forEach((p,i)=>{
 
@@ -221,47 +202,43 @@ function render(){
     const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
 
     const metodo=(p["Método pagamento"]||"").toLowerCase();
-    let iconePag="💰";
-    if(metodo.includes("pix")) iconePag="🟢 PIX";
-    else if(metodo.includes("cart")) iconePag="💳";
+    let pay="💰";
+    if(metodo.includes("pix")) pay="🟢 PIX";
+    else if(metodo.includes("cart")) pay="💳";
 
     const enviado=p["Frete"];
-    const dias=diasSemEnvio(p["Data"]);
-
-    const alerta = (!enviado && dias>=2)
-      ? `<div class="alerta">⚠ ${dias} dias parado</div>`
-      : "";
 
     lista.innerHTML+=`
-    <div class="item" onclick="abrirMenu(${i},this)">
+    <div class="item">
       <div class="left">
-        <div class="id">#${p["ID Pedido"]}</div>
-        <div class="nome">${p["Nome"]} ${vip}</div>
-        <div style="font-size:11px;color:#64748b">${iconePag}</div>
-        ${alerta}
+        <div class="menu-btn" onclick="abrirMenu(event,${i})">⋮</div>
+        <div onclick="abrirModal(${i})">
+          <strong>#${p["ID Pedido"]}</strong><br>
+          ${p["Nome"]} ${vip}<br>
+          <small>${pay}</small>
+        </div>
       </div>
 
       <div class="right">
-        <div class="valor">R$ ${p["Valor"]}</div>
-
-        <div class="badges">
-          <div class="badge pago-b">Pago</div>
-          <div class="badge ${enviado?'enviado-b':'embalar-b'}">
-            ${enviado?'🚚':'📦'}
-          </div>
-        </div>
+        R$ ${p["Valor"]}<br>
+        <span class="badge pago">Pago</span>
+        <span class="badge ${enviado?'enviado':'embalar'}">
+          ${enviado?'🚚':'📦'}
+        </span>
       </div>
     </div>`;
   });
 }
 
-function abrirMenu(i,el){
-  const p=pedidos[i];
+function abrirMenu(e,i){
+  e.stopPropagation();
 
-  const m=document.createElement("div");
-  m.className="menu-popup";
+  if(menu) menu.remove();
 
-  m.innerHTML=`
+  menu=document.createElement("div");
+  menu.className="menu-popup";
+
+  menu.innerHTML=`
     <button onclick="nota(${i})">Nota</button>
     <button onclick="pdf(${i})">PDF</button>
     <button onclick="embalar(${i})">Marcar embalada</button>
@@ -269,11 +246,31 @@ function abrirMenu(i,el){
     <button onclick="declaracao(${i})">Declaração</button>
   `;
 
-  document.body.appendChild(m);
-  const r=el.getBoundingClientRect();
-  m.style.top=r.bottom+"px";
-  m.style.left=r.left+"px";
+  document.body.appendChild(menu);
+
+  menu.style.top=e.pageY+"px";
+  menu.style.left=e.pageX+"px";
 }
+
+document.addEventListener("click",()=>{if(menu)menu.remove();});
+
+function abrirModal(i){
+  const p=pedidos[i];
+
+  modalContent.innerHTML=`
+    <h2>Pedido #${p["ID Pedido"]}</h2>
+    <p><b>Cliente:</b> ${p["Nome"]}</p>
+    <p><b>Valor:</b> R$ ${p["Valor"]}</p>
+    <p><b>Pagamento:</b> ${p["Método pagamento"]}</p>
+    <p><b>Endereço:</b> ${p["Endereço"]}</p>
+    <p><b>CEP:</b> ${p["CEP"]}</p>
+    <p><b>Cidade:</b> ${p["Cidade"]}</p>
+  `;
+
+  modal.style.display="flex";
+}
+
+function fecharModal(){modal.style.display="none";}
 
 async function embalar(i){
   const id=pedidos[i]["ID Pedido"];
@@ -283,8 +280,7 @@ async function embalar(i){
 }
 
 function etiqueta(i){
-  const id=pedidos[i]["ID Pedido"];
-  window.open(`https://loja.romerart.com.br/admin/orders/${id}`);
+  window.open(`https://loja.romerart.com.br/admin/orders/${pedidos[i]["ID Pedido"]}`);
 }
 
 function nota(i){
@@ -301,10 +297,9 @@ function declaracao(i){
 }
 
 function toast(msg){
-  const t=document.getElementById("toast");
-  t.innerText=msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
+  toast.innerText=msg;
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),2000);
 }
 
 busca.addEventListener("input",render);
