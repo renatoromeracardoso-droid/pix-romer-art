@@ -6,6 +6,7 @@
 <title>RomerArt • Sistema NF</title>
 
 <style>
+
 body{margin:0;font-family:'Segoe UI';background:#f1f5f9;}
 
 header{
@@ -41,26 +42,32 @@ header{
   cursor:pointer;
 }
 
+/* CARDS BONITOS */
 .cards{
   display:grid;
   grid-template-columns:repeat(2,1fr);
-  gap:10px;
+  gap:12px;
   padding:15px;
 }
 
 .card{
   padding:20px;
-  border-radius:14px;
+  border-radius:16px;
   font-weight:bold;
+  color:#111;
+  cursor:pointer;
+  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+  transition:.2s;
 }
+.card:hover{transform:scale(1.03);}
 
-.card:nth-child(1){background:#dbeafe;}
-.card:nth-child(2){background:#fef3c7;}
-.card:nth-child(3){background:#dcfce7;}
-.card:nth-child(4){background:#ede9fe;}
+.card.total{background:linear-gradient(135deg,#dbeafe,#93c5fd);}
+.card.pendente{background:linear-gradient(135deg,#fef3c7,#fde68a);}
+.card.emitido{background:linear-gradient(135deg,#dcfce7,#86efac);}
+.card.envio{background:linear-gradient(135deg,#ede9fe,#c4b5fd);}
 
+/* BUSCA */
 .filtros{padding:10px 15px;}
-
 input{
   width:100%;
   padding:12px;
@@ -68,23 +75,35 @@ input{
   border:none;
 }
 
+/* LISTA */
 .item{
   background:white;
   margin:10px 15px;
   padding:15px;
-  border-radius:14px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.05);
+  border-radius:16px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.05);
   cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+}
+
+.left{display:flex;gap:10px;}
+
+.valor{
+  font-weight:bold;
+  font-size:16px;
 }
 
 .badge{
-  padding:5px 10px;
+  padding:4px 10px;
   border-radius:999px;
   font-size:11px;
+  color:white;
 }
 
-.emitido{background:#22c55e;color:white;}
-.pendente{background:#f59e0b;color:white;}
+.recebido{background:#22c55e;}
+.embalar{background:#f59e0b;}
+.enviado{background:#3b82f6;}
 
 .toast{
   position:fixed;
@@ -96,7 +115,6 @@ input{
   padding:12px 20px;
   border-radius:10px;
   opacity:0;
-  transition:.3s;
 }
 .toast.show{opacity:1;}
 
@@ -119,6 +137,7 @@ input{
   max-height:90%;
   overflow:auto;
 }
+
 </style>
 </head>
 
@@ -131,15 +150,26 @@ input{
 
   <div class="top-right">
     <div class="bell">🔔 <span id="alerta">0</span></div>
-    <div class="btn-refresh" onclick="atualizarManual()">Atualizar</div>
+    <div class="btn-refresh" onclick="carregar()">Atualizar</div>
   </div>
 </header>
 
 <div class="cards">
-  <div class="card">Total: <span id="total">0</span></div>
-  <div class="card">Pendentes: <span id="pendentes">0</span></div>
-  <div class="card">Emitidos: <span id="emitidos">0</span></div>
-  <div class="card">Envios: <span id="envios">0</span></div>
+  <div class="card total" onclick="filtrar('todos')">
+    Total<br><span id="total">0</span>
+  </div>
+
+  <div class="card pendente" onclick="filtrar('pendente')">
+    Pendentes<br><span id="pendentes">0</span>
+  </div>
+
+  <div class="card emitido" onclick="filtrar('emitido')">
+    Emitidos<br><span id="emitidos">0</span>
+  </div>
+
+  <div class="card envio" onclick="filtrar('envio')">
+    Envios<br><span id="envios">0</span>
+  </div>
 </div>
 
 <div class="filtros">
@@ -149,7 +179,6 @@ input{
 <div id="lista"></div>
 <div id="toast" class="toast"></div>
 
-<!-- MODAL -->
 <div id="modalPedido" class="modal" onclick="fecharModal(event)">
   <div class="modal-content" id="conteudoModal"></div>
 </div>
@@ -159,7 +188,15 @@ input{
 const API = "https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
 
 let pedidos=[];
+let filtroAtual="todos";
 
+/* FILTRO */
+function filtrar(tipo){
+  filtroAtual = tipo;
+  render();
+}
+
+/* CARREGAR */
 async function carregar(){
   try{
     const r = await fetch(API + "?t=" + Date.now());
@@ -171,52 +208,60 @@ async function carregar(){
   }
 }
 
+/* CARDS */
 function atualizarCards(){
   total.innerText = pedidos.length;
-  pendentes.innerText = pedidos.length;
+
+  const pend = pedidos.filter(p=>!p["Frete"]).length;
+  pendentes.innerText = pend;
+
   emitidos.innerText = pedidos.filter(p=>p["Status NF"]==="emitido").length;
   envios.innerText = pedidos.filter(p=>p["Frete"]).length;
-  alerta.innerText = pendentes.innerText;
+
+  alerta.innerText = pend;
 }
 
+/* RENDER */
 function render(){
+
+  const busca = document.getElementById("busca").value.toLowerCase();
   lista.innerHTML="";
+
   pedidos.forEach((p,i)=>{
+
+    if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
+
+    if(filtroAtual==="pendente" && p["Frete"]) return;
+    if(filtroAtual==="emitido" && p["Status NF"]!=="emitido") return;
+    if(filtroAtual==="envio" && !p["Frete"]) return;
+
     lista.innerHTML+=`
-      <div class="item" onclick="abrirPedido(${i})">
-        <b>Pedido ${p["ID Pedido"]}</b><br>
-        ${p["Nome"]}<br>
-        R$ ${p["Valor"]}
+    <div class="item" onclick="abrirPedido(${i})">
+      <div class="left">
+        <div>
+          <strong>Pedido ${p["ID Pedido"]}</strong><br>
+          ${p["Nome"]}
+        </div>
       </div>
-    `;
+
+      <div>
+        <div class="valor">R$ ${p["Valor"]}</div>
+        <div class="badge recebido">Recebido</div>
+        <div class="badge embalar">Por embalar</div>
+      </div>
+    </div>`;
   });
 }
 
+/* MODAL */
 function abrirPedido(i){
   const p = pedidos[i];
 
   conteudoModal.innerHTML = `
     <h2>Pedido #${p["ID Pedido"]}</h2>
 
-    <span class="badge emitido">💰 Recebido</span>
-    <span class="badge pendente">📦 Por embalar</span>
-
-    <hr>
-
-    <h3>📦 Produto</h3>
-    <p>${p["Produto"] || "-"}</p>
-
-    <h3>💰 Pagamento</h3>
-    <p>R$ ${p["Valor"]}</p>
-
-    <h3>👤 Cliente</h3>
-    <p>${p["Nome"]}</p>
-
-    <h3>📍 Endereço</h3>
-    <p>${p["Endereco"] || "-"}</p>
-
-    <h3>🚚 Envio</h3>
-    <p>${p["Frete"] || "Não definido"}</p>
+    <p><b>Cliente:</b> ${p["Nome"]}</p>
+    <p><b>Valor:</b> R$ ${p["Valor"]}</p>
 
     <button onclick="embalar(${i})">📦 Marcar como embalado</button>
     <button onclick="imprimirEtiqueta(${i})">🖨 Imprimir etiqueta</button>
@@ -231,10 +276,11 @@ function fecharModal(e){
   }
 }
 
+/* AÇÕES */
 async function embalar(i){
   const id = pedidos[i]["ID Pedido"];
   await fetch(API + "?acao=nuvem&id=" + id);
-  toast("Pedido embalado 🚀");
+  toast("Embalado 🚀");
   carregar();
 }
 
@@ -243,12 +289,15 @@ function imprimirEtiqueta(i){
   window.open(`https://loja.romerart.com.br/admin/orders/${id}`);
 }
 
+/* TOAST */
 function toast(msg){
   const t=document.getElementById("toast");
   t.innerText=msg;
   t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),2000);
 }
+
+document.getElementById("busca").addEventListener("input",render);
 
 carregar();
 
