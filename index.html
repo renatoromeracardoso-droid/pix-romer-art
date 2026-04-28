@@ -3,21 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RomerArt • Painel Pro</title>
+<title>RomerArt • Painel</title>
 
 <style>
-body{margin:0;font-family:'Segoe UI';background:#f1f5f9;}
 
+body{
+  margin:0;
+  font-family:'Segoe UI';
+  background:#f8fafc;
+}
+
+/* HEADER */
 header{
   background:white;
-  padding:15px;
+  padding:16px;
   display:flex;
   justify-content:space-between;
+  align-items:center;
   box-shadow:0 2px 10px rgba(0,0,0,0.05);
 }
 
 .logo img{height:34px;}
 
+/* CARDS */
 .cards{
   display:grid;
   grid-template-columns:repeat(2,1fr);
@@ -27,50 +35,94 @@ header{
 
 .card{
   padding:18px;
-  border-radius:16px;
-  font-weight:bold;
+  border-radius:14px;
   color:white;
+  font-weight:600;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
   cursor:pointer;
-  box-shadow:0 10px 25px rgba(0,0,0,0.1);
   transition:.2s;
 }
-.card:hover{transform:scale(1.04);}
 
-.total{background:linear-gradient(135deg,#3b82f6,#1d4ed8);}
-.pago{background:linear-gradient(135deg,#22c55e,#15803d);}
-.pendente{background:linear-gradient(135deg,#f59e0b,#b45309);}
-.enviado{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
+.card span{
+  font-size:20px;
+  font-weight:bold;
+}
 
+.card:hover{transform:scale(1.02);}
+
+.total{background:#3b82f6;}
+.pago{background:#22c55e;}
+.pendente{background:#f59e0b;}
+.enviado{background:#6366f1;}
+
+/* BUSCA */
 input{
   width:calc(100% - 30px);
   margin:10px 15px;
   padding:12px;
   border-radius:10px;
   border:none;
+  background:white;
 }
 
+/* LISTA */
 .item{
   background:white;
   margin:10px 15px;
-  padding:15px;
-  border-radius:16px;
+  padding:14px;
+  border-radius:14px;
   display:flex;
   justify-content:space-between;
-  box-shadow:0 10px 25px rgba(0,0,0,0.05);
+  align-items:center;
+  box-shadow:0 5px 15px rgba(0,0,0,0.04);
   cursor:pointer;
 }
 
+.left{
+  display:flex;
+  flex-direction:column;
+}
+
+.id{
+  font-weight:bold;
+}
+
+.nome{
+  font-size:13px;
+  color:#64748b;
+}
+
+/* DIREITA */
+.right{
+  text-align:right;
+}
+
+.valor{
+  font-weight:bold;
+  font-size:16px;
+}
+
+.badges{
+  margin-top:5px;
+  display:flex;
+  gap:5px;
+  justify-content:flex-end;
+}
+
 .badge{
-  padding:4px 10px;
+  padding:3px 8px;
   border-radius:999px;
-  font-size:11px;
+  font-size:10px;
   color:white;
 }
 
-.ok{background:#22c55e;}
-.warn{background:#f59e0b;}
-.info{background:#3b82f6;}
+.pago-b{background:#22c55e;}
+.embalar-b{background:#f59e0b;}
+.enviado-b{background:#3b82f6;}
 
+/* MODAL */
 .modal{
   position:fixed;
   top:0;left:0;
@@ -84,7 +136,7 @@ input{
 .modal-box{
   background:white;
   width:92%;
-  max-width:520px;
+  max-width:500px;
   max-height:90%;
   overflow:auto;
   border-radius:16px;
@@ -92,17 +144,9 @@ input{
 }
 
 .section{
-  background:#f8fafc;
+  background:#f1f5f9;
   padding:12px;
   border-radius:12px;
-  margin-bottom:12px;
-}
-
-.timeline{
-  border-left:3px solid #e5e7eb;
-  padding-left:10px;
-}
-.timeline div{
   margin-bottom:10px;
 }
 
@@ -125,16 +169,14 @@ button{
 <body>
 
 <header>
-  <div class="logo">
-    <img src="RomerArt.png">
-  </div>
+  <div class="logo"><img src="RomerArt.png"></div>
 </header>
 
 <div class="cards">
-  <div class="card total" onclick="filtrar('todos')">Total<br><span id="total">0</span></div>
-  <div class="card pago" onclick="filtrar('pago')">Pagos<br><span id="pagos">0</span></div>
-  <div class="card pendente" onclick="filtrar('pendente')">Embalar<br><span id="pendentes">0</span></div>
-  <div class="card enviado" onclick="filtrar('enviado')">Enviados<br><span id="enviados">0</span></div>
+  <div class="card total" onclick="filtrar('todos')">Total <span id="total">0</span></div>
+  <div class="card pago" onclick="filtrar('pago')">Pagos <span id="pagos">0</span></div>
+  <div class="card pendente" onclick="filtrar('pendente')">Embalar <span id="pendentes">0</span></div>
+  <div class="card enviado" onclick="filtrar('enviado')">Enviados <span id="enviados">0</span></div>
 </div>
 
 <input id="busca" placeholder="Buscar cliente...">
@@ -155,7 +197,7 @@ let filtro="todos";
 function filtrar(f){filtro=f;render();}
 
 async function carregar(){
-  const r=await fetch(API+"?t="+Date.now());
+  const r=await fetch(API);
   pedidos=await r.json();
   atualizar();
   render();
@@ -163,12 +205,13 @@ async function carregar(){
 
 function atualizar(){
   total.innerText=pedidos.length;
-  pagos.innerText=pedidos.filter(p=>p["Valor"]).length;
+  pagos.innerText=pedidos.length;
   pendentes.innerText=pedidos.filter(p=>!p["Frete"]).length;
   enviados.innerText=pedidos.filter(p=>p["Frete"]).length;
 }
 
 function render(){
+
   const b=busca.value.toLowerCase();
   lista.innerHTML="";
 
@@ -179,17 +222,27 @@ function render(){
     if(filtro==="pendente" && p["Frete"]) return;
     if(filtro==="enviado" && !p["Frete"]) return;
 
+    const enviado = p["Frete"];
+
     lista.innerHTML+=`
     <div class="item" onclick="abrir(${i})">
-      <div>
-        <b>#${p["ID Pedido"]}</b><br>
-        ${p["Nome"]}
+
+      <div class="left">
+        <div class="id">#${p["ID Pedido"]}</div>
+        <div class="nome">${p["Nome"]}</div>
       </div>
 
-      <div>
-        <b>R$ ${p["Valor"]}</b><br>
-        <span class="badge ok">Pago</span>
+      <div class="right">
+        <div class="valor">R$ ${p["Valor"]}</div>
+
+        <div class="badges">
+          <div class="badge pago-b">Pago</div>
+          <div class="badge ${enviado ? 'enviado-b':'embalar-b'}">
+            ${enviado ? 'Enviado':'Embalar'}
+          </div>
+        </div>
       </div>
+
     </div>`;
   });
 }
@@ -202,45 +255,13 @@ function abrir(i){
 
   <h2>Pedido #${p["ID Pedido"]}</h2>
 
-  <div class="section">
-    <b>📦 Produto</b><br>
-    ${p["Produto"]||"-"}
-  </div>
+  <div class="section"><b>Cliente</b><br>${p["Nome"]}</div>
+  <div class="section"><b>Valor</b><br>R$ ${p["Valor"]}</div>
+  <div class="section"><b>Produto</b><br>${p["Produto"]||"-"}</div>
+  <div class="section"><b>Envio</b><br>${p["Frete"]||"Não definido"}</div>
 
-  <div class="section">
-    <b>💰 Pagamento</b><br>
-    R$ ${p["Valor"]}<br>
-    PIX
-  </div>
-
-  <div class="section">
-    <b>👤 Cliente</b><br>
-    ${p["Nome"]}<br>
-    ${p["Email"]||"-"}
-  </div>
-
-  <div class="section">
-    <b>📍 Endereço</b><br>
-    ${p["Endereco"]||"-"}<br>
-    ${p["Cidade"]||""} - ${p["Estado"]||""}
-  </div>
-
-  <div class="section">
-    <b>🚚 Envio</b><br>
-    ${p["Frete"]||"Não definido"}
-  </div>
-
-  <div class="section">
-    <b>📊 Status</b>
-    <div class="timeline">
-      <div>💰 Pagamento recebido</div>
-      <div>📦 Aguardando envio</div>
-      <div>🚚 Enviado</div>
-    </div>
-  </div>
-
-  <button class="btn-blue" onclick="embalar(${i})">📦 Marcar como embalado</button>
-  <button class="btn-green" onclick="etiqueta(${i})">🖨 Imprimir etiqueta</button>
+  <button class="btn-blue" onclick="embalar(${i})">📦 Embalar</button>
+  <button class="btn-green" onclick="etiqueta(${i})">🖨 Etiqueta</button>
 
   `;
 
