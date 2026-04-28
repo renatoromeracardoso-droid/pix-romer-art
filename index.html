@@ -249,16 +249,19 @@ render();
 
 function filtrar(f){filtro=f;render();}
 
-/* NOVO CALCULO ATRASO */
 function diasAtraso(dataStr){
 if(!dataStr) return 0;
 const data = new Date(dataStr);
 const hoje = new Date();
-const diff = Math.floor((hoje - data) / (1000*60*60*24));
-return diff;
+return Math.floor((hoje - data) / (1000*60*60*24));
 }
 
-/* LISTA MELHORADA */
+function formatarData(data){
+if(!data) return "-";
+return new Date(data).toLocaleString("pt-BR");
+}
+
+/* LISTA */
 function render(){
 
 lista.innerHTML="";
@@ -278,49 +281,102 @@ if(filtro==="enviado" && !p["Frete"]) return;
 
 const enviado=p["Frete"];
 const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
-
 const atraso = diasAtraso(p["Data"]);
 
 lista.innerHTML+=`
 <div class="item">
 
 <div class="left">
-
 <div class="menu-btn" onclick="abrirMenu(event,${i})">⋮</div>
 
 <div class="info" onclick="abrirModal(${i})">
 <strong>#${p["ID Pedido"]}</strong>
-
 ${p["Nome"]} ${vip}
 
-<div class="subinfo">
-📅 ${p["Data"] || "-"}
-</div>
-
-<div class="subinfo">
-📍 ${p["Cidade"] || "-"}
-</div>
+<div class="subinfo">📅 ${formatarData(p["Data"])}</div>
+<div class="subinfo">📍 ${p["Cidade"] || "-"}</div>
 
 ${atraso>3 ? `<div class="atraso">⚠ ${atraso} dias em atraso</div>` : ``}
-
 </div>
-
 </div>
 
 <div class="right">
 R$ ${p["Valor"]}<br>
-
 <span class="badge pago">💰 Pago</span>
-
 <span class="badge ${enviado?'enviado':'embalar'}">
 ${enviado?'🚚 Enviado':'📦 Embalar'}
 </span>
-
 </div>
 
 </div>`;
 });
 }
+
+/* MODAL COMPLETO FINAL */
+function abrirModal(i){
+const p = pedidos[i];
+
+modalContent.innerHTML=`
+<div class="close-btn" onclick="fecharModal()">❌</div>
+
+<h2>📦 Pedido #${p["ID Pedido"]}</h2>
+
+<div class="modal-grid">
+
+<div class="box">
+<h3>👤 Cliente</h3>
+<p>👤 ${p["Nome"]}</p>
+<p>📧 ${p["Email"]||"-"}</p>
+<p>📞 ${p["Telefone"]||"-"}</p>
+<p>🪪 ${p["CPF/CNPJ"]||"-"}</p>
+</div>
+
+<div class="box">
+<h3>💳 Pagamento</h3>
+<p>💰 R$ ${p["Valor"]}</p>
+<p>📅 ${formatarData(p["Data"])}</p>
+</div>
+
+<div class="box">
+<h3>🛠 Serviço</h3>
+<p>🧩 ${p["Serviço"]||"-"}</p>
+</div>
+
+<div class="box">
+<h3>📏 Medidas</h3>
+<p>📐 ${p["Largura"]||"-"} x ${p["Altura"]||"-"} x ${p["Comprimento"]||"-"}</p>
+<p>⚖ ${p["Peso"]||"-"} g</p>
+</div>
+
+<div class="box">
+<h3>📍 Endereço Completo</h3>
+<p>📍 ${p["Endereço"]||"-"}, ${p["Numero"]||""}</p>
+<p>🏙 ${p["Bairro"]||"-"}</p>
+<p>🌎 ${p["Cidade"]||"-"} - ${p["CEP"]||"-"}</p>
+<p>📦 ${p["Complemento"]||""}</p>
+</div>
+
+<div class="box">
+<h3>🚚 Envio</h3>
+<p>📦 ${p["Escolha Envio"]||"-"}</p>
+<p>💰 ${p["Frete"]||"Não gerado"}</p>
+<p>🔎 ${p["Rastreio"]||"-"}</p>
+</div>
+
+</div>
+
+<div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;">
+<button onclick="embalar(${i})">📦 Embalar</button>
+<button onclick="etiqueta(${i})">🖨 Etiqueta</button>
+<button onclick="nota(${i})">📄 Nota</button>
+<button onclick="declaracao(${i})">📋 Declaração</button>
+</div>
+`;
+
+modal.style.display="flex";
+}
+
+function fecharModal(){modal.style.display="none";}
 
 /* RESTO IGUAL */
 function abrirMenu(e,i){
@@ -344,57 +400,6 @@ menu.style.left=e.pageX+"px";
 }
 
 document.addEventListener("click",()=>{if(menu)menu.remove();});
-
-function abrirModal(i){
-const p = pedidos[i];
-
-modalContent.innerHTML=`
-<div class="close-btn" onclick="fecharModal()">❌</div>
-
-<h2>📦 Pedido #${p["ID Pedido"]}</h2>
-
-<div class="modal-grid">
-
-<div class="box">
-<h3>👤 Cliente</h3>
-<p>👤 ${p["Nome"]}</p>
-<p>📧 ${p["Email"]||"-"}</p>
-<p>📞 ${p["Telefone"]||"-"}</p>
-<p>🪪 ${p["CPF/CNPJ"]||"-"}</p>
-</div>
-
-<div class="box">
-<h3>💳 Pagamento</h3>
-<p>💰 R$ ${p["Valor"]}</p>
-<p>📅 ${p["Data"]}</p>
-</div>
-
-<div class="box">
-<h3>📍 Endereço</h3>
-<p>📍 ${p["Endereço"]||""}</p>
-<p>${p["Cidade"]||""}</p>
-</div>
-
-<div class="box">
-<h3>🚚 Envio</h3>
-<p>${p["Frete"]||"Não enviado"}</p>
-<p>🔎 ${p["Rastreio"]||"-"}</p>
-</div>
-
-</div>
-
-<div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;">
-<button onclick="embalar(${i})">📦 Embalar</button>
-<button onclick="etiqueta(${i})">🖨 Etiqueta</button>
-<button onclick="nota(${i})">📄 Nota</button>
-<button onclick="declaracao(${i})">📋 Declaração</button>
-</div>
-`;
-
-modal.style.display="flex";
-}
-
-function fecharModal(){modal.style.display="none";}
 
 async function embalar(i){
 const id=pedidos[i]["ID Pedido"];
