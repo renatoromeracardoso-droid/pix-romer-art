@@ -23,24 +23,19 @@ header{
 
 .top-actions{
   display:flex;
-  gap:8px;
-  align-items:center;
+  gap:10px;
 }
 
-.btn-refresh{
+.btn{
   background:#f97316;
   color:white;
-  padding:8px 14px;
+  padding:8px 12px;
   border-radius:8px;
   cursor:pointer;
 }
 
-.btn-relatorio{
-  background:#3b82f6;
-  color:white;
-  padding:8px 14px;
-  border-radius:8px;
-  cursor:pointer;
+.btn-sair{
+  background:#ef4444;
 }
 
 .cards{
@@ -89,48 +84,6 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
 .embalar{background:#f59e0b;color:white;}
 .enviado{background:#3b82f6;color:white;}
 
-.alerta{color:red;font-size:11px;}
-
-.menu-popup{
-  position:absolute;
-  background:white;
-  border-radius:10px;
-  padding:5px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.2);
-  z-index:999;
-}
-
-.modal{
-  position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  justify-content:center;
-  align-items:center;
-}
-
-.modal-content{
-  background:white;
-  width:95%;
-  max-height:90%;
-  overflow:auto;
-  border-radius:12px;
-  padding:20px;
-}
-
-.modal-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-
-.box{
-  background:#f1f5f9;
-  padding:12px;
-  border-radius:10px;
-}
-
 .toast{
   position:fixed;
   bottom:20px;
@@ -154,8 +107,8 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   </div>
 
   <div class="top-actions">
-    <div class="btn-relatorio" onclick="abrirRelatorio()">📊 Relatório</div>
-    <div class="btn-refresh" onclick="carregar()">🔄 Atualizar</div>
+    <div class="btn" onclick="carregar()">Atualizar</div>
+    <div class="btn btn-sair" onclick="sair()">Sair</div>
   </div>
 </header>
 
@@ -166,34 +119,34 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   <div class="card" onclick="filtrar('enviado')"><small>Enviados</small><br><strong id="enviados">0</strong></div>
 </div>
 
-<div class="filtros">
+<div style="padding:10px">
   <input id="busca" placeholder="Buscar cliente...">
 </div>
 
 <div id="lista"></div>
 
-<div id="modal" class="modal" onclick="fecharModal()">
-  <div class="modal-content" onclick="event.stopPropagation()" id="modalContent"></div>
-</div>
-
 <div id="toast" class="toast"></div>
 
 <script>
 
-const API="https://script.google.com/macros/s/AKfycbwdU7T--tD0wk3OJNcIthOiH4ag8E0lK50F_-s7sCBOrB-yKJw7mF8EENeIbfnt6PQP/exec";
-
-let pedidos=[],menu=null,filtro="todos";
-
-function abrirRelatorio(){
-  window.open("relatorio-mei.html");
+/* 🔐 PROTEÇÃO LOGIN */
+if(localStorage.getItem("logado") !== "1"){
+  window.location.href = "login.html";
 }
 
+/* SUA API */
+const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
+
+let pedidos=[],filtro="todos";
+
+/* CARREGAR */
 async function carregar(){
   const r=await fetch(API);
   pedidos=await r.json();
   atualizar();
 }
 
+/* ATUALIZAR */
 function atualizar(){
   total.innerText=pedidos.length;
   pagos.innerText=pedidos.length;
@@ -202,18 +155,14 @@ function atualizar(){
   render();
 }
 
+/* FILTRO */
 function filtrar(f){filtro=f;render();}
 
+/* RENDER */
 function render(){
 
   lista.innerHTML="";
   const b=busca.value.toLowerCase();
-
-  const cpfCount={};
-  pedidos.forEach(p=>{
-    const cpf=p["CPF/CNPJ"];
-    if(cpf) cpfCount[cpf]=(cpfCount[cpf]||0)+1;
-  });
 
   pedidos.forEach((p,i)=>{
 
@@ -223,127 +172,34 @@ function render(){
     if(filtro==="enviado" && !p["Frete"]) return;
 
     const enviado=p["Frete"];
-    const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
 
     lista.innerHTML+=`
     <div class="item">
       <div class="left">
-        <div class="menu-btn" onclick="abrirMenu(event,${i})">⋮</div>
-        <div onclick="abrirModal(${i})">
+        <div>
           <strong>#${p["ID Pedido"]}</strong><br>
-          ${p["Nome"]} ${vip}
+          ${p["Nome"]}
         </div>
       </div>
 
       <div class="right">
         R$ ${p["Valor"]}<br>
-        <span class="badge pago">💰 Pago</span>
+        <span class="badge pago">Pago</span>
         <span class="badge ${enviado?'enviado':'embalar'}">
-          ${enviado?'🚚 Enviado':'📦 Embalar'}
+          ${enviado?'Enviado':'Embalar'}
         </span>
       </div>
     </div>`;
   });
 }
 
-function abrirMenu(e,i){
-  e.stopPropagation();
-  if(menu) menu.remove();
-
-  menu=document.createElement("div");
-  menu.className="menu-popup";
-
-  menu.innerHTML=`
-    <button onclick="nota(${i})">📄 Nota</button>
-    <button onclick="pdf(${i})">📑 PDF</button>
-    <button onclick="embalar(${i})">📦 Embalar</button>
-    <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
-    <button onclick="declaracao(${i})">📋 Declaração</button>
-  `;
-
-  document.body.appendChild(menu);
-  menu.style.top=e.pageY+"px";
-  menu.style.left=e.pageX+"px";
+/* SAIR */
+function sair(){
+  localStorage.removeItem("logado");
+  window.location.href = "login.html";
 }
 
-document.addEventListener("click",()=>{if(menu)menu.remove();});
-
-function abrirModal(i){
-  const p = pedidos[i];
-
-  modalContent.innerHTML = `
-  <h2>📦 Pedido #${p["ID Pedido"]}</h2>
-
-  <div class="modal-grid">
-
-    <div class="box">
-      <h3>👤 Cliente</h3>
-      <p>${p["Nome"]}</p>
-      <p>📧 ${p["Email"]||"-"}</p>
-      <p>📞 ${p["Telefone"]||"-"}</p>
-      <p>🪪 ${p["CPF/CNPJ"]||"-"}</p>
-    </div>
-
-    <div class="box">
-      <h3>💳 Pagamento</h3>
-      <p>${p["Método pagamento"]}</p>
-      <p>💰 R$ ${p["Valor"]}</p>
-      <p>📅 ${p["Data"]}</p>
-    </div>
-
-    <div class="box">
-      <h3>📍 Endereço</h3>
-      <p>${p["Endereço"]}, ${p["Numero"]}</p>
-      <p>${p["Bairro"]}</p>
-      <p>${p["Cidade"]} - ${p["CEP"]}</p>
-    </div>
-
-    <div class="box">
-      <h3>🚚 Envio</h3>
-      <p>${p["Escolha Envio"]}</p>
-      <p>${p["Frete"]||"Não gerado"}</p>
-      <p>${p["Rastreio"]||"-"}</p>
-    </div>
-
-  </div>
-
-  <div style="margin-top:20px;display:flex;gap:10px;">
-    <button onclick="embalar(${i})">📦 Embalar</button>
-    <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
-    <button onclick="nota(${i})">📄 Nota</button>
-    <button onclick="declaracao(${i})">📋 Declaração</button>
-  </div>
-  `;
-
-  modal.style.display="flex";
-}
-
-function fecharModal(){modal.style.display="none";}
-
-async function embalar(i){
-  const id=pedidos[i]["ID Pedido"];
-  await fetch(API+"?acao=nuvem&id="+id);
-  toast("Embalado");
-  carregar();
-}
-
-function etiqueta(i){
-  window.open(`https://loja.romerart.com.br/admin/orders/${pedidos[i]["ID Pedido"]}`);
-}
-
-function nota(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
-}
-
-function pdf(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
-}
-
-function declaracao(i){
-  const p=pedidos[i];
-  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
-}
-
+/* TOAST */
 function toast(msg){
   const t=document.getElementById("toast");
   t.innerText=msg;
