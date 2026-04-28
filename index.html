@@ -56,6 +56,9 @@ if(!token){
       if(!res.ok){
         localStorage.removeItem("token");
         window.location.href="login.html";
+      }else{
+        localStorage.setItem("usuario", res.usuario);
+        localStorage.setItem("nivel", res.nivel);
       }
     })
     .catch(()=>console.log("erro ignorado"));
@@ -68,6 +71,13 @@ if(!token){
 </div>
 
 <div class="top-actions">
+
+<!-- 🔥 USUÁRIO -->
+<div id="userBox" style="font-size:12px;background:#f1f5f9;padding:6px 10px;border-radius:8px;">
+👤 <span id="userNome"></span> 
+<span id="userNivel" style="font-weight:bold;"></span>
+</div>
+
 <div class="btn-relatorio" onclick="abrirRelatorio()">📊 Relatório</div>
 <div class="btn-refresh" onclick="carregar()">🔄 Atualizar</div>
 <div class="btn-sair" onclick="sair()">🚪 Sair</div>
@@ -94,6 +104,16 @@ if(!token){
 <div id="toast" class="toast"></div>
 
 <script>
+
+/* 🔐 USUÁRIO NA TELA */
+document.addEventListener("DOMContentLoaded",()=>{
+  const nome = localStorage.getItem("usuario") || "Usuário";
+  const nivel = localStorage.getItem("nivel") || "operador";
+
+  userNome.innerText = nome;
+  userNivel.innerText = nivel==="admin" ? "(ADMIN)" : "(OPERADOR)";
+  userNivel.style.color = nivel==="admin" ? "#16a34a" : "#f59e0b";
+});
 
 function sair(){
 localStorage.removeItem("token");
@@ -164,10 +184,9 @@ ${enviado?'🚚 Enviado':'📦 Embalar'}
 });
 }
 
-/* MENU FUNCIONANDO */
+/* MENU */
 function abrirMenu(e,i){
 e.stopPropagation();
-
 if(menu) menu.remove();
 
 menu=document.createElement("div");
@@ -202,76 +221,21 @@ menu.remove();
 }
 });
 
-/* MODAL COMPLETO */
-function abrirModal(i){
-const p = pedidos[i];
+/* 🔐 PERMISSÃO REAL */
+function nota(i){
 
-// 💳 tipo pagamento
-let pagamentoIcon="💰";
-const metodo=(p["Método pagamento"]||"").toLowerCase();
-if(metodo.includes("pix")) pagamentoIcon="🟢 PIX";
-else if(metodo.includes("cart")) pagamentoIcon="💳 Cartão";
-else if(metodo.includes("din")) pagamentoIcon="💵 Dinheiro";
-
-// 🚚 envio
-let envioIcon="📦";
-const envio=(p["Escolha Envio"]||"").toLowerCase();
-if(envio.includes("sedex")) envioIcon="🚀 Sedex";
-else if(envio.includes("pac")) envioIcon="📦 PAC";
-
-// 📦 status envio
-const statusEnvio = p["Frete"] ? "🚚 Enviado" : "📦 Aguardando envio";
-
-modalContent.innerHTML=`
-
-<h2 style="margin-bottom:10px;">📦 Pedido #${p["ID Pedido"]}</h2>
-
-<div class="modal-grid">
-
-  <div class="box">
-    <h3>👤 Cliente</h3>
-    <p>👤 ${p["Nome"]}</p>
-    <p>📧 ${p["Email"]||"-"}</p>
-    <p>📞 ${p["Telefone"]||"-"}</p>
-    <p>🪪 ${p["CPF/CNPJ"]||"-"}</p>
-  </div>
-
-  <div class="box">
-    <h3>💳 Pagamento</h3>
-    <p>${pagamentoIcon}</p>
-    <p>💰 R$ ${p["Valor"]}</p>
-    <p>📅 ${p["Data"]}</p>
-  </div>
-
-  <div class="box">
-    <h3>📍 Endereço</h3>
-    <p>📍 ${p["Endereço"]}, ${p["Numero"]||""}</p>
-    <p>🏙 ${p["Bairro"]||""}</p>
-    <p>🌎 ${p["Cidade"]||""} - ${p["CEP"]||""}</p>
-  </div>
-
-  <div class="box">
-    <h3>🚚 Envio</h3>
-    <p>${envioIcon}</p>
-    <p>${statusEnvio}</p>
-    <p>📦 Frete: ${p["Frete"]||"Não gerado"}</p>
-    <p>🔎 Rastreio: ${p["Rastreio"]||"-"}</p>
-  </div>
-
-</div>
-
-<div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;">
-  <button onclick="embalar(${i})">📦 Embalar</button>
-  <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
-  <button onclick="nota(${i})">📄 Nota</button>
-  <button onclick="declaracao(${i})">📋 Declaração</button>
-</div>
-
-`;
-
-modal.style.display="flex";
+if(localStorage.getItem("nivel") !== "admin"){
+  toast("Apenas ADMIN pode emitir nota ❌");
+  return;
 }
-/* AÇÕES */
+
+window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
+}
+
+function pdf(i){
+window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
+}
+
 async function embalar(i){
 const id=pedidos[i]["ID Pedido"];
 await fetch(API+"?acao=nuvem&id="+id);
@@ -281,14 +245,6 @@ carregar();
 
 function etiqueta(i){
 window.open(`https://loja.romerart.com.br/admin/orders/${pedidos[i]["ID Pedido"]}`);
-}
-
-function nota(i){
-window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
-}
-
-function pdf(i){
-window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
 }
 
 function declaracao(i){
