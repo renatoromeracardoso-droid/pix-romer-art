@@ -17,7 +17,6 @@ header{
   box-shadow:0 2px 10px rgba(0,0,0,0.05);
 }
 
-.logo{display:flex;align-items:center;gap:10px;}
 .logo img{height:36px;}
 
 .top-right{display:flex;gap:12px;align-items:center;}
@@ -49,13 +48,7 @@ header{
   padding:15px;
 }
 
-.card{
-  padding:20px;
-  border-radius:14px;
-  cursor:pointer;
-  font-weight:bold;
-}
-
+.card{padding:20px;border-radius:14px;font-weight:bold;cursor:pointer;}
 .card:nth-child(1){background:#dbeafe;}
 .card:nth-child(2){background:#fef3c7;}
 .card:nth-child(3){background:#dcfce7;}
@@ -128,6 +121,25 @@ input{
   transition:.3s;
 }
 .toast.show{opacity:1;}
+
+.modal{
+  display:none;
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,0.5);
+  z-index:9999;
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-box{
+  background:white;
+  border-radius:16px;
+  padding:20px;
+  width:90%;
+  max-width:400px;
+}
 </style>
 </head>
 
@@ -158,6 +170,24 @@ input{
 <div id="lista"></div>
 <div id="toast" class="toast"></div>
 
+<!-- MODAL -->
+<div id="modalPedido" class="modal">
+  <div class="modal-box">
+    <div id="conteudoModal"></div>
+
+    <button onclick="fecharModal()" style="
+      margin-top:15px;
+      width:100%;
+      padding:12px;
+      border:none;
+      border-radius:10px;
+      background:#f97316;
+      color:white;
+      font-weight:bold;
+    ">Fechar</button>
+  </div>
+</div>
+
 <script>
 
 const API = "https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
@@ -181,12 +211,6 @@ async function carregar(){
   }
 }
 
-async function atualizarManual(){
-  toast("Atualizando...");
-  await carregar();
-  toast("Atualizado");
-}
-
 function atualizarCards(){
   const pend = pedidos.filter(p => ehPendente(p)).length;
 
@@ -203,38 +227,13 @@ function filtrar(tipo){
   render();
 }
 
-function fecharMenu(){
-  if(menuAtual){
-    menuAtual.remove();
-    menuAtual=null;
-  }
-}
-
-document.addEventListener("click",(e)=>{
-  if(!e.target.closest(".menu-btn") && !e.target.closest(".menu-popup")){
-    fecharMenu();
-  }
-});
-
 function abrirMenu(i,el){
-
-  fecharMenu();
-
-  const p = pedidos[i];
+  if(menuAtual) menuAtual.remove();
 
   let html = `
-    <button onclick="nota(${i});fecharMenu()">👁 Nota</button>
-    <button onclick="pdf(${i});fecharMenu()">📄 PDF</button>
-  `;
-
-  if(p["Status NF"] !== "emitido"){
-    html += `<button onclick="emitir(${i})">📄 Emitir Nota</button>`;
-  }
-
-  html += `
-    <button onclick="embalar(${i})">📦 Marcar como embalada</button>
-    <button onclick="imprimirEtiqueta(${i})">🖨 Imprimir etiqueta</button>
-    <button onclick="declaracao(${i});fecharMenu()">📦 Declaração</button>
+    <button onclick="emitir(${i})">📄 Emitir Nota</button>
+    <button onclick="embalar(${i})">📦 Marcar como embalado</button>
+    <button onclick="imprimirEtiqueta(${i})">🖨 Etiqueta</button>
   `;
 
   const m = document.createElement("div");
@@ -250,109 +249,83 @@ function abrirMenu(i,el){
   menuAtual = m;
 }
 
-function diasSemEnvio(data){
-  if(!data) return 0;
-  const d = new Date(data);
-  if(isNaN(d)) return 0;
-  const hoje = new Date();
-  return Math.floor((hoje-d)/(1000*60*60*24));
-}
-
 function render(){
 
   const busca = document.getElementById("busca").value.toLowerCase();
-
   lista.innerHTML="";
 
   pedidos.forEach((p,i)=>{
 
     if(busca && !(p["Nome"]||"").toLowerCase().includes(busca)) return;
 
-    if(filtroAtual==="pendente" && !ehPendente(p)) return;
-    if(filtroAtual==="emitido" && p["Status NF"]!=="emitido") return;
-    if(filtroAtual==="envio" && !(p["Frete"]||p["Rastreio"])) return;
-
-    const dias = diasSemEnvio(p["Data"]);
-    const alertaTxt = (ehPendente(p) && dias>=2)
-      ? `<div class="alerta">⚠ ${dias} dias sem envio</div>`
-      : "";
-
     const envioStatus = p["Frete"] || p["Rastreio"] ? "Enviado" : "Por embalar";
-    const envioTipo = p["Frete"] || "Não definido";
 
     lista.innerHTML+=`
     <div class="item">
+
       <div class="left">
         <div class="menu-btn" onclick="abrirMenu(${i},this)">⋮</div>
+
         <div>
-          <strong>Pedido ${p["ID Pedido"]||"-"}</strong><br>
-          👤 ${p["Nome"]||"-"}<br>
-          <small>📅 ${p["Data"]||"-"}</small>
-          ${alertaTxt}
+          <strong onclick="abrirPedido(${i})" style="cursor:pointer;color:#2563eb">
+            Pedido ${p["ID Pedido"]}
+          </strong><br>
+
+          👤 ${p["Nome"]}<br>
+          <small>📅 ${p["Data"]}</small>
         </div>
       </div>
 
       <div style="text-align:right">
-        💰 R$ ${p["Valor"]||"0.00"}<br>
+        💰 R$ ${p["Valor"]}<br>
 
-        <span class="badge emitido">💳 Recebido</span><br>
+        <span class="badge emitido">Recebido</span><br>
 
         <span class="badge ${(envioStatus==="Enviado")?"emitido":"pendente"}">
-          📦 ${envioStatus}
-        </span><br>
-
-        <small>🚚 ${envioTipo}</small>
+          ${envioStatus}
+        </span>
       </div>
+
     </div>`;
   });
 }
 
+function abrirPedido(i){
+  const p = pedidos[i];
+
+  document.getElementById("conteudoModal").innerHTML = `
+    <h3>Pedido #${p["ID Pedido"]}</h3>
+    <p><b>Cliente:</b> ${p["Nome"]}</p>
+    <p><b>Valor:</b> R$ ${p["Valor"]}</p>
+    <p><b>Data:</b> ${p["Data"]}</p>
+    <p><b>Status:</b> ${p["Status NF"]}</p>
+
+    <button onclick="emitir(${i})">Emitir Nota</button><br><br>
+    <button onclick="embalar(${i})">Embalar</button><br><br>
+    <button onclick="imprimirEtiqueta(${i})">Etiqueta</button>
+  `;
+
+  document.getElementById("modalPedido").style.display="flex";
+}
+
+function fecharModal(){
+  document.getElementById("modalPedido").style.display="none";
+}
+
 async function emitir(i){
-  fecharMenu();
-  const id = pedidos[i]["ID Pedido"];
-  await fetch(API + "?acao=emitir&id=" + id);
+  await fetch(API + "?acao=emitir&id=" + pedidos[i]["ID Pedido"]);
   toast("Nota emitida");
   carregar();
 }
 
 async function embalar(i){
-  fecharMenu();
-  const id = pedidos[i]["ID Pedido"];
-
-  try{
-    const r = await fetch(API + "?acao=nuvem&id=" + id);
-    const text = await r.text();
-
-    if(text.includes("ok") || text.includes("embalado")){
-      toast("Pedido embalado 🚀");
-    }else{
-      toast("Processado ✔");
-    }
-
-  }catch(e){
-    toast("Erro conexão ❌");
-  }
-
+  await fetch(API + "?acao=nuvem&id=" + pedidos[i]["ID Pedido"]);
+  toast("Embalado 🚀");
   carregar();
 }
 
 function imprimirEtiqueta(i){
-  fecharMenu();
-  const id = pedidos[i]["ID Pedido"];
-  window.open(`https://loja.romerart.com.br/admin/orders/${id}`);
-}
-
-function nota(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}`);
-}
-
-function pdf(i){
-  window.open(`nota.html?id=${pedidos[i]["ID Pedido"]}&pdf=1`);
-}
-
-function declaracao(i){
-  const p = pedidos[i];
-  window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
+  window.open(`https://loja.romerart.com.br/admin/orders/${pedidos[i]["ID Pedido"]}`);
 }
 
 function toast(msg){
@@ -361,8 +334,6 @@ function toast(msg){
   t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),2000);
 }
-
-document.getElementById("busca").addEventListener("input",render);
 
 carregar();
 
