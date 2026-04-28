@@ -52,7 +52,6 @@ padding:20px;
 position:relative;
 }
 
-/* BOTÃO FECHAR */
 .close-btn{
 position:absolute;
 top:10px;
@@ -81,38 +80,78 @@ opacity:0;
 
 <body>
 
-<!-- RESTO DO HTML IGUAL (não mexi) -->
+<script>
+const API="https://script.google.com/macros/s/AKfycbyx7oLhI8Pt7lqFqc6ilEoa5vS10_Zx6g-nOgzM9VbGqyQSgJOcvie-dJJhnfrVG7oZVg/exec";
+
+/* 🔐 LOGIN */
+const token = localStorage.getItem("token");
+
+if(!token){
+  window.location.href="login.html";
+}else{
+  fetch(API + "?acao=validar&token=" + token)
+    .then(r=>r.json())
+    .then(res=>{
+      if(!res.ok){
+        localStorage.removeItem("token");
+        window.location.href="login.html";
+      }else{
+        localStorage.setItem("usuario", res.usuario);
+        localStorage.setItem("nivel", res.nivel);
+      }
+    });
+}
+</script>
+
+<header>
+<div class="logo"><img src="RomerArt.png"></div>
+
+<div class="top-actions">
+<div id="userBox">👤 <span id="userNome"></span> <span id="userNivel"></span></div>
+<div class="btn-relatorio" onclick="abrirRelatorio()">📊 Relatório</div>
+<div class="btn-refresh" onclick="carregar()">🔄 Atualizar</div>
+<div class="btn-sair" onclick="sair()">🚪 Sair</div>
+</div>
+</header>
+
+<div class="cards">
+<div class="card" onclick="filtrar('todos')"><small>Total</small><br><strong id="total">0</strong></div>
+<div class="card" onclick="filtrar('pagos')"><small>Pagos</small><br><strong id="pagos">0</strong></div>
+<div class="card" onclick="filtrar('embalar')"><small>Embalar</small><br><strong id="embalar">0</strong></div>
+<div class="card" onclick="filtrar('enviado')"><small>Enviados</small><br><strong id="enviados">0</strong></div>
+</div>
+
+<div class="filtros">
+<input id="busca" placeholder="Buscar cliente...">
+</div>
+
+<div id="lista"></div>
 
 <div id="modal" class="modal" onclick="fecharModal()">
 <div class="modal-content" onclick="event.stopPropagation()" id="modalContent"></div>
 </div>
 
+<div id="toast" class="toast"></div>
+
 <script>
 
-/* 🔥 FECHAR MODAL */
-function fecharModal(){
-document.getElementById("modal").style.display="none";
-}
+document.addEventListener("DOMContentLoaded",()=>{
+userNome.innerText = localStorage.getItem("usuario")||"Usuário";
+});
 
-/* MODAL COMPLETO */
+/* 🔥 CORREÇÃO DO MODAL */
 function abrirModal(i){
 
 const p = pedidos[i];
 
-// 💳 pagamento
-let pagamentoIcon="💰";
+let pagamento="💰";
 const metodo=(p["Método pagamento"]||"").toLowerCase();
-if(metodo.includes("pix")) pagamentoIcon="🟢 PIX";
-else if(metodo.includes("cart")) pagamentoIcon="💳 Cartão";
-else if(metodo.includes("din")) pagamentoIcon="💵 Dinheiro";
+if(metodo.includes("pix")) pagamento="🟢 PIX";
+if(metodo.includes("cart")) pagamento="💳 Cartão";
 
-// 🚚 envio
-let envioIcon="📦";
-const envio=(p["Escolha Envio"]||"").toLowerCase();
-if(envio.includes("sedex")) envioIcon="🚀 Sedex";
-else if(envio.includes("pac")) envioIcon="📦 PAC";
-
-const statusEnvio = p["Frete"] ? "🚚 Enviado" : "📦 Aguardando envio";
+let envio="📦";
+const tipo=(p["Escolha Envio"]||"").toLowerCase();
+if(tipo.includes("sedex")) envio="🚀 Sedex";
 
 modalContent.innerHTML=`
 
@@ -127,43 +166,59 @@ modalContent.innerHTML=`
 <p>👤 ${p["Nome"]}</p>
 <p>📧 ${p["Email"]||"-"}</p>
 <p>📞 ${p["Telefone"]||"-"}</p>
-<p>🪪 ${p["CPF/CNPJ"]||"-"}</p>
 </div>
 
 <div class="box">
 <h3>💳 Pagamento</h3>
-<p>${pagamentoIcon}</p>
+<p>${pagamento}</p>
 <p>💰 R$ ${p["Valor"]}</p>
 <p>📅 ${p["Data"]}</p>
 </div>
 
 <div class="box">
 <h3>📍 Endereço</h3>
-<p>📍 ${p["Endereço"]}, ${p["Numero"]||""}</p>
-<p>🏙 ${p["Bairro"]||""}</p>
-<p>🌎 ${p["Cidade"]||""} - ${p["CEP"]||""}</p>
+<p>${p["Cidade"]||""}</p>
 </div>
 
 <div class="box">
 <h3>🚚 Envio</h3>
-<p>${envioIcon}</p>
-<p>${statusEnvio}</p>
-<p>📦 Frete: ${p["Frete"]||"Não gerado"}</p>
-<p>🔎 Rastreio: ${p["Rastreio"]||"-"}</p>
+<p>${envio}</p>
+<p>${p["Frete"]||"Não enviado"}</p>
 </div>
 
 </div>
 
-<div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;">
-<button onclick="embalar(${i})">📦 Embalar</button>
-<button onclick="etiqueta(${i})">🖨 Etiqueta</button>
-<button onclick="nota(${i})">📄 Nota</button>
-<button onclick="declaracao(${i})">📋 Declaração</button>
-</div>
 `;
 
-document.getElementById("modal").style.display="flex";
+modal.style.display="flex";
 }
+
+function fecharModal(){
+modal.style.display="none";
+}
+
+/* RESTO DO SEU SISTEMA */
+let pedidos=[];
+
+async function carregar(){
+const r=await fetch(API);
+pedidos=await r.json();
+total.innerText=pedidos.length;
+render();
+}
+
+function render(){
+lista.innerHTML="";
+pedidos.forEach((p,i)=>{
+lista.innerHTML+=`
+<div class="item" onclick="abrirModal(${i})">
+${p["Nome"]}
+</div>`;
+});
+}
+
+carregar();
+
 </script>
 
 </body>
