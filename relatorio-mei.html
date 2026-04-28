@@ -6,46 +6,49 @@
 <title>Relatório MEI Oficial</title>
 
 <style>
-body{
-  font-family:Arial;
-  background:white;
-  padding:20px;
+body{font-family:Arial;background:white;padding:20px;}
+
+.topo{margin-bottom:10px;}
+
+input{padding:6px;}
+
+.painel{
+  background:#f1f5f9;
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:15px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
 }
 
-.topo{
-  margin-bottom:10px;
+.painel strong{font-size:16px;}
+
+.badge{
+  background:#ef4444;
+  color:white;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
 }
 
-input{
-  padding:6px;
+.ok{background:#22c55e;}
+
+.link-btn{
+  background:#3b82f6;
+  color:white;
+  padding:6px 10px;
+  border-radius:6px;
+  text-decoration:none;
 }
 
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:13px;
-}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+td{border:2px solid black;padding:6px;}
 
-td{
-  border:2px solid black;
-  padding:6px;
-}
-
-.titulo{
-  text-align:center;
-  font-weight:bold;
-  background:#e5e5e5;
-}
-
-.secao{
-  background:#efefef;
-  font-weight:bold;
-}
-
-.valor{
-  width:120px;
-  text-align:right;
-}
+.titulo{text-align:center;font-weight:bold;background:#e5e5e5;}
+.secao{background:#efefef;font-weight:bold;}
+.valor{text-align:right;width:120px;}
 
 .btn{
   margin-top:15px;
@@ -59,12 +62,28 @@ td{
 }
 
 @media print{
-  .btn,.topo{display:none;}
+  .btn,.topo,.painel{display:none;}
 }
 </style>
 </head>
 
 <body>
+
+<!-- 🔥 PAINEL DAS -->
+<div class="painel">
+  <div>
+    <strong>📅 DAS vence dia 20</strong><br>
+    <span id="contador"></span>
+  </div>
+
+  <div id="statusDAS" class="badge">Pendente</div>
+
+  <button onclick="marcarPago()">✅ Já paguei</button>
+
+  <a class="link-btn" href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/pgmei.app/Identificacao" target="_blank">
+    🔗 Abrir DAS
+  </a>
+</div>
 
 <div class="topo">
 📅 Período:
@@ -73,96 +92,20 @@ td{
 
 <table>
 
-<tr>
-<td colspan="2" class="titulo">RELATÓRIO MENSAL DAS RECEITAS BRUTAS</td>
-</tr>
+<tr><td colspan="2" class="titulo">RELATÓRIO MENSAL DAS RECEITAS BRUTAS</td></tr>
 
-<tr>
-<td colspan="2">CNPJ: <strong>66.252.416/0001-05</strong></td>
-</tr>
+<tr><td colspan="2">CNPJ: <strong>66.252.416/0001-05</strong></td></tr>
+<tr><td colspan="2">Empreendedor individual: <strong>66.252.416 GISLEINE LOCATELI LEMOS CARDOSO</strong></td></tr>
+<tr><td colspan="2">Período de apuração: <span id="periodo"></span></td></tr>
 
-<tr>
-<td colspan="2">Empreendedor individual: <strong>66.252.416 GISLEINE LOCATELI LEMOS CARDOSO</strong></td>
-</tr>
+<tr class="secao"><td colspan="2">REVENDA DE MERCADORIAS (COMÉRCIO)</td></tr>
+<tr><td>I – Sem nota</td><td class="valor" id="r1">R$ 0</td></tr>
+<tr><td>II – Com nota</td><td class="valor" id="r2">R$ 0</td></tr>
+<tr><td>III – Total</td><td class="valor" id="r3">R$ 0</td></tr>
 
-<tr>
-<td colspan="2">Período de apuração: <span id="periodo"></span></td>
-</tr>
+<tr class="secao"><td>X - Total geral</td><td class="valor" id="total">R$ 0</td></tr>
 
-<tr class="secao">
-<td colspan="2">RECEITA BRUTA MENSAL – REVENDA DE MERCADORIAS (COMÉRCIO)</td>
-</tr>
-
-<tr>
-<td>I – Revenda sem nota fiscal</td>
-<td class="valor" id="r1">R$ 0,00</td>
-</tr>
-
-<tr>
-<td>II – Revenda com nota fiscal emitida</td>
-<td class="valor" id="r2">R$ 0,00</td>
-</tr>
-
-<tr>
-<td>III – Total (I + II)</td>
-<td class="valor" id="r3">R$ 0,00</td>
-</tr>
-
-<tr class="secao">
-<td colspan="2">RECEITA BRUTA MENSAL – VENDA DE PRODUTOS INDUSTRIALIZADOS (INDÚSTRIA)</td>
-</tr>
-
-<tr>
-<td>IV – Sem nota</td>
-<td class="valor">R$ 0,00</td>
-</tr>
-
-<tr>
-<td>V – Com nota</td>
-<td class="valor">R$ 0,00</td>
-</tr>
-
-<tr>
-<td>VI – Total</td>
-<td class="valor">R$ 0,00</td>
-</tr>
-
-<tr class="secao">
-<td colspan="2">RECEITA BRUTA MENSAL – PRESTAÇÃO DE SERVIÇOS</td>
-</tr>
-
-<tr>
-<td>VII – Sem nota</td>
-<td class="valor">R$ 0,00</td>
-</tr>
-
-<tr>
-<td>VIII – Com nota</td>
-<td class="valor">R$ 0,00</td>
-</tr>
-
-<tr>
-<td>IX – Total</td>
-<td class="valor">R$ 0,00</td>
-</tr>
-
-<tr class="secao">
-<td>X - Total geral das receitas brutas no mês (III + VI + IX)</td>
-<td class="valor" id="total">R$ 0,00</td>
-</tr>
-
-<tr>
-<td>LOCAL E DATA:</td>
-<td>ASSINATURA DO EMPRESÁRIO:</td>
-</tr>
-
-<tr>
-<td colspan="2">
-ENCONTRAM-SE ANEXADOS ESTE RELATÓRIO:<br>
-- Documentos fiscais de entrada<br>
-- Notas fiscais emitidas no período
-</td>
-</tr>
+<tr><td>LOCAL E DATA:</td><td>ASSINATURA DO EMPRESÁRIO:</td></tr>
 
 </table>
 
@@ -172,28 +115,61 @@ ENCONTRAM-SE ANEXADOS ESTE RELATÓRIO:<br>
 
 const API="https://script.google.com/macros/s/AKfycbzxPEsJg9iOwMIYey4ZyazDnhcgIHdV8rzE1aeF_y9Q78LHNHhlLyPUjy4nTTbegmC4zA/exec";
 
-// mês atual automático
+/* 📅 CONTADOR DAS */
+function atualizarDAS(){
+
+  const hoje=new Date();
+  const vencimento=new Date(hoje.getFullYear(),hoje.getMonth(),20);
+
+  const diff=Math.ceil((vencimento-hoje)/(1000*60*60*24));
+
+  const pago=localStorage.getItem("dasPago");
+
+  if(pago==="true"){
+    statusDAS.innerText="Pago ✔️";
+    statusDAS.className="badge ok";
+    contador.innerText="";
+    return;
+  }
+
+  if(diff<=0){
+    contador.innerText="⚠ Vencido!";
+  }else{
+    contador.innerText="Faltam "+diff+" dias";
+  }
+
+  if(diff<=5){
+    statusDAS.className="badge";
+  }
+
+}
+
+function marcarPago(){
+  localStorage.setItem("dasPago","true");
+  atualizarDAS();
+}
+
+/* 📊 RELATÓRIO */
 const hoje=new Date();
-document.getElementById("mes").value=hoje.toISOString().slice(0,7);
+mes.value=hoje.toISOString().slice(0,7);
 
 async function carregar(){
 
-  const mesSelecionado=document.getElementById("mes").value;
+  const mesSelecionado=mes.value;
 
   const r=await fetch(API);
   const dados=await r.json();
 
-  let comNF=0;
-  let semNF=0;
+  let comNF=0,semNF=0;
 
   dados.forEach(p=>{
 
     if(!p["Data"]) return;
 
     const data=new Date(p["Data"]);
-    const mesPedido=data.toISOString().slice(0,7);
+    const m=data.toISOString().slice(0,7);
 
-    if(mesPedido!==mesSelecionado) return;
+    if(m!==mesSelecionado) return;
 
     const valor=parseFloat(p["Valor"]||0);
 
@@ -205,19 +181,20 @@ async function carregar(){
 
   });
 
-  document.getElementById("r1").innerText="R$ "+semNF.toFixed(2);
-  document.getElementById("r2").innerText="R$ "+comNF.toFixed(2);
-  document.getElementById("r3").innerText="R$ "+(semNF+comNF).toFixed(2);
-  document.getElementById("total").innerText="R$ "+(semNF+comNF).toFixed(2);
+  r1.innerText="R$ "+semNF.toFixed(2);
+  r2.innerText="R$ "+comNF.toFixed(2);
+  r3.innerText="R$ "+(semNF+comNF).toFixed(2);
+  total.innerText="R$ "+(semNF+comNF).toFixed(2);
 
-  const [ano,mes]=mesSelecionado.split("-");
-  const nomeMes=new Date(ano,mes-1).toLocaleDateString('pt-BR',{month:'long'});
-
-  document.getElementById("periodo").innerText=nomeMes+" / "+ano;
+  const [ano,m]=mesSelecionado.split("-");
+  const nomeMes=new Date(ano,m-1).toLocaleDateString('pt-BR',{month:'long'});
+  periodo.innerText=nomeMes+" / "+ano;
 
 }
 
+/* INIT */
 carregar();
+atualizarDAS();
 
 </script>
 
