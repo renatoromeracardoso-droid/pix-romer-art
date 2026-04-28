@@ -29,6 +29,7 @@ header{
   cursor:pointer;
 }
 
+/* CARDS */
 .cards{
   display:grid;
   grid-template-columns:repeat(4,1fr);
@@ -51,9 +52,11 @@ header{
 .card small{font-size:11px;}
 .card strong{font-size:18px;}
 
+/* BUSCA */
 .filtros{padding:10px;}
 input{width:100%;padding:10px;border-radius:8px;border:none;}
 
+/* LISTA */
 .item{
   background:white;
   margin:8px 10px;
@@ -81,6 +84,7 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
 
 .alerta{color:red;font-size:11px;}
 
+/* MENU */
 .menu-popup{
   position:absolute;
   background:white;
@@ -90,15 +94,7 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   z-index:999;
 }
 
-.menu-popup button{
-  display:block;
-  width:100%;
-  border:none;
-  background:none;
-  padding:8px;
-  text-align:left;
-}
-
+/* MODAL */
 .modal{
   position:fixed;
   top:0;left:0;
@@ -112,13 +108,37 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
 
 .modal-content{
   background:white;
-  width:90%;
+  width:95%;
   max-height:90%;
   overflow:auto;
   border-radius:12px;
   padding:20px;
 }
 
+/* GRID MODAL */
+.modal-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.box{
+  background:#f1f5f9;
+  padding:12px;
+  border-radius:10px;
+}
+
+.box h3{
+  margin:0 0 8px;
+  font-size:14px;
+}
+
+.box p{
+  margin:2px 0;
+  font-size:13px;
+}
+
+/* TOAST */
 .toast{
   position:fixed;
   bottom:20px;
@@ -131,6 +151,13 @@ input{width:100%;padding:10px;border-radius:8px;border:none;}
   opacity:0;
 }
 .toast.show{opacity:1;}
+
+button{
+  padding:8px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
 </style>
 </head>
 
@@ -189,22 +216,12 @@ function render(){
   lista.innerHTML="";
   const b=busca.value.toLowerCase();
 
-  const cpfCount={};
-  pedidos.forEach(p=>cpfCount[p["CPF/CNPJ"]]=(cpfCount[p["CPF/CNPJ"]]||0)+1);
-
   pedidos.forEach((p,i)=>{
 
     if(b && !(p["Nome"]||"").toLowerCase().includes(b)) return;
 
     if(filtro==="embalar" && p["Frete"]) return;
     if(filtro==="enviado" && !p["Frete"]) return;
-
-    const vip = cpfCount[p["CPF/CNPJ"]]>=5 ? "⭐" : "";
-
-    const metodo=(p["Método pagamento"]||"").toLowerCase();
-    let pay="💰";
-    if(metodo.includes("pix")) pay="🟢 PIX";
-    else if(metodo.includes("cart")) pay="💳";
 
     const enviado=p["Frete"];
 
@@ -214,8 +231,7 @@ function render(){
         <div class="menu-btn" onclick="abrirMenu(event,${i})">⋮</div>
         <div onclick="abrirModal(${i})">
           <strong>#${p["ID Pedido"]}</strong><br>
-          ${p["Nome"]} ${vip}<br>
-          <small>${pay}</small>
+          ${p["Nome"]}
         </div>
       </div>
 
@@ -230,9 +246,9 @@ function render(){
   });
 }
 
+/* MENU */
 function abrirMenu(e,i){
   e.stopPropagation();
-
   if(menu) menu.remove();
 
   menu=document.createElement("div");
@@ -247,24 +263,71 @@ function abrirMenu(e,i){
   `;
 
   document.body.appendChild(menu);
-
   menu.style.top=e.pageY+"px";
   menu.style.left=e.pageX+"px";
 }
 
 document.addEventListener("click",()=>{if(menu)menu.remove();});
 
+/* MODAL COMPLETO */
 function abrirModal(i){
-  const p=pedidos[i];
+  const p = pedidos[i];
 
-  modalContent.innerHTML=`
-    <h2>Pedido #${p["ID Pedido"]}</h2>
-    <p><b>Cliente:</b> ${p["Nome"]}</p>
-    <p><b>Valor:</b> R$ ${p["Valor"]}</p>
-    <p><b>Pagamento:</b> ${p["Método pagamento"]}</p>
-    <p><b>Endereço:</b> ${p["Endereço"]}</p>
-    <p><b>CEP:</b> ${p["CEP"]}</p>
-    <p><b>Cidade:</b> ${p["Cidade"]}</p>
+  modalContent.innerHTML = `
+  <h2>#${p["ID Pedido"]}</h2>
+
+  <div class="modal-grid">
+
+    <div class="box">
+      <h3>👤 Cliente</h3>
+      <p>${p["Nome"]}</p>
+      <p>${p["Email"] || "-"}</p>
+      <p>${p["Telefone"] || "-"}</p>
+      <p>${p["CPF/CNPJ"] || "-"}</p>
+    </div>
+
+    <div class="box">
+      <h3>📦 Pedido</h3>
+      <p>${p["Serviço"]}</p>
+      <p>R$ ${p["Valor"]}</p>
+      <p>${p["Método pagamento"]}</p>
+      <p>${p["Data"]}</p>
+    </div>
+
+    <div class="box">
+      <h3>📍 Endereço</h3>
+      <p>${p["Endereço"]}, ${p["Numero"]}</p>
+      <p>${p["Bairro"]}</p>
+      <p>${p["Cidade"]} - ${p["CEP"]}</p>
+    </div>
+
+    <div class="box">
+      <h3>🚚 Envio</h3>
+      <p>${p["Escolha Envio"]}</p>
+      <p>${p["Frete"] || "Não gerado"}</p>
+      <p>${p["Rastreio"] || "-"}</p>
+    </div>
+
+    <div class="box">
+      <h3>📏 Medidas</h3>
+      <p>Peso: ${p["Peso"]}</p>
+      <p>${p["Largura"]} x ${p["Altura"]} x ${p["Comprimento"]}</p>
+    </div>
+
+    <div class="box">
+      <h3>🧾 Fiscal</h3>
+      <p>${p["Codigo Barra"] || "-"}</p>
+      <p>${p["Número chave"] || "-"}</p>
+    </div>
+
+  </div>
+
+  <div style="margin-top:20px;display:flex;gap:10px;">
+    <button onclick="embalar(${i})">📦 Embalar</button>
+    <button onclick="etiqueta(${i})">🖨 Etiqueta</button>
+    <button onclick="nota(${i})">📄 Nota</button>
+    <button onclick="declaracao(${i})">📦 Declaração</button>
+  </div>
   `;
 
   modal.style.display="flex";
@@ -272,6 +335,7 @@ function abrirModal(i){
 
 function fecharModal(){modal.style.display="none";}
 
+/* AÇÕES */
 async function embalar(i){
   const id=pedidos[i]["ID Pedido"];
   await fetch(API+"?acao=nuvem&id="+id);
@@ -296,10 +360,12 @@ function declaracao(i){
   window.open(`declaracao.html?nome=${p["Nome"]}&valor=${p["Valor"]}`);
 }
 
+/* TOAST */
 function toast(msg){
-  toast.innerText=msg;
-  toast.classList.add("show");
-  setTimeout(()=>toast.classList.remove("show"),2000);
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
 }
 
 busca.addEventListener("input",render);
