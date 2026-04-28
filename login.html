@@ -22,9 +22,18 @@ body{
   border-radius:12px;
   width:300px;
   box-shadow:0 10px 30px rgba(0,0,0,0.1);
+  text-align:center;
 }
 
-h2{text-align:center;margin-bottom:20px;}
+/* 🔥 LOGO */
+.logo img{
+  height:60px;
+  margin-bottom:10px;
+}
+
+h2{
+  margin-bottom:20px;
+}
 
 input{
   width:100%;
@@ -45,6 +54,10 @@ button{
   cursor:pointer;
 }
 
+button:hover{
+  opacity:0.9;
+}
+
 .erro{
   color:red;
   font-size:12px;
@@ -57,6 +70,12 @@ button{
 <body>
 
 <div class="box">
+
+  <!-- 🔥 LOGO -->
+  <div class="logo">
+    <img src="RomerArt.png">
+  </div>
+
   <h2>🔐 Login</h2>
 
   <input id="user" placeholder="Usuário">
@@ -82,19 +101,26 @@ async function logar(){
     return;
   }
 
-  const r = await fetch(`${API}?acao=login&user=${user}&pass=${pass}`);
-  const res = await r.json();
+  try{
 
-  if(res.ok){
+    const r = await fetch(`${API}?acao=login&user=${user}&pass=${pass}`);
+    const res = await r.json();
 
-    // 🔥 salva token (agora é profissional)
-    localStorage.setItem("token", res.token);
-    localStorage.setItem("usuario", res.usuario);
+    if(res.ok){
 
-    window.location.href = "index.html";
+      // 🔥 salva tudo (token + usuario + nivel)
+      localStorage.setItem("token", res.token);
+      localStorage.setItem("usuario", res.usuario);
+      localStorage.setItem("nivel", res.nivel);
 
-  }else{
-    erro.innerText = "Usuário ou senha inválidos";
+      window.location.href = "index.html";
+
+    }else{
+      erro.innerText = "Usuário ou senha inválidos";
+    }
+
+  }catch(e){
+    erro.innerText = "Erro de conexão";
   }
 }
 
@@ -106,11 +132,18 @@ if(token){
     .then(r=>r.json())
     .then(res=>{
       if(res.ok){
+
+        // 🔥 mantém dados atualizados
+        localStorage.setItem("usuario", res.usuario);
+        localStorage.setItem("nivel", res.nivel);
+
         window.location.href="index.html";
+
       }else{
         localStorage.removeItem("token");
       }
-    });
+    })
+    .catch(()=>{});
 }
 
 </script>
