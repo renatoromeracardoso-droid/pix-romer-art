@@ -1,53 +1,107 @@
-<!DOCTYPE html><html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calculadora de Taxas</title>
+<title>Comparador de Bancos</title>
+
 <style>
-    body { font-family: Arial; background:#0f172a; color:#fff; padding:20px }
-    .card { background:#1e293b; padding:20px; border-radius:12px; max-width:500px; margin:auto }
-    input { width:100%; padding:10px; margin:8px 0; border-radius:8px; border:none }
-    button { width:100%; padding:12px; border:none; border-radius:10px; background:#22c55e; color:#000; font-weight:bold }
-    .result { margin-top:15px; background:#020617; padding:10px; border-radius:8px }
+body { font-family: Arial; background:#0f172a; color:#fff; padding:20px }
+.card { background:#1e293b; padding:20px; border-radius:12px; margin-bottom:20px }
+input { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none }
+h2 { margin-bottom:5px }
+button { width:100%; padding:12px; border:none; border-radius:10px; background:#22c55e; color:#000; font-weight:bold }
+.result { background:#020617; padding:15px; border-radius:10px; margin-top:20px }
 </style>
+
 </head>
-<body><div class="card">
-<h2>Calculadora de Taxas</h2><label>Valor do Produto (R$)</label> <input type="number" id="valor" placeholder="Ex: 100">
+<body>
 
-<h3>Taxas (%)</h3><label>PIX (%)</label> <input type="number" id="pix" placeholder="Ex: 0.5">
+<div class="card">
+<h2>Valor do Produto</h2>
+<input type="number" id="valor" placeholder="Ex: 100">
+</div>
 
-<label>Cartão Crédito (%)</label> <input type="number" id="credito" placeholder="Ex: 3.5">
+<!-- MERCADO PAGO -->
+<div class="card">
+<h2>Mercado Pago</h2>
+<input type="number" id="mp_pix" placeholder="PIX %">
+<input type="number" id="mp_credito" placeholder="Crédito %">
+<input type="number" id="mp_boleto" placeholder="Boleto %">
+<input type="number" id="mp_fixa" placeholder="Taxa fixa (R$)">
+</div>
 
-<label>Boleto (%)</label> <input type="number" id="boleto" placeholder="Ex: 2.0">
+<!-- NUVEM PAGO -->
+<div class="card">
+<h2>Nuvem Pago</h2>
+<input type="number" id="np_pix" placeholder="PIX %">
+<input type="number" id="np_credito" placeholder="Crédito %">
+<input type="number" id="np_boleto" placeholder="Boleto %">
+<input type="number" id="np_fixa" placeholder="Taxa fixa (R$)">
+</div>
 
-<button onclick="calcular()">Calcular</button>
+<!-- BANCO Y -->
+<div class="card">
+<h2>Banco Y</h2>
+<input type="number" id="by_pix" placeholder="PIX %">
+<input type="number" id="by_credito" placeholder="Crédito %">
+<input type="number" id="by_boleto" placeholder="Boleto %">
+<input type="number" id="by_fixa" placeholder="Taxa fixa (R$)">
+</div>
+
+<button onclick="calcular()">Comparar</button>
 
 <div class="result" id="resultado"></div>
-</div><script>
+
+<script>
+function calcularLiquido(valor, taxa, fixa){
+    return valor - (valor * taxa/100) - fixa;
+}
+
 function calcular(){
     let valor = parseFloat(document.getElementById('valor').value) || 0;
-    let pix = parseFloat(document.getElementById('pix').value) || 0;
-    let credito = parseFloat(document.getElementById('credito').value) || 0;
-    let boleto = parseFloat(document.getElementById('boleto').value) || 0;
 
-    let liquidoPix = valor - (valor * pix/100);
-    let liquidoCredito = valor - (valor * credito/100);
-    let liquidoBoleto = valor - (valor * boleto/100);
+    let bancos = [
+        {
+            nome: "Mercado Pago",
+            pix: calcularLiquido(valor, mp_pix.value, mp_fixa.value),
+            credito: calcularLiquido(valor, mp_credito.value, mp_fixa.value),
+            boleto: calcularLiquido(valor, mp_boleto.value, mp_fixa.value)
+        },
+        {
+            nome: "Nuvem Pago",
+            pix: calcularLiquido(valor, np_pix.value, np_fixa.value),
+            credito: calcularLiquido(valor, np_credito.value, np_fixa.value),
+            boleto: calcularLiquido(valor, np_boleto.value, np_fixa.value)
+        },
+        {
+            nome: "Banco Y",
+            pix: calcularLiquido(valor, by_pix.value, by_fixa.value),
+            credito: calcularLiquido(valor, by_credito.value, by_fixa.value),
+            boleto: calcularLiquido(valor, by_boleto.value, by_fixa.value)
+        }
+    ];
 
-    let melhor = Math.max(liquidoPix, liquidoCredito, liquidoBoleto);
+    let melhor = { banco: "", metodo: "", valor: 0 };
 
-    let melhorMetodo = "";
+    let html = "";
 
-    if(melhor === liquidoPix) melhorMetodo = "PIX";
-    if(melhor === liquidoCredito) melhorMetodo = "Cartão";
-    if(melhor === liquidoBoleto) melhorMetodo = "Boleto";
+    bancos.forEach(b => {
+        html += `<strong>${b.nome}</strong><br>`;
+        html += `PIX: R$ ${b.pix.toFixed(2)}<br>`;
+        html += `Crédito: R$ ${b.credito.toFixed(2)}<br>`;
+        html += `Boleto: R$ ${b.boleto.toFixed(2)}<br><br>`;
 
-    document.getElementById('resultado').innerHTML = `
-        PIX: R$ ${liquidoPix.toFixed(2)}<br>
-        Cartão: R$ ${liquidoCredito.toFixed(2)}<br>
-        Boleto: R$ ${liquidoBoleto.toFixed(2)}<br><br>
-        <strong>Melhor opção: ${melhorMetodo}</strong>
-    `;
+        if(b.pix > melhor.valor){ melhor = { banco: b.nome, metodo: "PIX", valor: b.pix }; }
+        if(b.credito > melhor.valor){ melhor = { banco: b.nome, metodo: "Crédito", valor: b.credito }; }
+        if(b.boleto > melhor.valor){ melhor = { banco: b.nome, metodo: "Boleto", valor: b.boleto }; }
+    });
+
+    html += `<hr><strong>🏆 Melhor opção: ${melhor.banco} (${melhor.metodo}) → R$ ${melhor.valor.toFixed(2)}</strong>`;
+
+    document.getElementById('resultado').innerHTML = html;
 }
-</script></body>
+</script>
+
+</body>
 </html>
