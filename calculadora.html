@@ -1,8 +1,10 @@
-<!DOCTYPE html><html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Comparador de Bancos</title>
+
 <style>
 body { font-family: Arial; background:#0f172a; color:#fff; padding:20px }
 .card { background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px }
@@ -10,19 +12,27 @@ table { width:100%; border-collapse: collapse; margin-top:10px }
 th, td { padding:8px; border-bottom:1px solid #334155; text-align:left }
 th { background:#020617 }
 .best { color:#22c55e; font-weight:bold }
+.highlight { background:#064e3b }
+.rank-item { padding:8px; border-bottom:1px solid #334155 }
 input { width:100%; padding:10px; border-radius:8px; border:none; margin-bottom:10px }
 button { width:100%; padding:12px; border:none; border-radius:10px; background:#22c55e; color:#000; font-weight:bold }
-.highlight { background:#064e3b }
 </style>
+
 </head>
-<body><div class="card">
+<body>
+
+<div class="card">
 <h2>Valor do Produto</h2>
 <input type="number" id="valor" placeholder="Ex: 100">
-</div><button onclick="calcular()">Calcular Melhor Opção</button>
+</div>
 
-<div id="tabelas"></div><script>
+<button onclick="calcular()">Calcular Melhor Opção</button>
 
-// 🔵 NUVEM PAGO (ATUALIZADO)
+<div id="tabelas"></div>
+
+<script>
+
+// 🔵 NUVEM PAGO
 const nuvemPago = {
  nome: "Nuvem Pago",
  pix: 0.99,
@@ -34,16 +44,16 @@ const nuvemPago = {
  boleto: 2.39
 };
 
-// 🟡 MERCADO PAGO (COM +2% DA NUVEM)
+// 🟡 MERCADO PAGO (+2%)
 const mercadoPago = {
  nome: "Mercado Pago",
- pix: 0.99 + 2, // 2% adicional
+ pix: 0.99 + 2,
  credito: [
    {prazo:"Na hora", taxa:4.98 + 2, fixa:0},
    {prazo:"14 dias", taxa:4.49 + 2, fixa:0},
    {prazo:"30 dias", taxa:3.98 + 2, fixa:0}
  ],
- boleto: 3.49 + 0 // fixo permanece
+ boleto: 3.49
 };
 
 const bancos = [nuvemPago, mercadoPago];
@@ -53,59 +63,114 @@ function calcCred(v, t, f){ return v - (v*t/100) - f; }
 function calcBol(v, f){ return v - f; }
 
 function calcular(){
+
  let valor = parseFloat(document.getElementById('valor').value) || 0;
  let melhorGlobal = {valor:0, texto:"", id:""};
+ let ranking = [];
  let html = "";
 
  bancos.forEach((b, i) => {
+
    let melhorBanco = {valor:0, texto:""};
 
    html += `<div class='card'><h2>${b.nome}</h2>`;
-   html += `<table><tr><th>Tipo</th><th>Condição</th><th>Líquido</th></tr>`;
+   html += `<table><tr><th>Tipo</th><th>Condição</th><th>Líquido</th><th>Taxa</th></tr>`;
 
    // PIX
    let pix = calcPix(valor, b.pix);
    let idPix = `${i}-pix`;
-   html += `<tr id='${idPix}'><td>PIX</td><td>Na hora</td><td>R$ ${pix.toFixed(2)}</td></tr>`;
+   let taxaPix = valor - pix;
 
-   if(pix > melhorBanco.valor){ melhorBanco = {valor:pix, texto:`PIX (Na hora)`}; }
-   if(pix > melhorGlobal.valor){ melhorGlobal = {valor:pix, texto:`${b.nome} - PIX`, id:idPix}; }
+   html += `<tr id='${idPix}'>
+     <td>PIX</td>
+     <td>Na hora (${b.pix.toFixed(2)}%)</td>
+     <td>R$ ${pix.toFixed(2)}</td>
+     <td>R$ ${taxaPix.toFixed(2)}</td>
+   </tr>`;
 
-   // Crédito
+   ranking.push({nome:`${b.nome} - PIX`, valor:pix});
+
+   if(pix > melhorBanco.valor) melhorBanco = {valor:pix, texto:`PIX (Na hora)`};
+   if(pix > melhorGlobal.valor) melhorGlobal = {valor:pix, texto:`${b.nome} - PIX`, id:idPix};
+
+   // CRÉDITO
    b.credito.forEach((c, j) => {
+
      let v = calcCred(valor, c.taxa, c.fixa);
      let id = `${i}-cred-${j}`;
+     let taxa = valor - v;
 
-     html += `<tr id='${id}'><td>Crédito</td><td>${c.prazo}</td><td>R$ ${v.toFixed(2)}</td></tr>`;
+     html += `<tr id='${id}'>
+       <td>Crédito</td>
+       <td>${c.prazo} (${c.taxa.toFixed(2)}% ${c.fixa ? '+ R$'+c.fixa.toFixed(2) : ''})</td>
+       <td>R$ ${v.toFixed(2)}</td>
+       <td>R$ ${taxa.toFixed(2)}</td>
+     </tr>`;
 
-     if(v > melhorBanco.valor){ melhorBanco = {valor:v, texto:`Crédito (${c.prazo})`}; }
-     if(v > melhorGlobal.valor){ melhorGlobal = {valor:v, texto:`${b.nome} - Crédito (${c.prazo})`, id:id}; }
+     ranking.push({nome:`${b.nome} - Crédito (${c.prazo})`, valor:v});
+
+     if(v > melhorBanco.valor) melhorBanco = {valor:v, texto:`Crédito (${c.prazo})`};
+     if(v > melhorGlobal.valor) melhorGlobal = {valor:v, texto:`${b.nome} - Crédito (${c.prazo})`, id:id};
+
    });
 
-   // Boleto
+   // BOLETO
    let bol = calcBol(valor, b.boleto);
    let idBol = `${i}-bol`;
+   let taxaBol = valor - bol;
 
-   html += `<tr id='${idBol}'><td>Boleto</td><td>Padrão</td><td>R$ ${bol.toFixed(2)}</td></tr>`;
+   html += `<tr id='${idBol}'>
+     <td>Boleto</td>
+     <td>Padrão (R$ ${b.boleto.toFixed(2)})</td>
+     <td>R$ ${bol.toFixed(2)}</td>
+     <td>R$ ${taxaBol.toFixed(2)}</td>
+   </tr>`;
 
-   if(bol > melhorBanco.valor){ melhorBanco = {valor:bol, texto:`Boleto`}; }
-   if(bol > melhorGlobal.valor){ melhorGlobal = {valor:bol, texto:`${b.nome} - Boleto`, id:idBol}; }
+   ranking.push({nome:`${b.nome} - Boleto`, valor:bol});
+
+   if(bol > melhorBanco.valor) melhorBanco = {valor:bol, texto:`Boleto`};
+   if(bol > melhorGlobal.valor) melhorGlobal = {valor:bol, texto:`${b.nome} - Boleto`, id:idBol};
 
    html += `</table>`;
    html += `<p class='best'>🏆 Melhor neste banco: ${melhorBanco.texto} → R$ ${melhorBanco.valor.toFixed(2)}</p>`;
    html += `</div>`;
  });
 
- html += `<div class='card'><h2 class='best'>🏆 Melhor Geral</h2>
- <p>${melhorGlobal.texto} → R$ ${melhorGlobal.valor.toFixed(2)}</p></div>`;
+ // 🔥 RANKING COMPLETO
+ ranking.sort((a,b) => b.valor - a.valor);
+
+ html += `<div class='card'><h2>📊 Ranking Completo</h2>`;
+
+ ranking.forEach((r, i) => {
+   let perda = valor - r.valor;
+
+   html += `<div class='rank-item'>
+     <strong>${i+1}º ${r.nome}</strong><br>
+     💰 Recebe: R$ ${r.valor.toFixed(2)}<br>
+     📉 Perde em taxa: R$ ${perda.toFixed(2)}
+   </div>`;
+ });
+
+ html += `</div>`;
+
+ // 🏆 MELHOR GERAL
+ html += `<div class='card'>
+   <h2 class='best'>🏆 Melhor Geral</h2>
+   <p><strong>${ranking[0].nome}</strong></p>
+   <p>💰 Você recebe: R$ ${ranking[0].valor.toFixed(2)}</p>
+   <p>📉 Taxa total: R$ ${(valor - ranking[0].valor).toFixed(2)}</p>
+ </div>`;
 
  document.getElementById('tabelas').innerHTML = html;
 
- // destacar melhor linha
+ // destaque visual
  if(melhorGlobal.id){
    document.getElementById(melhorGlobal.id).classList.add('highlight');
  }
+
 }
 
-</script></body>
+</script>
+
+</body>
 </html>
