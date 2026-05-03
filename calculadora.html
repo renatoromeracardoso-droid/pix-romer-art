@@ -12,6 +12,7 @@ th { background:#020617 }
 .best { color:#22c55e; font-weight:bold }
 input { width:100%; padding:10px; border-radius:8px; border:none; margin-bottom:10px }
 button { width:100%; padding:12px; border:none; border-radius:10px; background:#22c55e; color:#000; font-weight:bold }
+.highlight { background:#064e3b }
 </style>
 </head>
 <body><div class="card">
@@ -21,27 +22,31 @@ button { width:100%; padding:12px; border:none; border-radius:10px; background:#
 
 <div id="tabelas"></div><script>
 
-const bancos = [
-{
+// 🔵 NUVEM PAGO (ATUALIZADO)
+const nuvemPago = {
  nome: "Nuvem Pago",
  pix: 0.99,
  credito: [
+   {prazo:"2 dias", taxa:5.19, fixa:0.35},
    {prazo:"14 dias", taxa:4.69, fixa:0.35},
    {prazo:"30 dias", taxa:4.19, fixa:0.35}
  ],
  boleto: 2.39
-},
-{
+};
+
+// 🟡 MERCADO PAGO (COM +2% DA NUVEM)
+const mercadoPago = {
  nome: "Mercado Pago",
- pix: 0.99,
+ pix: 0.99 + 2, // 2% adicional
  credito: [
-   {prazo:"Na hora", taxa:4.98, fixa:0},
-   {prazo:"14 dias", taxa:4.49, fixa:0},
-   {prazo:"30 dias", taxa:3.98, fixa:0}
+   {prazo:"Na hora", taxa:4.98 + 2, fixa:0},
+   {prazo:"14 dias", taxa:4.49 + 2, fixa:0},
+   {prazo:"30 dias", taxa:3.98 + 2, fixa:0}
  ],
- boleto: 3.49
-}
-];
+ boleto: 3.49 + 0 // fixo permanece
+};
+
+const bancos = [nuvemPago, mercadoPago];
 
 function calcPix(v, t){ return v - (v*t/100); }
 function calcCred(v, t, f){ return v - (v*t/100) - f; }
@@ -49,10 +54,10 @@ function calcBol(v, f){ return v - f; }
 
 function calcular(){
  let valor = parseFloat(document.getElementById('valor').value) || 0;
- let melhorGlobal = {valor:0, texto:""};
+ let melhorGlobal = {valor:0, texto:"", id:""};
  let html = "";
 
- bancos.forEach(b => {
+ bancos.forEach((b, i) => {
    let melhorBanco = {valor:0, texto:""};
 
    html += `<div class='card'><h2>${b.nome}</h2>`;
@@ -60,24 +65,31 @@ function calcular(){
 
    // PIX
    let pix = calcPix(valor, b.pix);
-   html += `<tr><td>PIX</td><td>Na hora</td><td>R$ ${pix.toFixed(2)}</td></tr>`;
+   let idPix = `${i}-pix`;
+   html += `<tr id='${idPix}'><td>PIX</td><td>Na hora</td><td>R$ ${pix.toFixed(2)}</td></tr>`;
+
    if(pix > melhorBanco.valor){ melhorBanco = {valor:pix, texto:`PIX (Na hora)`}; }
-   if(pix > melhorGlobal.valor){ melhorGlobal = {valor:pix, texto:`${b.nome} - PIX`}; }
+   if(pix > melhorGlobal.valor){ melhorGlobal = {valor:pix, texto:`${b.nome} - PIX`, id:idPix}; }
 
    // Crédito
-   b.credito.forEach(c => {
+   b.credito.forEach((c, j) => {
      let v = calcCred(valor, c.taxa, c.fixa);
-     html += `<tr><td>Crédito</td><td>${c.prazo}</td><td>R$ ${v.toFixed(2)}</td></tr>`;
+     let id = `${i}-cred-${j}`;
+
+     html += `<tr id='${id}'><td>Crédito</td><td>${c.prazo}</td><td>R$ ${v.toFixed(2)}</td></tr>`;
 
      if(v > melhorBanco.valor){ melhorBanco = {valor:v, texto:`Crédito (${c.prazo})`}; }
-     if(v > melhorGlobal.valor){ melhorGlobal = {valor:v, texto:`${b.nome} - Crédito (${c.prazo})`}; }
+     if(v > melhorGlobal.valor){ melhorGlobal = {valor:v, texto:`${b.nome} - Crédito (${c.prazo})`, id:id}; }
    });
 
    // Boleto
    let bol = calcBol(valor, b.boleto);
-   html += `<tr><td>Boleto</td><td>Padrão</td><td>R$ ${bol.toFixed(2)}</td></tr>`;
+   let idBol = `${i}-bol`;
+
+   html += `<tr id='${idBol}'><td>Boleto</td><td>Padrão</td><td>R$ ${bol.toFixed(2)}</td></tr>`;
+
    if(bol > melhorBanco.valor){ melhorBanco = {valor:bol, texto:`Boleto`}; }
-   if(bol > melhorGlobal.valor){ melhorGlobal = {valor:bol, texto:`${b.nome} - Boleto`}; }
+   if(bol > melhorGlobal.valor){ melhorGlobal = {valor:bol, texto:`${b.nome} - Boleto`, id:idBol}; }
 
    html += `</table>`;
    html += `<p class='best'>🏆 Melhor neste banco: ${melhorBanco.texto} → R$ ${melhorBanco.valor.toFixed(2)}</p>`;
@@ -88,6 +100,11 @@ function calcular(){
  <p>${melhorGlobal.texto} → R$ ${melhorGlobal.valor.toFixed(2)}</p></div>`;
 
  document.getElementById('tabelas').innerHTML = html;
+
+ // destacar melhor linha
+ if(melhorGlobal.id){
+   document.getElementById(melhorGlobal.id).classList.add('highlight');
+ }
 }
 
 </script></body>
