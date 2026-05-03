@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Taxas</title>
+<style>
+    body { font-family: Arial; background:#0f172a; color:#fff; padding:20px }
+    .card { background:#1e293b; padding:20px; border-radius:12px; max-width:500px; margin:auto }
+    input { width:100%; padding:10px; margin:8px 0; border-radius:8px; border:none }
+    button { width:100%; padding:12px; border:none; border-radius:10px; background:#22c55e; color:#000; font-weight:bold }
+    .result { margin-top:15px; background:#020617; padding:10px; border-radius:8px }
+</style>
+</head>
+<body><div class="card">
+<h2>Calculadora de Taxas</h2><label>Valor do Produto (R$)</label> <input type="number" id="valor" placeholder="Ex: 100">
+
+<h3>Taxas (%)</h3><label>PIX (%)</label> <input type="number" id="pix" placeholder="Ex: 0.5">
+
+<label>Cartão Crédito (%)</label> <input type="number" id="credito" placeholder="Ex: 3.5">
+
+<label>Boleto (%)</label> <input type="number" id="boleto" placeholder="Ex: 2.0">
+
+<button onclick="calcular()">Calcular</button>
+
+<div class="result" id="resultado"></div>
+</div><script>
+function calcular(){
+    let valor = parseFloat(document.getElementById('valor').value) || 0;
+    let pix = parseFloat(document.getElementById('pix').value) || 0;
+    let credito = parseFloat(document.getElementById('credito').value) || 0;
+    let boleto = parseFloat(document.getElementById('boleto').value) || 0;
+
+    let liquidoPix = valor - (valor * pix/100);
+    let liquidoCredito = valor - (valor * credito/100);
+    let liquidoBoleto = valor - (valor * boleto/100);
+
+    let melhor = Math.max(liquidoPix, liquidoCredito, liquidoBoleto);
+
+    let melhorMetodo = "";
+
+    if(melhor === liquidoPix) melhorMetodo = "PIX";
+    if(melhor === liquidoCredito) melhorMetodo = "Cartão";
+    if(melhor === liquidoBoleto) melhorMetodo = "Boleto";
+
+    document.getElementById('resultado').innerHTML = `
+        PIX: R$ ${liquidoPix.toFixed(2)}<br>
+        Cartão: R$ ${liquidoCredito.toFixed(2)}<br>
+        Boleto: R$ ${liquidoBoleto.toFixed(2)}<br><br>
+        <strong>Melhor opção: ${melhorMetodo}</strong>
+    `;
+}
+</script></body>
+</html>
