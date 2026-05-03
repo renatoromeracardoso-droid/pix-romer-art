@@ -1,107 +1,94 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+<!DOCTYPE html><html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Comparador de Bancos</title>
-
 <style>
 body { font-family: Arial; background:#0f172a; color:#fff; padding:20px }
-.card { background:#1e293b; padding:20px; border-radius:12px; margin-bottom:20px }
-input { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:none }
-h2 { margin-bottom:5px }
+.card { background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px }
+table { width:100%; border-collapse: collapse; margin-top:10px }
+th, td { padding:8px; border-bottom:1px solid #334155; text-align:left }
+th { background:#020617 }
+.best { color:#22c55e; font-weight:bold }
+input { width:100%; padding:10px; border-radius:8px; border:none; margin-bottom:10px }
 button { width:100%; padding:12px; border:none; border-radius:10px; background:#22c55e; color:#000; font-weight:bold }
-.result { background:#020617; padding:15px; border-radius:10px; margin-top:20px }
 </style>
-
 </head>
-<body>
-
-<div class="card">
+<body><div class="card">
 <h2>Valor do Produto</h2>
 <input type="number" id="valor" placeholder="Ex: 100">
-</div>
+</div><button onclick="calcular()">Calcular Melhor Opção</button>
 
-<!-- MERCADO PAGO -->
-<div class="card">
-<h2>Mercado Pago</h2>
-<input type="number" id="mp_pix" placeholder="PIX %">
-<input type="number" id="mp_credito" placeholder="Crédito %">
-<input type="number" id="mp_boleto" placeholder="Boleto %">
-<input type="number" id="mp_fixa" placeholder="Taxa fixa (R$)">
-</div>
+<div id="tabelas"></div><script>
 
-<!-- NUVEM PAGO -->
-<div class="card">
-<h2>Nuvem Pago</h2>
-<input type="number" id="np_pix" placeholder="PIX %">
-<input type="number" id="np_credito" placeholder="Crédito %">
-<input type="number" id="np_boleto" placeholder="Boleto %">
-<input type="number" id="np_fixa" placeholder="Taxa fixa (R$)">
-</div>
-
-<!-- BANCO Y -->
-<div class="card">
-<h2>Banco Y</h2>
-<input type="number" id="by_pix" placeholder="PIX %">
-<input type="number" id="by_credito" placeholder="Crédito %">
-<input type="number" id="by_boleto" placeholder="Boleto %">
-<input type="number" id="by_fixa" placeholder="Taxa fixa (R$)">
-</div>
-
-<button onclick="calcular()">Comparar</button>
-
-<div class="result" id="resultado"></div>
-
-<script>
-function calcularLiquido(valor, taxa, fixa){
-    return valor - (valor * taxa/100) - fixa;
+const bancos = [
+{
+ nome: "Nuvem Pago",
+ pix: 0.99,
+ credito: [
+   {prazo:"14 dias", taxa:4.69, fixa:0.35},
+   {prazo:"30 dias", taxa:4.19, fixa:0.35}
+ ],
+ boleto: 2.39
+},
+{
+ nome: "Mercado Pago",
+ pix: 0.99,
+ credito: [
+   {prazo:"Na hora", taxa:4.98, fixa:0},
+   {prazo:"14 dias", taxa:4.49, fixa:0},
+   {prazo:"30 dias", taxa:3.98, fixa:0}
+ ],
+ boleto: 3.49
 }
+];
+
+function calcPix(v, t){ return v - (v*t/100); }
+function calcCred(v, t, f){ return v - (v*t/100) - f; }
+function calcBol(v, f){ return v - f; }
 
 function calcular(){
-    let valor = parseFloat(document.getElementById('valor').value) || 0;
+ let valor = parseFloat(document.getElementById('valor').value) || 0;
+ let melhorGlobal = {valor:0, texto:""};
+ let html = "";
 
-    let bancos = [
-        {
-            nome: "Mercado Pago",
-            pix: calcularLiquido(valor, mp_pix.value, mp_fixa.value),
-            credito: calcularLiquido(valor, mp_credito.value, mp_fixa.value),
-            boleto: calcularLiquido(valor, mp_boleto.value, mp_fixa.value)
-        },
-        {
-            nome: "Nuvem Pago",
-            pix: calcularLiquido(valor, np_pix.value, np_fixa.value),
-            credito: calcularLiquido(valor, np_credito.value, np_fixa.value),
-            boleto: calcularLiquido(valor, np_boleto.value, np_fixa.value)
-        },
-        {
-            nome: "Banco Y",
-            pix: calcularLiquido(valor, by_pix.value, by_fixa.value),
-            credito: calcularLiquido(valor, by_credito.value, by_fixa.value),
-            boleto: calcularLiquido(valor, by_boleto.value, by_fixa.value)
-        }
-    ];
+ bancos.forEach(b => {
+   let melhorBanco = {valor:0, texto:""};
 
-    let melhor = { banco: "", metodo: "", valor: 0 };
+   html += `<div class='card'><h2>${b.nome}</h2>`;
+   html += `<table><tr><th>Tipo</th><th>Condição</th><th>Líquido</th></tr>`;
 
-    let html = "";
+   // PIX
+   let pix = calcPix(valor, b.pix);
+   html += `<tr><td>PIX</td><td>Na hora</td><td>R$ ${pix.toFixed(2)}</td></tr>`;
+   if(pix > melhorBanco.valor){ melhorBanco = {valor:pix, texto:`PIX (Na hora)`}; }
+   if(pix > melhorGlobal.valor){ melhorGlobal = {valor:pix, texto:`${b.nome} - PIX`}; }
 
-    bancos.forEach(b => {
-        html += `<strong>${b.nome}</strong><br>`;
-        html += `PIX: R$ ${b.pix.toFixed(2)}<br>`;
-        html += `Crédito: R$ ${b.credito.toFixed(2)}<br>`;
-        html += `Boleto: R$ ${b.boleto.toFixed(2)}<br><br>`;
+   // Crédito
+   b.credito.forEach(c => {
+     let v = calcCred(valor, c.taxa, c.fixa);
+     html += `<tr><td>Crédito</td><td>${c.prazo}</td><td>R$ ${v.toFixed(2)}</td></tr>`;
 
-        if(b.pix > melhor.valor){ melhor = { banco: b.nome, metodo: "PIX", valor: b.pix }; }
-        if(b.credito > melhor.valor){ melhor = { banco: b.nome, metodo: "Crédito", valor: b.credito }; }
-        if(b.boleto > melhor.valor){ melhor = { banco: b.nome, metodo: "Boleto", valor: b.boleto }; }
-    });
+     if(v > melhorBanco.valor){ melhorBanco = {valor:v, texto:`Crédito (${c.prazo})`}; }
+     if(v > melhorGlobal.valor){ melhorGlobal = {valor:v, texto:`${b.nome} - Crédito (${c.prazo})`}; }
+   });
 
-    html += `<hr><strong>🏆 Melhor opção: ${melhor.banco} (${melhor.metodo}) → R$ ${melhor.valor.toFixed(2)}</strong>`;
+   // Boleto
+   let bol = calcBol(valor, b.boleto);
+   html += `<tr><td>Boleto</td><td>Padrão</td><td>R$ ${bol.toFixed(2)}</td></tr>`;
+   if(bol > melhorBanco.valor){ melhorBanco = {valor:bol, texto:`Boleto`}; }
+   if(bol > melhorGlobal.valor){ melhorGlobal = {valor:bol, texto:`${b.nome} - Boleto`}; }
 
-    document.getElementById('resultado').innerHTML = html;
+   html += `</table>`;
+   html += `<p class='best'>🏆 Melhor neste banco: ${melhorBanco.texto} → R$ ${melhorBanco.valor.toFixed(2)}</p>`;
+   html += `</div>`;
+ });
+
+ html += `<div class='card'><h2 class='best'>🏆 Melhor Geral</h2>
+ <p>${melhorGlobal.texto} → R$ ${melhorGlobal.valor.toFixed(2)}</p></div>`;
+
+ document.getElementById('tabelas').innerHTML = html;
 }
-</script>
 
-</body>
+</script></body>
 </html>
